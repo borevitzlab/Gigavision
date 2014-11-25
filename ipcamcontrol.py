@@ -13,7 +13,7 @@ import time
 import re
 
 
-class Camera(object):
+class IPCamera(object):
     """
     Control ACTi Camera
     Ref: http://www2.acti.com/getfile/KnowledgeBase_UploadFile/ACTi_Camera_URL_Commands_20120327_002.pdf
@@ -146,7 +146,7 @@ class Camera(object):
                                                      self.focusPos))
 
 
-class PanTiltUnit(object):
+class PanTilt(object):
     """
     Control J-Systems PTZ
     """
@@ -308,10 +308,10 @@ if __name__ == "__main__":
     Camera_User = "Admin"
     Camera_Password = "123456"
     Camera_ImageSize = [640, 480]  # [1920, 1080]
-    Cam = Camera(Camera_IP, Camera_User, Camera_Password, Camera_ImageSize)
+    Cam = IPCamera(Camera_IP, Camera_User, Camera_Password, Camera_ImageSize)
 
     PanTil_IP = "192.168.1.101"
-    PanTil = PanTiltUnit(PanTil_IP)
+    PanTil = PanTilt(PanTil_IP)
 
     liveViewDemo(Cam, PanTil)
 
