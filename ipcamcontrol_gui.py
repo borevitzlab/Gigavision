@@ -12,10 +12,6 @@ from ipcamcontrol import IPCamera, PanTilt
 import cv2
 
 form_class = uic.loadUiType("controller.ui")[0]
-COLORTABLE = []
-for i in range(256):
-    COLORTABLE.append(QtGui.qRgb(i/4, i, i/2))
-
 
 class MyWindowClass(QtGui.QMainWindow, form_class):
     def __init__(self, parent=None):
@@ -81,6 +77,11 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             QI = QtGui.QImage(Image.data, Image.shape[1], Image.shape[0],
                               bytesPerLine, QtGui.QImage.Format_RGB888)
             self.labelCurrentViewImage.setPixmap(QtGui.QPixmap.fromImage(QI))
+            self.labelCurrentViewImage.setScaledContents(True)
+            self.labelCurrentViewImage.setGeometry(
+                QtCore.QRect(0, 0, Image.shape[1], Image.shape[0]))
+#            self.scrollAreaWidgetContentsCurrentView.setGeometry(
+#                QtCore.QRect(0, 0, Image.shape[1], Image.shape[0]))
 
     def updatePositions(self):
         self.labelPositions.setText(
@@ -94,6 +95,26 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
     def updateZoomFocusInfo(self, ZoomFocusPos):
         self.ZoomPos, self.FocusPos = ZoomFocusPos.split(",")
         self.updatePositions()
+
+    def keyPressEvent(self, event):
+        Key = event.key()
+        print("Key = {}".format(Key))
+        if Key == QtCore.Qt.Key_Escape:
+            self.close()
+        elif Key == QtCore.Qt.DownArrow:
+            self.PanTilt.panStep("down", 10)
+        elif Key == QtCore.Qt.UpArrow:
+            self.PanTilt.panStep("up", 10)
+        elif Key == QtCore.Qt.LeftArrow:
+            self.PanTilt.panStep("left", 10)
+        elif Key == QtCore.Qt.RightArrow:
+            self.PanTilt.panStep("right", 10)
+        elif Key == QtCore.Qt.Key_PageDown:
+            self.Camera.zoomStep("out", 50)
+        elif Key == QtCore.Qt.Key_PageUp:
+            self.Camera.zoomStep("in", 50)
+        else:
+            super().keyPressEvent(event)
 
 
 class CameraThread(QtCore.QThread):
