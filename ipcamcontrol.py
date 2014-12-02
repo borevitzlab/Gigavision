@@ -11,6 +11,7 @@ import urllib
 import numpy as np
 import time
 import re
+from matplotlib import pyplot as plt
 
 
 class IPCamera(object):
@@ -233,6 +234,17 @@ class PanTilt(object):
         self.updateStatus()
         return self.PanPos, self.TiltPos
 
+    def holdPanTilt(self, State):
+        if State is True:
+            Url = self.Link + "/Calibration.xml?Action=0"
+        else:
+            Url = self.Link + "/Calibration.xml?Action=C"
+        stream = urllib.urlopen(Url)
+        Output = stream.read(1024)
+        print(Output)
+        Info = self.getKeyValue(Output, "Text")
+        return Info
+
     def updateStatus(self):
         Url = self.Link + "/CP_Update.xml"
         stream = urllib.urlopen(Url)
@@ -303,6 +315,10 @@ def liveViewDemo(Camera, PanTil):
         elif Key == 115:  # s key
             Info = PanTil.status()
             Info += "\n" + Cam.status()
+        elif Key == 72:  # H key
+            Info = PanTil.holdPanTilt(True)
+        elif Key == 104:  # h key
+            Info = PanTil.holdPanTilt(False)
         elif Key != 255:
             print("Key = {} is not recognised".format(Key))
 
@@ -418,27 +434,212 @@ def testFoV(Camera, PanTil):
                 break
 
 
+def drawMatches(img1, kp1, img2, kp2, matches):
+    """
+    Source: http://stackoverflow.com/questions/20259025/module-object-has-no-attribute-drawmatches-opencv-python
+    This function takes in two images with their associated
+    keypoints, as well as a list of DMatch data structure (matches)
+    that contains which keypoints matched in which images.
+
+    An image will be produced where a montage is shown with
+    the first image followed by the second image beside it.
+
+    Keypoints are delineated with circles, while lines are connected
+    between matching keypoints.
+
+    img1,img2 - Grayscale images
+    kp1,kp2 - Detected list of keypoints through any of the OpenCV keypoint
+              detection algorithms
+    matches - A list of matches of corresponding keypoints through any
+              OpenCV keypoint matching algorithm
+    """
+
+    # Create a new output image that concatenates the two images together
+    # (a.k.a) a montage
+    rows1 = img1.shape[0]
+    cols1 = img1.shape[1]
+    rows2 = img2.shape[0]
+    cols2 = img2.shape[1]
+
+    out = np.zeros((max([rows1, rows2]), cols1+cols2, 3), dtype='uint8')
+
+    # Place the first image to the left
+    out[:rows1, :cols1, :] = np.dstack([img1, img1, img1])
+
+    # Place the next image to the right of it
+    out[:rows2, cols1:cols1+cols2, :] = np.dstack([img2, img2, img2])
+
+    # For each pair of points we have between both images
+    # draw circles, then connect a line between them
+    for mat in matches:
+
+        # Get the matching keypoints for each of the images
+        img1_idx = mat.queryIdx
+        img2_idx = mat.trainIdx
+
+        # x - columns
+        # y - rows
+        (x1, y1) = kp1[img1_idx].pt
+        (x2, y2) = kp2[img2_idx].pt
+
+        # Draw a small circle at both co-ordinates
+        # radius 4
+        # colour blue
+        # thickness = 1
+        cv2.circle(out, (int(x1), int(y1)), 4, (255, 0, 0), 1)
+        cv2.circle(out, (int(x2)+cols1, int(y2)), 4, (255, 0, 0), 1)
+
+        # Draw a line in between the two points
+        # thickness = 1
+        # colour blue
+        cv2.line(out, (int(x1), int(y1)), (int(x2)+cols1, int(y2)),
+                 (255, 0, 0), 1)
+
+    return out
+
+
+def getDisplacement(Image0, Image1):
+    img1 = cv2.cvtColor(Image0, cv2.COLOR_BGR2GRAY)
+    img2 = cv2.cvtColor(Image1, cv2.COLOR_BGR2GRAY)
+
+    # Create ORB detector with 1000 keypoints with a scaling pyramid factor
+    # of 1.2
+    orb = cv2.ORB(1000, 1.2)
+
+    # Detect keypoints
+    (kp1, des1) = orb.detectAndCompute(img1, None)
+    (kp2, des2) = orb.detectAndCompute(img2, None)
+
+    # Create matcher and do matching
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    matches = bf.match(des1, des2)
+
+    # Sort the matches based on distance.  Least distance
+    # is better
+    matches = sorted(matches, key=lambda val: val.distance)
+
+    # collect displacement from the first 10 matches
+    dxList = []
+    dyList = []
+    for mat in matches[:10]:
+        # Get the matching keypoints for each of the images
+        img1_idx = mat.queryIdx
+        img2_idx = mat.trainIdx
+
+        # x - columns
+        # y - rows
+        (x1, y1) = kp1[img1_idx].pt
+        (x2, y2) = kp2[img2_idx].pt
+        dxList.append(abs(x1 - x2))
+        dyList.append(abs(y1 - y2))
+
+    dxMedian = np.median(np.asarray(dxList, dtype=np.double))
+    dyMedian = np.median(np.asarray(dyList, dtype=np.double))
+
+#    img3 = drawMatches(img1, kp1, img2, kp2, matches[:10])
+#    WindowName = "Displacement = {}, {}".format(dxMedian, dyMedian)
+#    cv2.imshow(WindowName, img3)
+#    cv2.waitKey()
+
+    return dxMedian, dyMedian
+
+
 def getFieldOfView(Camera, PanTil,
-                   PanPosList=range(0, 10, 2),
-                   TiltPosList=range(0, 10, 2),
-                   ZoomList=range(50, 1000, 100)):
+                   ZoomList=range(50, 1000, 100),
+                   PanPosList=range(150, 160, 2),
+                   TiltPos0=0):
     """
-    This can take a long time to run
+    Capture images at different pan/tilt angles, then measure the pixel
+    displacement between the images to estimate the field-of-view angle.
+    This can take a long time to run.
     """
+    FovAngleList = []
     Camera.setZoomPosition(ZoomList[0]-10)
-    PanTil.setPanTiltPosition(PanPosList[0]-10, TiltPosList[0]-10)
     cv2.waitKey(5000)
+    PanPos0 = PanPosList[0]
+    for ZoomPos in ZoomList:
+        Camera.setZoomPosition(ZoomPos)
+        Image = Camera.snapPhoto()
+        Image = Camera.snapPhoto()
+        cv2.waitKey(5000)
+
+        PanTil.setPanTiltPosition(PanPos0-5, TiltPos0)
+        cv2.waitKey(5000)
+        PanTil.setPanTiltPosition(PanPos0, TiltPos0)
+        cv2.waitKey(5000)
+        # capture image with pan motion
+        ImagePanList = []
+        for i, PanPos in enumerate(PanPosList):
+            PanTil.setPanTiltPosition(PanPos, TiltPos0)
+            cv2.waitKey(5000)
+            while True:
+                # make sure camera finishes refocusing
+                Image = Camera.snapPhoto()
+                if Image is not None:
+                    ImagePanList.append(Image)
+                    break
+            if i == 0:
+                continue
+            Image0 = ImagePanList[0]
+            Image1 = ImagePanList[i]
+            dx, dy = getDisplacement(Image0, Image1)
+            if dx > 100:
+                PixPerDegree = dx/(PanPosList[i] - PanPosList[0])
+                FovAngle = Image0.shape[1]/PixPerDegree
+                FovAngleList.append(FovAngle)
+                break
+    return FovAngleList
 
 
-def panorama(Camera, PanTil, Zoom=300,
+def refineFieldOfView(Camera, PanTil,
+                      ZoomList0, FoVList0,
+                      ZoomList1,
+                      PanPos0=100, TiltPos0=0):
+    FovAngleList = []
+    Camera.setZoomPosition(ZoomList0[0]-5)
+    cv2.waitKey(5000)
+    Camera.snapPhoto()
+    for ZoomPos in ZoomList1:
+        Camera.setZoomPosition(ZoomPos)
+        cv2.waitKey(5000)
+        Camera.snapPhoto()
+        PanPos = PanPos0
+        # add nearby position to reduce backlash
+        PanTil.setPanTiltPosition(PanPos-10, TiltPos0)
+        cv2.waitKey(5000)
+        PanTil.setPanTiltPosition(PanPos, TiltPos0)
+        cv2.waitKey(5000)
+        while True:
+            # make sure camera finishes refocusing
+            Image0 = Camera.snapPhoto()
+            if Image0 is not None:
+                break
+        PanFoV = np.interp(ZoomPos, ZoomList0, FoVList0)
+        PanFoVHalf = PanFoV/2.0
+        PanPos = PanPos0 + PanFoVHalf
+        PanTil.setPanTiltPosition(PanPos, TiltPos0)
+        cv2.waitKey(5000)
+        while True:
+            # make sure camera finishes refocusing
+            Image1 = Camera.snapPhoto()
+            if Image1 is not None:
+                break
+        dx, dy = getDisplacement(Image0, Image1)
+        PixPerDegree = dx/PanFoVHalf
+        FovAngle = Image0.shape[1]/PixPerDegree
+        FovAngleList.append(FovAngle)
+    return FovAngleList
+
+
+def panorama(Camera, PanTil, Zoom=300, FovAngle=4.6,
              PanRange=[80, 220], TiltRange=[-20, 20],
              Folder="/home/chuong/Workspace/ackwEYEr/images/panorama/",
              Overlap=0.5):
 #    ZoomList = [ 0, 100, 200, 300, 400, 500, 600, 700, 800, 900]  # +30
-    PixPerDegree = [12.227, 15.514, 18.774, 23.00, 28.895, 37.267,
-                    49.417, 67.375, 100.2, 149.0]
-    PanStep = int((1-Overlap)*Camera.ImageSize[0]/PixPerDegree[3])
-    TiltStep = int((1-Overlap)*Camera.ImageSize[1]/PixPerDegree[3])
+#    PixPerDegree = [12.227, 15.514, 18.774, 23.00, 28.895, 37.267,
+#                    49.417, 67.375, 100.2, 149.0]
+    PanStep = int((1-Overlap)*FovAngle)
+    TiltStep = int((1-Overlap)*FovAngle*Camera.ImageSize[0]/Camera.ImageSize[1])
     print("PanStep = {}, TiltStep = {}".format(PanStep, TiltStep))
 
     Camera.setZoomPosition(Zoom - 5)
@@ -481,5 +682,30 @@ if __name__ == "__main__":
 #    liveViewDemo(Cam, PanTil)
 #    liveViewDemo2(Cam, PanTil)
 #    testFoV(Cam, PanTil)
-    panorama(Cam, PanTil)
 
+    PanPosList = np.linspace(100, 110, 5)
+    PanPos0 = 100
+    TiltPos0 = 0
+    ZoomList0 = np.linspace(50, 950, 4)  # [50]  #
+    FovList0 = getFieldOfView(Cam, PanTil, ZoomList0, PanPosList, TiltPos0)
+#    ZoomList0 = [  50.  350.  650.  950.]
+#    FovList0 = [62.65664020625497, 31.594361616180283, 15.375375375375375, 4.647244871046345]
+    print("ZoomList0 = {}".format(ZoomList0))
+    print("FovList0 = {}".format(FovList0))
+    ZoomList1 = np.linspace(50, 950, 10)
+    FovList1 = refineFieldOfView(Cam, PanTil, ZoomList0, FovList0, ZoomList1,
+                                 PanPos0, TiltPos0)
+    print("ZoomList1 = {}".format(ZoomList1))
+    print("FovList1 = {}".format(FovList1))
+    plt.figure()
+    plt.hold(True)
+    plt.plot(ZoomList0, FovList0, label="Initial estimated FoV")
+    plt.plot(ZoomList1, FovList1, label="Refine FoV")
+    plt.show()
+
+#    Zoom = 950
+#    FovAngle = 4.6
+#    PanRange=[80, 220]
+#    TiltRange=[-20, 20]
+#    Folder="/home/chuong/Workspace/ackwEYEr/images/panorama/",
+#    panorama(Cam, PanTil, Zoom, FovAngle, PanRange, TiltRange)
