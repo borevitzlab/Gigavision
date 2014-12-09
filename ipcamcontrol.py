@@ -14,426 +14,6 @@ import re
 from matplotlib import pyplot as plt
 
 
-class IPCamera(object):
-    """
-    Control ACTi Camera
-    Ref: http://www2.acti.com/getfile/KnowledgeBase_UploadFile/ACTi_Camera_URL_Commands_20120327_002.pdf
-    """
-    def __init__(self, IP, User, Password, ImageSize=None):
-        self.IP = IP
-        self.HTTPLogin = "http://{}/cgi-bin/encoder?"\
-            "USER={}&PWD={}".format(IP, User, Password)
-        self.IMAGE_SIZES = [[1920, 1080], [1280, 720], [640, 480]]
-        if ImageSize:
-            assert(ImageSize in self.IMAGE_SIZES)
-            self.ImageSize = ImageSize
-        self.Image = None
-        self.PhotoIndex = 0
-
-        self.Commands = {}
-        self.Commands["zoom_range"] = "&ZOOM_CAP_GET"
-        self.Commands["zoom_curpos"] = "&ZOOM_POSITION"
-        self.Commands["zoom_mode"] = "&ZOOM={}"
-        self.Commands["zoom_set"] = "&ZOOM={},{}"
-        self.Commands["zoom_step"] = "&STEPPED_ZOOM={},{}"
-
-        self.Commands["focus_range"] = "&FOCUS_CAP_GET"
-        self.Commands["focus_curpos"] = "&FOCUS_POSITION"
-        self.Commands["focus_mode"] = "&FOCUS={}"
-        self.Commands["focus_set"] = "&FOCUS={},{}"
-        self.Commands["focus_step"] = "&STEPPED_FOCUS={},{}"
-
-        self.Commands["snap_photo"] = "&SNAPSHOT=N{}x{},100&DUMMY={}"
-
-        # Valid values for ACTi camera
-        self.ZOOM_MODES = ["STOPS"]
-        self.ZOOM_STATES = ["DIRECT", "TELE"]
-        self.ZOOM_STEP_DIRECTIONS = ["TELE", "WIDE"]
-        self.ZOOM_STEP_RANGE = [1, 255]
-        self.ZOOM_DIRECT_RANGE = self.getZoomRange()
-
-        self.FOCUS_MODES = ["STOP", "FAR", "NEAR", "AUTO", "MANUAL", "ZOOM_AF",
-                            "REFOCUS"]
-        self.FOCUS_STATES = ["DIRECT"]
-        self.FOCUS_STEP_DIRECTIONS = ["NEAR", "FAR"]
-        self.FOCUS_STEP_RANGE = [1, 255]
-        self.FOCUS_DIRECT_RANGE = self.getFocusRange()
-
-        print(self.status())
-
-    def snapPhoto(self, ImageSize=None):
-        if ImageSize and ImageSize in self.IMAGE_SIZES:
-            stream = urllib.urlopen(self.HTTPLogin +
-                                    self.Commands["snap_photo"].format(
-                                        ImageSize[0], ImageSize[1],
-                                        self.PhotoIndex))
-        else:
-            stream = urllib.urlopen(self.HTTPLogin +
-                                    self.Commands["snap_photo"].format(
-                                        self.ImageSize[0], self.ImageSize[1],
-                                        self.PhotoIndex))
-        jpg_bytearray = np.asarray(bytearray(stream.read()), dtype=np.uint8)
-        self.Image = cv2.imdecode(jpg_bytearray, cv2.CV_LOAD_IMAGE_COLOR)
-        self.PhotoIndex += 1
-        return self.Image
-
-    def getValue(self, Text):
-        Text = Text.split("=")
-        TextValue = re.sub("'", "", Text[1])
-        ValueList = TextValue.split(",")
-        ValueList = [float(Value) if Value.isdigit() else Value
-                     for Value in ValueList]
-        return ValueList
-
-    def zoomStep(self, Direction, StepSize):
-        if Direction.lower() == "in":
-            Direction = "TELE"
-        elif Direction.lower() == "out":
-            Direction = "WIDE"
-        assert(Direction in self.ZOOM_STEP_DIRECTIONS and
-               StepSize >= self.ZOOM_STEP_RANGE[0] and
-               StepSize <= self.ZOOM_STEP_RANGE[1])
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["zoom_step"].format(
-                                    Direction, StepSize))
-        Output = stream.read(1024).strip()
-        return Output
-
-    def setZoomPosition(self, AbsPosition):
-        assert(AbsPosition >= self.ZOOM_DIRECT_RANGE[0] and
-               AbsPosition <= self.ZOOM_DIRECT_RANGE[1])
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["zoom_set"].format(
-                                    "Direct", AbsPosition))
-        Output = stream.read(1024).strip()
-        return Output
-
-    def getZoomPosition(self):
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["zoom_curpos"])
-        Output = stream.read(1024).strip()
-        Position = self.getValue(Output)
-        return Position[0]
-
-    def getZoomRange(self):
-        stream = urllib.urlopen(self.HTTPLogin + self.Commands["zoom_range"])
-        Outptput = stream.read(1024).strip()
-        return self.getValue(Outptput)
-
-    def getFocusPosition(self):
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["focus_curpos"])
-        Output = stream.read(1024).strip()
-        Position = self.getValue(Output)
-        return Position[0]
-
-    def getFocusRange(self):
-        stream = urllib.urlopen(self.HTTPLogin + self.Commands["focus_range"])
-        Outptput = stream.read(1024).strip()
-        Values = self.getValue(Outptput)
-        # ex: Values = ["Motorized", 1029.0, 221.0]
-        Range = Values[2:0:-1]
-        return Range
-
-    def updateStatus(self):
-        self.zoomPos = self.getZoomPosition()
-        self.zoomRange = self.getZoomRange()
-        self.focusPos = self.getFocusPosition()
-        self.focusRange = self.getFocusRange()
-
-    def status(self):
-        self.updateStatus()
-        Status = "ZoomPos = {}. FocusPos = {}.".format(self.zoomPos,
-                                                       self.focusPos)
-        Status += "\nZoom range = {}".format(self.ZOOM_DIRECT_RANGE)
-        Status += "\nFocus range = {}".format(self.FOCUS_DIRECT_RANGE)
-        return Status
-
-
-class PanTilt(object):
-    """
-    Control J-Systems PTZ
-    """
-    def __init__(self, IP, User=None, Password=None):
-        self.IP = IP
-        self.User = User
-        self.Password = Password
-        self.Link = "http://{}".format(self.IP)
-        print(self.status())
-
-    def getKeyValue(self, MessageXML, Key):
-        KeyStart = "<{}>".format(Key)
-        KeyEnd = "</{}>".format(Key)
-        Start = MessageXML.find(KeyStart)
-        # Sometimes KeyStart is missing
-        if Start < 0:
-            Start = 0
-        else:
-            Start = Start + len(KeyStart)
-        End = MessageXML.find(KeyEnd, Start)
-        if End > Start:
-            Value = MessageXML[Start:End].strip()
-#            if Value.isdigit():
-#                return float(Value)
-            return Value
-        else:
-            return ""
-
-    def panStep(self, Direction, Steps):
-        assert(abs(Steps) <= 127)
-        Dir = 1
-        if Direction.lower() == "left":
-            Dir = -1
-        Url = self.Link + "/Bump.xml?PCmd={}".format(Dir*Steps)
-        stream = urllib.urlopen(Url)
-        Output = stream.read(1024)
-        Info = self.getKeyValue(Output, "Text")
-        return Info
-
-    def tiltStep(self, Direction, Steps):
-        assert(abs(Steps) <= 127)
-        Dir = 1
-        if Direction.lower() == "down":
-            Dir = -1
-        Url = self.Link + "/Bump.xml?TCmd={}".format(Dir*Steps)
-        stream = urllib.urlopen(Url)
-        Output = stream.read(1024)
-        Info = self.getKeyValue(Output, "Text")
-        return Info
-
-    def setPanTiltPosition(self, PanDegree=0, TiltDegree=0):
-        Url = self.Link + "/Bump.xml?GoToP={}&GoToT={}".format(
-            int(PanDegree*10), int(TiltDegree*10))
-        stream = urllib.urlopen(Url)
-        Output = stream.read(1024)
-        Info = self.getKeyValue(Output, "Text")
-        return Info
-
-    def setPanPosition(self, Degree):
-        Info = self.setPanTiltPosition(PanDegree=Degree)
-#        Url = self.Link + "/CP_Update.xml"
-#        stream = urllib.urlopen(Url)
-#        Output = stream.read(1024)
-#        self.PanPos = self.getKeyValue(Output, "PanPos")  # degrees
-#        while self.PanPos != "{f}"Degree
-        return Info
-
-    def setTiltPosition(self, Degree):
-        Info = self.setPanTiltPosition(TiltDegree=Degree)
-        return Info
-
-    def getPanPosition(self):
-        self.updateStatus()
-        return self.PanPos
-
-    def getTiltPosition(self):
-        self.updateStatus()
-        return self.TiltPos
-
-    def getPanTiltPosition(self):
-        self.updateStatus()
-        return self.PanPos, self.TiltPos
-
-    def holdPanTilt(self, State):
-        if State is True:
-            Url = self.Link + "/Calibration.xml?Action=0"
-        else:
-            Url = self.Link + "/Calibration.xml?Action=C"
-        stream = urllib.urlopen(Url)
-        Output = stream.read(1024)
-        print(Output)
-        Info = self.getKeyValue(Output, "Text")
-        return Info
-
-    def updateStatus(self):
-        Url = self.Link + "/CP_Update.xml"
-        stream = urllib.urlopen(Url)
-        Output = stream.read(1024)
-
-        self.PanPos = self.getKeyValue(Output, "PanPos")  # degrees
-        self.TiltPos = self.getKeyValue(Output, "TiltPos")  # degrees
-
-        # Limit switch states
-        self.PCCWLS = self.getKeyValue(Output, "PCCWLS")
-        self.PCWLS = self.getKeyValue(Output, "PCWLS")
-        self.TDnLS = self.getKeyValue(Output, "TDnLS")
-        self.TUpLS = self.getKeyValue(Output, "TUpLS")
-
-        self.BattV = self.getKeyValue(Output, "BattV")  # Volt
-        self.Heater = self.getKeyValue(Output, "Heater")
-        self.Temp = self.getKeyValue(Output, "Temp")  # F degrees
-
-        self.ListState = self.getKeyValue(Output, "ListState")
-        self.ListIndex = self.getKeyValue(Output, "ListIndex")
-        self.CtrlMode = self.getKeyValue(Output, "CtrlMode")
-
-        self.AutoPatrol = self.getKeyValue(Output, "AutoPatrol")
-        self.Dwell = self.getKeyValue(Output, "Dwell")  # seconds
-
-    def status(self):
-        self.updateStatus()
-        Status = "PanPos = {} degrees. TiltPos = {} degrees.".format(
-            self.PanPos, self.TiltPos)
-        Status += "PCCWLS = {}, PCCWLS = {}, TDnLS = {}, TDnLS = {}".format(
-            self.PCCWLS, self.PCWLS, self.TDnLS, self.TUpLS)
-        return Status
-
-
-def liveViewDemo(Camera, PanTil):
-    WindowName = "Live view from {}".format(Camera.IP)
-    while True:
-        Image = Camera.snapPhoto()
-        if Image is not None:
-            cv2.imshow(WindowName, Image)
-        time.sleep(0.1)
-        if sys.platform == 'win32':
-            Key = cv2.waitKey(50)
-        else:
-            Key = 0xFF & cv2.waitKey(50)
-
-        Info = ""
-        if Key == 27:
-            break
-        elif Key == 81 or Key == 2424832:  # arrow left key
-            Info = PanTil.panStep("left", 10)
-            Info = PanTil.getPanPosition()
-        elif Key == 83 or Key == 2555904:  # arrow right key
-            Info = PanTil.panStep("right", 10)
-            Info = PanTil.getPanPosition()
-        elif Key == 82 or Key == 2490368:  # arrow up key
-            Info = PanTil.tiltStep("up", 10)
-            Info = PanTil.getTiltPosition()
-        elif Key == 84 or Key == 2621440:  # arrow down key
-            Info = PanTil.tiltStep("down", 10)
-            Info = PanTil.getTiltPosition()
-        elif Key == 85 or Key == 2162688:  # page up key
-            Info = Camera.zoomStep("in", 100)
-            Info = Camera.getZoomPosition()
-        elif Key == 86 or Key == 2228224:  # page down key
-            Info = Camera.zoomStep("out", 100)
-            Info = Camera.getZoomPosition()
-        elif Key == 115:  # s key
-            Info = PanTil.status()
-            Info += "\n" + Cam.status()
-        elif Key == 72:  # H key
-            Info = PanTil.holdPanTilt(True)
-        elif Key == 104:  # h key
-            Info = PanTil.holdPanTilt(False)
-        elif Key != 255:
-            print("Key = {} is not recognised".format(Key))
-
-        if len(Info) > 0:
-            print(Info)
-
-
-def liveViewDemo2(Camera, PanTil):
-    PanRange = [19, 337]
-    TiltRange = [-85, 24]
-    ZoomRange = [30, 1000]  # actual range
-    PanPos = 150
-    TiltPos = 0
-    ZoomPos = 30
-
-    def pan(PanIntValue):
-        PanPos = PanRange[0] + PanIntValue
-        print("PanPos={}, TiltPos={}".format(PanPos, TiltPos))
-        PanTil.setPanTiltPosition(PanPos, TiltPos)
-
-    def tilt(TiltIntValue):
-        TiltPos = TiltRange[0] + TiltIntValue
-        print("PanPos={}, TiltPos={}".format(PanPos, TiltPos))
-        PanTil.setPanTiltPosition(PanPos, TiltPos)
-
-    def zoom(ZoomIntValue):
-        ZoomPos = ZoomRange[0] + ZoomIntValue
-        Camera.setZoomPosition(ZoomPos)
-
-    WindowName = "Live view from {}".format(Camera.IP)
-    TrackbarNamePan = "Pan"
-    TrackbarNameTilt = "Tilt"
-    TrackbarNameZoom = "Zoom"
-    cv2.namedWindow(WindowName)
-    cv2.createTrackbar(TrackbarNamePan, WindowName,
-                       PanPos - PanRange[0], PanRange[1]-PanRange[0], pan)
-    cv2.createTrackbar(TrackbarNameTilt, WindowName,
-                       TiltPos - TiltRange[0], TiltRange[1]-TiltRange[0], tilt)
-    cv2.createTrackbar(TrackbarNameZoom, WindowName,
-                       ZoomPos - ZoomRange[0], ZoomRange[1]-ZoomRange[0], zoom)
-    pan(PanPos - PanRange[0])
-    tilt(TiltPos - TiltRange[0])
-    zoom(ZoomPos - ZoomRange[0])
-    while True:
-        Image = Camera.snapPhoto()
-        if Image is not None:
-            cv2.imshow(WindowName, Image)
-        if sys.platform == 'win32':
-            Key = cv2.waitKey(100)
-        else:
-            Key = 0xFF & cv2.waitKey(100)
-
-        Info = ""
-        if Key == 27:
-            break
-        elif Key == 115:  # s key
-            Info = PanTil.status()
-            Info += "\n" + Cam.status()
-        elif Key != 255:
-            print("Key = {} is not recognised".format(Key))
-
-        if len(Info) > 0:
-            print(Info)
-
-
-def testFoV(Camera, PanTil):
-    ZoomRange = [30, 1000]  # actual range
-    ZoomList   = [ 0, 100, 200, 300, 400, 500, 600, 700, 800, 900]
-    PanFoVList = [44,  37,  31,  25,  19,  15,  12,   8,   5,   3]
-#    PixPerDegree = [12.227, 15.514, 18.774, 23.00, 28.895, 37.267,
-#                    49.417, 67.375, 100.2, 149.0]
-#    FoVAngle = [Camera.ImageSize[0]/val for val in PixPerDegree]
-    PanPos0 = 150
-    TiltPos0 = 0
-    Folder = "/home/chuong/Workspace/ackwEYEr/images/"
-    Camera.setZoomPosition(ZoomList[0] + ZoomRange[0])
-    cv2.waitKey(5000)
-    Image = Camera.snapPhoto()
-    Image = Camera.snapPhoto()
-    Image = Camera.snapPhoto()
-    for ZoomPos, PanFoV in zip(ZoomList, PanFoVList):
-        ZoomPos = ZoomPos + ZoomRange[0]
-        Camera.setZoomPosition(ZoomPos)
-        cv2.waitKey(5000)
-        PanPos = PanPos0
-        # add nearby position to reduce backlash
-        PanTil.setPanTiltPosition(PanPos-20, TiltPos0)
-        cv2.waitKey(5000)
-        PanTil.setPanTiltPosition(PanPos, TiltPos0)
-        cv2.waitKey(5000)
-        while True:
-            # make sure camera finishes refocusing
-            Image = Camera.snapPhoto()
-            Image = Camera.snapPhoto()
-            Image = Camera.snapPhoto()
-            if Image is not None:
-                FileName = Folder + "image_{}_{}.jpg".format(ZoomPos, PanPos)
-                cv2.imwrite(FileName, Image)
-                print("Wrote image " + FileName)
-                break
-        PanPos = PanPos0 + PanFoV
-        PanTil.setPanTiltPosition(PanPos, TiltPos0)
-        cv2.waitKey(5000)
-        while True:
-            # make sure camera finishes refocusing
-            Image = Camera.snapPhoto()
-            Image = Camera.snapPhoto()
-            Image = Camera.snapPhoto()
-            if Image is not None:
-                FileName = Folder + "image_{}_{}.jpg".format(ZoomPos, PanPos)
-                cv2.imwrite(FileName, Image)
-                print("Wrote image " + FileName)
-                break
-
-
 def drawMatches(img1, kp1, img2, kp2, matches):
     """
     Source: http://stackoverflow.com/questions/20259025/module-object-has-no-attribute-drawmatches-opencv-python
@@ -544,37 +124,428 @@ def getDisplacement(Image0, Image1):
     return dxMedian, dyMedian
 
 
-def getFieldOfView(Camera, PanTil,
-                   ZoomList=range(50, 1000, 100),
-                   PanPosList=range(150, 160, 2),
-                   TiltPos0=0):
+class IPCamera(object):
     """
-    Capture images at different pan/tilt angles, then measure the pixel
-    displacement between the images to estimate the field-of-view angle.
-    This can take a long time to run.
-    """
-    FovAngleList = []
-    Camera.setZoomPosition(ZoomList[0]-10)
-    cv2.waitKey(5000)
-    PanPos0 = PanPosList[0]
-    for ZoomPos in ZoomList:
-        Camera.setZoomPosition(ZoomPos)
-        Image = Camera.snapPhoto()
-        Image = Camera.snapPhoto()
-        cv2.waitKey(5000)
+    Control ACTi Camera
+    Ref: http://www2.acti.com/getfile/KnowledgeBase_UploadFile/ACTi_Camera_URL_Commands_20120327_002.pdf
 
-        PanTil.setPanTiltPosition(PanPos0-5, TiltPos0)
-        cv2.waitKey(5000)
-        PanTil.setPanTiltPosition(PanPos0, TiltPos0)
-        cv2.waitKey(5000)
+    For high zoom, zoom value needs to change slowly for the camera to auto focus
+
+    """
+    def __init__(self, IP, User, Password, ImageSize=None):
+        self.IP = IP
+        self.HTTPLogin = "http://{}/cgi-bin/encoder?"\
+            "USER={}&PWD={}".format(IP, User, Password)
+        self.IMAGE_SIZES = [[1920, 1080], [1280, 720], [640, 480]]
+        if ImageSize:
+            assert(ImageSize in self.IMAGE_SIZES)
+            self.ImageSize = ImageSize
+        self.Image = None
+        self.PhotoIndex = 0
+
+        self.Commands = {}
+        self.Commands["zoom_range"] = "&ZOOM_CAP_GET"
+        self.Commands["zoom_curpos"] = "&ZOOM_POSITION"
+        self.Commands["zoom_mode"] = "&ZOOM={}"
+        self.Commands["zoom_set"] = "&ZOOM={},{}"
+        self.Commands["zoom_step"] = "&STEPPED_ZOOM={},{}"
+
+        self.Commands["focus_range"] = "&FOCUS_CAP_GET"
+        self.Commands["focus_curpos"] = "&FOCUS_POSITION"
+        self.Commands["focus_mode"] = "&FOCUS={}"
+        self.Commands["focus_set"] = "&FOCUS={},{}"
+        self.Commands["focus_step"] = "&STEPPED_FOCUS={},{}"
+
+        self.Commands["snap_photo"] = "&SNAPSHOT=N{}x{},100&DUMMY={}"
+
+        # Valid values for ACTi camera
+        self.ZOOM_MODES = ["STOPS"]
+        self.ZOOM_STATES = ["DIRECT", "TELE"]
+        self.ZOOM_STEP_DIRECTIONS = ["TELE", "WIDE"]
+        self.ZOOM_STEP_RANGE = [1, 255]
+        self.ZOOM_DIRECT_RANGE = self.getZoomRange()
+
+        self.FOCUS_MODES = ["STOP", "FAR", "NEAR", "AUTO", "MANUAL", "ZOOM_AF",
+                            "REFOCUS"]
+        self.FOCUS_STATES = ["DIRECT"]
+        self.FOCUS_STEP_DIRECTIONS = ["NEAR", "FAR"]
+        self.FOCUS_STEP_RANGE = [1, 255]
+        self.FOCUS_DIRECT_RANGE = self.getFocusRange()
+
+        print(self.status())
+
+    def setImageSize(self, ImageSize):
+        assert(ImageSize in self.IMAGE_SIZES)
+        self.ImageSize = ImageSize
+
+    def getImageSize(self, ImageSize):
+        return self.ImageSize
+
+    def snapPhoto(self, ImageSize=None):
+        if ImageSize and ImageSize in self.IMAGE_SIZES:
+            stream = urllib.urlopen(self.HTTPLogin +
+                                    self.Commands["snap_photo"].format(
+                                        ImageSize[0], ImageSize[1],
+                                        self.PhotoIndex))
+        else:
+            stream = urllib.urlopen(self.HTTPLogin +
+                                    self.Commands["snap_photo"].format(
+                                        self.ImageSize[0], self.ImageSize[1],
+                                        self.PhotoIndex))
+        jpg_bytearray = np.asarray(bytearray(stream.read()), dtype=np.uint8)
+        self.Image = cv2.imdecode(jpg_bytearray, cv2.CV_LOAD_IMAGE_COLOR)
+        self.PhotoIndex += 1
+        return self.Image
+
+    def getValue(self, Text):
+        Text = Text.split("=")
+        TextValue = re.sub("'", "", Text[1])
+        ValueList = TextValue.split(",")
+        ValueList = [float(Value) if Value.replace(".", "", 1).isdigit() else Value
+                     for Value in ValueList]
+        return ValueList
+
+    def zoomStep(self, Direction, StepSize):
+        if Direction.lower() == "in":
+            Direction = "TELE"
+        elif Direction.lower() == "out":
+            Direction = "WIDE"
+        assert(Direction in self.ZOOM_STEP_DIRECTIONS and
+               StepSize >= self.ZOOM_STEP_RANGE[0] and
+               StepSize <= self.ZOOM_STEP_RANGE[1])
+        stream = urllib.urlopen(self.HTTPLogin +
+                                self.Commands["zoom_step"].format(
+                                    Direction, StepSize))
+        Output = stream.read(1024).strip()
+        return Output
+
+    def setZoomPosition(self, AbsPosition):
+        assert(AbsPosition >= self.ZOOM_DIRECT_RANGE[0] and
+               AbsPosition <= self.ZOOM_DIRECT_RANGE[1])
+        stream = urllib.urlopen(self.HTTPLogin +
+                                self.Commands["zoom_set"].format(
+                                    "DIRECT", AbsPosition))
+        Output = stream.read(1024).strip()
+        return Output
+
+    def setFocusPosition(self, AbsPosition):
+        assert(AbsPosition >= self.FOCUS_DIRECT_RANGE[0] and
+               AbsPosition <= self.FOCUS_DIRECT_RANGE[1])
+        stream = urllib.urlopen(self.HTTPLogin +
+                                self.Commands["focus_set"].format(
+                                    "DIRECT", AbsPosition))
+        Output = stream.read(1024).strip()
+        return Output
+
+    def getZoomPosition(self):
+        stream = urllib.urlopen(self.HTTPLogin +
+                                self.Commands["zoom_curpos"])
+        Output = stream.read(1024).strip()
+        Position = self.getValue(Output)
+        return Position[0]
+
+    def getZoomRange(self):
+        stream = urllib.urlopen(self.HTTPLogin + self.Commands["zoom_range"])
+        Outptput = stream.read(1024).strip()
+        return self.getValue(Outptput)
+
+    def getFocusPosition(self):
+        stream = urllib.urlopen(self.HTTPLogin +
+                                self.Commands["focus_curpos"])
+        Output = stream.read(1024).strip()
+        Position = self.getValue(Output)
+        return Position[0]
+
+    def getFocusRange(self):
+        stream = urllib.urlopen(self.HTTPLogin + self.Commands["focus_range"])
+        Outptput = stream.read(1024).strip()
+        Values = self.getValue(Outptput)
+        # ex: Values = ["Motorized", 1029.0, 221.0]
+        Range = Values[2:0:-1]
+        return Range
+
+    def updateStatus(self):
+        self.zoomPos = self.getZoomPosition()
+        self.zoomRange = self.getZoomRange()
+        self.focusPos = self.getFocusPosition()
+        self.focusRange = self.getFocusRange()
+
+    def status(self):
+        self.updateStatus()
+        Status = "ZoomPos = {}. FocusPos = {}.".format(self.zoomPos,
+                                                       self.focusPos)
+        Status += "\nZoom range = {}".format(self.ZOOM_DIRECT_RANGE)
+        Status += "\nFocus range = {}".format(self.FOCUS_DIRECT_RANGE)
+        return Status
+
+
+class PanTilt(object):
+    """
+    Control J-Systems PTZ
+
+    For new sysem or new firmware, the system needs calibration as follows:
+    - Open URL of the PTZ on a web browser
+    - Click on "Calibration" tab, enter username and password if necessary
+    - On Calibration window, click on "Open-loop" and then "Set Mode"
+    - Use joystick controller to rotate the pan axis to minimum position
+    - Click on 'Pan Axis Min' line, enter '2.0', and click "Set Calibration"
+    - Use joystick controller to rotate the pan axis to maximum position
+    - Click on 'Pan Axis Max' line, enter '358.0', and click "Set Calibration"
+    - Use joystick controller to rotate the tilt axis to minimum position
+    - Click on 'Tilt Axis Min' line, enter '-90.0', and click "Set Calibration"
+    - Use joystick controller to rotate the tilt axis to maximum position
+    - Click on 'Tilt Axis Max' line, enter '30.0', and click "Set Calibration"
+    - Click on "Closed-loop" and then "Set Mode"
+    - Close Calibration window
+    """
+    def __init__(self, IP, User=None, Password=None):
+        self.IP = IP
+        self.User = User
+        self.Password = Password
+        self.Link = "http://{}".format(self.IP)
+        print(self.status())
+
+    def getKeyValue(self, MessageXML, Key):
+        KeyStart = "<{}>".format(Key)
+        KeyEnd = "</{}>".format(Key)
+        Start = MessageXML.find(KeyStart)
+        # Sometimes KeyStart is missing
+        if Start < 0:
+            Start = 0
+        else:
+            Start = Start + len(KeyStart)
+        End = MessageXML.find(KeyEnd, Start)
+        if End > Start:
+            Value = MessageXML[Start:End].strip()
+            try:
+                return float(Value)
+            except:
+                return Value
+        else:
+            return ""
+
+    def panStep(self, Direction, Steps):
+        assert(abs(Steps) <= 127)
+        Dir = 1
+        if Direction.lower() == "left":
+            Dir = -1
+        Url = self.Link + "/Bump.xml?PCmd={}".format(Dir*Steps)
+        stream = urllib.urlopen(Url)
+        Output = stream.read(1024)
+        Info = self.getKeyValue(Output, "Text")
+        return Info
+
+    def tiltStep(self, Direction, Steps):
+        assert(abs(Steps) <= 127)
+        Dir = 1
+        if Direction.lower() == "down":
+            Dir = -1
+        Url = self.Link + "/Bump.xml?TCmd={}".format(Dir*Steps)
+        stream = urllib.urlopen(Url)
+        Output = stream.read(1024)
+        Info = self.getKeyValue(Output, "Text")
+        return Info
+
+    def setPanTiltPosition(self, PanDegree=0, TiltDegree=0):
+        Url = self.Link + "/Bump.xml?GoToP={}&GoToT={}".format(
+            int(PanDegree*10), int(TiltDegree*10))
+        stream = urllib.urlopen(Url)
+        Output = stream.read(1024)
+        Info = self.getKeyValue(Output, "Text")
+        NoLoops = 0
+        while True:
+            PanPos, TiltPos = self.getPanTiltPosition()
+            PanDiff = int(abs(PanPos - PanDegree))
+            TiltDiff = int(abs(TiltPos - TiltDegree))
+            if PanDiff <= 1 and TiltDiff <= 1:
+                break
+            cv2.waitKey(100)
+            NoLoops += 1
+            if NoLoops > 100:
+                print("Warning: pan-tilt fails to move to correct location")
+                print("  Desire position: PanPos={}, TiltPos={}".format(
+                    PanDegree, TiltDegree))
+                print("  Current position: PanPos={}, TiltPos={}".format(
+                    PanPos, TiltPos))
+                break
+        return Info
+
+    def setPanPosition(self, Degree):
+        Info = self.setPanTiltPosition(PanDegree=Degree)
+        return Info
+
+    def setTiltPosition(self, Degree):
+        Info = self.setPanTiltPosition(TiltDegree=Degree)
+        return Info
+
+    def getPanPosition(self):
+        self.updateStatus()
+        return self.PanPos
+
+    def getTiltPosition(self):
+        self.updateStatus()
+        return self.TiltPos
+
+    def getPanTiltPosition(self):
+        self.updateStatus()
+        return self.PanPos, self.TiltPos
+
+    def holdPanTilt(self, State):
+        if State is True:
+            Url = self.Link + "/Calibration.xml?Action=0"
+        else:
+            Url = self.Link + "/Calibration.xml?Action=C"
+        stream = urllib.urlopen(Url)
+        Output = stream.read(1024)
+        print(Output)
+        Info = self.getKeyValue(Output, "Text")
+        return Info
+
+    def updateStatus(self):
+        Url = self.Link + "/CP_Update.xml"
+        stream = urllib.urlopen(Url)
+        Output = stream.read(1024)
+
+        self.PanPos = self.getKeyValue(Output, "PanPos")  # degrees
+        self.TiltPos = self.getKeyValue(Output, "TiltPos")  # degrees
+
+        # Limit switch states
+        self.PCCWLS = self.getKeyValue(Output, "PCCWLS")
+        self.PCWLS = self.getKeyValue(Output, "PCWLS")
+        self.TDnLS = self.getKeyValue(Output, "TDnLS")
+        self.TUpLS = self.getKeyValue(Output, "TUpLS")
+
+        self.BattV = self.getKeyValue(Output, "BattV")  # Volt
+        self.Heater = self.getKeyValue(Output, "Heater")
+        self.Temp = self.getKeyValue(Output, "Temp")  # F degrees
+
+        self.ListState = self.getKeyValue(Output, "ListState")
+        self.ListIndex = self.getKeyValue(Output, "ListIndex")
+        self.CtrlMode = self.getKeyValue(Output, "CtrlMode")
+
+        self.AutoPatrol = self.getKeyValue(Output, "AutoPatrol")
+        self.Dwell = self.getKeyValue(Output, "Dwell")  # seconds
+
+    def status(self):
+        self.updateStatus()
+        Status = "PanPos = {} degrees. TiltPos = {} degrees.".format(
+            self.PanPos, self.TiltPos)
+        Status += "PCCWLS = {}, PCCWLS = {}, TDnLS = {}, TDnLS = {}".format(
+            self.PCCWLS, self.PCWLS, self.TDnLS, self.TUpLS)
+        return Status
+
+
+class Panorama(object):
+    def __init__(self,
+                 CameraURL, CameraUsername, CameraPassword,
+                 PanTiltURL, PanTiltUsername=None, PanTiltPassword=None):
+        self.Cam = IPCamera(CameraURL, CameraUsername, CameraPassword)
+        self.PanTil = PanTilt(PanTiltURL, PanTiltUsername, PanTiltPassword)
+        self.CamZoom = None
+        self.CamHFoV = None
+        self.CamVFoV = None
+        self.CamZoomList = None
+        self.CamHFoVList = None
+        self.CamVFoVList = None
+        self.PanRange = None
+        self.TiltRange = None
+        self.ImageOverlap = 0.5
+
+    def setImageSize(self, ImageSize):
+        self.Cam.setImageSize(ImageSize)
+
+    def setImageOverlap(self, ImageOverlap):
+        self.ImageOverlap = ImageOverlap
+
+    def setZoom(self, Zoom):
+        self.Cam.setZoomPosition(Zoom)
+        self.CamZoom = Zoom
+
+    def setFoVFromZoom(self, Zoom=None):
+        if Zoom is not None and self.CamZoom is None:
+            self.Zoom = Zoom
+        elif Zoom is None and self.CamZoom is None:
+            print("Zoom is not set")
+            raise
+        elif self.CamZoomList is None and self.CamFoVList is None:
+            print("Field of view is not set")
+            raise
+        self.CamHFoV = np.interp(self.CamZoom,
+                                 self.CamZoomList, self.CamHFoVList)
+        if self.CamVFoVList is None:
+            self.CamVFoV = self.CamHFoV * \
+                self.Cam.ImageSize[1]/self.Cam.ImageSize[0]
+        else:
+            self.CamVFoV = np.interp(self.CamZoom,
+                                     self.CamZoomList, self.CamVFoVList)
+
+    def setCameraFoV(self, CamHFoV, CamVFoV):
+        self.CamHFoV = CamHFoV
+        self.CamVFoV = CamVFoV
+
+    def setCameraFovDist(self, ZoomList, HFoVList, VFoVList=None):
+        self.CamZoomList = ZoomList
+        self.CamHFoVList = HFoVList
+        self.CamVFoVList = VFoVList
+
+    def getCameraFoV(self, Zoom=None):
+        if Zoom is None and \
+                self.CamHFoV is not None and self.CamVFoV is not None:
+            return self.CamHFoV, self.CamVFoV
+        elif self.CamZoomList is not None and self.CamFoVList is not None:
+            CamHFoV = np.interp(Zoom, self.CamZoomList, self.CamHFoVList)
+            CamVFoV = np.interp(Zoom, self.CamZoomList, self.CamVFoVList)
+            return CamHFoV, CamVFoV
+        else:
+            return None, None
+
+    def setPanoramaFoV(self, PanFoV, TiltFoV, PanCentre, TiltCentre):
+        self.PanRange = [PanFoV - PanCentre, PanFoV + PanCentre]
+        self.TiltRange = [TiltFoV - TiltCentre, TiltFoV + TiltCentre]
+
+    def setPanoramaFoVRange(self, PanRange, TiltRange):
+        self.PanRange = PanRange
+        self.TiltRange = TiltRange
+
+    def calibrateFoVList(self, ZoomList=range(50, 1000, 100),
+                         PanPos0=150, TiltPos0=0,
+                         PanInc=2, TiltInc=0):
+        CamHFoVList = []
+        CamVFoVList = []
+        self.Cam.setZoomPosition(ZoomList[0]-5)
+        cv2.waitKey(1000)
+        for ZoomPos in ZoomList:
+            self.Cam.setZoomPosition(ZoomPos)
+            cv2.waitKey(1000)
+            self.Cam.snapPhoto()
+            cv2.waitKey(1000)
+            self.Cam.snapPhoto()
+            CamHFoV, CamVFoV = self.calibrateFoV(ZoomPos, PanPos0, TiltPos0,
+                                                 PanInc, TiltInc)
+            CamHFoVList.append(CamHFoV)
+            CamVFoVList.append(CamVFoV)
+
+        return CamHFoVList, CamVFoVList
+
+    def calibrateFoV(self, ZoomPos, PanPos0=150, TiltPos0=0,
+                     PanInc=2, TiltInc=0):
+        """
+        Capture images at different pan/tilt angles, then measure the pixel
+        displacement between the images to estimate the field-of-view angle.
+        """
+        self.Cam.setZoomPosition(ZoomPos)
+        self.Cam.snapPhoto()
+        # add nearby position to reduce backlash
+        self.PanTil.setPanTiltPosition(PanPos0, TiltPos0)
+
         # capture image with pan motion
         ImagePanList = []
-        for i, PanPos in enumerate(PanPosList):
-            PanTil.setPanTiltPosition(PanPos, TiltPos0)
-            cv2.waitKey(5000)
+        for i in range(100):
+            self.PanTil.setPanTiltPosition(PanPos0+PanInc*i,
+                                           TiltPos0+TiltInc*i)
             while True:
                 # make sure camera finishes refocusing
-                Image = Camera.snapPhoto()
+                Image = self.Cam.snapPhoto()
                 if Image is not None:
                     ImagePanList.append(Image)
                     break
@@ -583,129 +554,247 @@ def getFieldOfView(Camera, PanTil,
             Image0 = ImagePanList[0]
             Image1 = ImagePanList[i]
             dx, dy = getDisplacement(Image0, Image1)
-            if dx > 100:
-                PixPerDegree = dx/(PanPosList[i] - PanPosList[0])
-                FovAngle = Image0.shape[1]/PixPerDegree
-                FovAngleList.append(FovAngle)
+            if PanInc != 0:
+                CamHFoV = Image0.shape[1]*PanInc*i/dx
+            if TiltInc != 0:
+                CamVFoV = Image0.shape[0]*TiltInc*i/dy
+            if dx > 100 or dy > 100:
                 break
-    return FovAngleList
 
-
-def refineFieldOfView(Camera, PanTil,
-                      ZoomList0, FoVList0,
-                      ZoomList1,
-                      PanPos0=100, TiltPos0=0):
-    FovAngleList = []
-    Camera.setZoomPosition(ZoomList0[0]-5)
-    cv2.waitKey(5000)
-    Camera.snapPhoto()
-    for ZoomPos in ZoomList1:
-        Camera.setZoomPosition(ZoomPos)
-        cv2.waitKey(5000)
-        Camera.snapPhoto()
-        PanPos = PanPos0
-        # add nearby position to reduce backlash
-        PanTil.setPanTiltPosition(PanPos-10, TiltPos0)
-        cv2.waitKey(5000)
-        PanTil.setPanTiltPosition(PanPos, TiltPos0)
-        cv2.waitKey(5000)
+        # make an increment equal to 1/4 of FoV
+        if PanInc != 0:
+            PanFoVSmall = 0.25*CamHFoV
+        else:
+            PanFoVSmall = 0.25*CamVFoV*self.Cam.ImageSize[0]/self.Cam.ImageSize[1]
+        self.PanTil.setPanTiltPosition(PanPos0 + PanFoVSmall, TiltPos0)
         while True:
             # make sure camera finishes refocusing
-            Image0 = Camera.snapPhoto()
-            if Image0 is not None:
-                break
-        PanFoV = np.interp(ZoomPos, ZoomList0, FoVList0)
-        PanFoVHalf = PanFoV/2.0
-        PanPos = PanPos0 + PanFoVHalf
-        PanTil.setPanTiltPosition(PanPos, TiltPos0)
-        cv2.waitKey(5000)
-        while True:
-            # make sure camera finishes refocusing
-            Image1 = Camera.snapPhoto()
+            Image1 = self.Cam.snapPhoto()
             if Image1 is not None:
                 break
         dx, dy = getDisplacement(Image0, Image1)
-        PixPerDegree = dx/PanFoVHalf
-        FovAngle = Image0.shape[1]/PixPerDegree
-        FovAngleList.append(FovAngle)
-    return FovAngleList
+        CamHFoV = Image0.shape[1]*PanFoVSmall/dx
+
+        if TiltInc != 0:
+            TiltFoVSmall = 0.25*CamVFoV
+        else:
+            TiltFoVSmall = 0.25*CamHFoV*self.Cam.ImageSize[1]/self.Cam.ImageSize[0]
+        self.PanTil.setPanTiltPosition(PanPos0 + PanFoVSmall,
+                                       TiltPos0 + TiltFoVSmall)
+        while True:
+            # make sure camera finishes refocusing
+            Image2 = self.Cam.snapPhoto()
+            if Image2 is not None:
+                break
+        dx, dy = getDisplacement(Image1, Image2)
+        CamVFoV = Image0.shape[0]*TiltFoVSmall/dy
+
+        return CamHFoV, CamVFoV
+
+    def test(self):
+        PanStep = (1-self.ImageOverlap)*self.CamHFoV
+        TiltStep = (1-self.ImageOverlap)*self.CamVFoV
+        print("PanStep = {}, TiltStep = {}".format(PanStep, TiltStep))
+
+        self.Cam.setZoomPosition(self.CamZoom)
+        cv2.waitKey(100)
+        self.Cam.snapPhoto()
+        self.Cam.snapPhoto()
+
+        PanPosList = np.arange(self.PanRange[0], self.PanRange[1], PanStep)
+        TiltPosList = np.arange(self.TiltRange[1], self.TiltRange[0]-TiltStep,
+                                -TiltStep)
+
+        print("Test scanning range")
+        self.PanTil.setPanTiltPosition(PanPosList[0], TiltPosList[0])
+#        self.Cam.setZoomPosition(self.CamZoom-5)
+#        Image = self.Cam.snapPhoto()
+        self.Cam.setZoomPosition(self.CamZoom)
+        cv2.waitKey(100)
+        Image = self.Cam.snapPhoto()
+        cv2.imshow("Top left corner image, Pan={}, Tilt={}".format(
+            PanPosList[0], TiltPosList[0]), Image)
+        cv2.waitKey(100)
+
+        self.PanTil.setPanTiltPosition(PanPosList[0], TiltPosList[-1])
+#        self.Cam.setZoomPosition(self.CamZoom-5)
+#        Image = self.Cam.snapPhoto()
+        self.Cam.setZoomPosition(self.CamZoom)
+        cv2.waitKey(100)
+        Image = self.Cam.snapPhoto()
+        cv2.imshow("Bottom left corner image, Pan={}, Tilt={}".format(
+            PanPosList[0], TiltPosList[-1]), Image)
+        cv2.waitKey(100)
+
+        self.PanTil.setPanTiltPosition(PanPosList[-1], TiltPosList[0])
+#        self.Cam.setZoomPosition(self.CamZoom-5)
+#        Image = self.Cam.snapPhoto()
+        self.Cam.setZoomPosition(self.CamZoom)
+        cv2.waitKey(100)
+        Image = self.Cam.snapPhoto()
+        cv2.imshow("Top right corner image, Pan={}, Tilt={}".format(
+            PanPosList[-1], TiltPosList[0]), Image)
+        cv2.waitKey(100)
+
+        self.PanTil.setPanTiltPosition(PanPosList[-1], TiltPosList[-1])
+#        self.Cam.setZoomPosition(self.CamZoom-5)
+#        Image = self.Cam.snapPhoto()
+        self.Cam.setZoomPosition(self.CamZoom)
+        cv2.waitKey(100)
+        Image = self.Cam.snapPhoto()
+        cv2.imshow("Bottom right corner image, Pan={}, Tilt={}".format(
+            PanPosList[-1], TiltPosList[-1]), Image)
+        cv2.waitKey(100)
+
+        self.PanTil.setPanTiltPosition((PanPosList[0]+PanPosList[-1])/2,
+                                       (TiltPosList[0]+TiltPosList[-1])/2)
+#        self.Cam.setZoomPosition(self.CamZoom-5)
+#        Image = self.Cam.snapPhoto()
+        self.Cam.setZoomPosition(self.CamZoom)
+        cv2.waitKey(100)
+        Image = self.Cam.snapPhoto()
+        cv2.imshow("Center image, Pan={}, Tilt={}".format(
+            PanPosList[-1], TiltPosList[-1]), Image)
+        cv2.waitKey(0)
+
+    def run(self, OutputFolder):
+        PanStep = (1-self.ImageOverlap)*self.CamHFoV
+        TiltStep = (1-self.ImageOverlap)*self.CamVFoV
+        PanPosList = np.arange(self.PanRange[0], self.PanRange[1], PanStep)
+        TiltPosList = np.arange(self.TiltRange[1], self.TiltRange[0]-TiltStep,
+                                -TiltStep)
+        NoImages = len(PanPosList)*len(TiltPosList)
+        print("This will take {}(H) x {}(V) = {} images".format(
+            len(PanPosList), len(TiltPosList), NoImages))
+        Minutes, Seconds = divmod(5*NoImages, 60)
+        print("This will complete in about {} min:{} sec".format(
+            Minutes, Seconds))
+        print("PanStep = {} degree, TiltStep = {} degree".format(
+            PanStep, TiltStep))
+
+        self.setZoom(self.CamZoom)
+        self.Cam.snapPhoto()
+        for i, PanPos in enumerate(PanPosList):
+            for j, TiltPos in enumerate(TiltPosList):
+                Info = self.PanTil.setPanTiltPosition(PanPos, TiltPos)
+                if len(Info) > 0:
+                    print("Info: {}".format(Info))
+                while True:
+                    # make sure camera finishes refocusing
+                    Image = self.Cam.snapPhoto()
+                    if Image is not None:
+                        FileName = OutputFolder + "image_{}_{}_{}.jpg".format(
+                            self.CamZoom, i, j)
+                        cv2.imwrite(FileName, Image)
+                        print("Wrote image " + FileName)
+                        break
 
 
-def panorama(Camera, PanTil, Zoom=300, FovAngle=4.6,
-             PanRange=[80, 220], TiltRange=[-20, 20],
-             Folder="/home/chuong/Workspace/ackwEYEr/images/panorama/",
-             Overlap=0.5):
-#    ZoomList = [ 0, 100, 200, 300, 400, 500, 600, 700, 800, 900]  # +30
-#    PixPerDegree = [12.227, 15.514, 18.774, 23.00, 28.895, 37.267,
-#                    49.417, 67.375, 100.2, 149.0]
-    PanStep = int((1-Overlap)*FovAngle)
-    TiltStep = int((1-Overlap)*FovAngle*Camera.ImageSize[0]/Camera.ImageSize[1])
-    print("PanStep = {}, TiltStep = {}".format(PanStep, TiltStep))
+def liveViewDemo(Camera_IP, Camera_User, Camera_Password,
+                 PanTil):
+    ImageSize = [1920, 1080]  # [640, 480]  #
+    Camera = IPCamera(Camera_IP, Camera_User, Camera_Password, ImageSize)
+    PanTil = PanTilt(PanTil_IP)
+    WindowName = "Live view from {}".format(Camera.IP)
+    while True:
+        Image = Camera.snapPhoto()
+        if Image is not None:
+            cv2.imshow(WindowName, Image)
+        time.sleep(0.1)
+        if sys.platform == 'win32':
+            Key = cv2.waitKey(50)
+        else:
+            Key = 0xFF & cv2.waitKey(50)
 
-    Camera.setZoomPosition(Zoom - 5)
-    Image = Camera.snapPhoto()
-    Image = Camera.snapPhoto()
-    Image = Camera.snapPhoto()
-    cv2.waitKey(5000)
-    PanTil.setPanTiltPosition(PanRange[0]-5, TiltRange[0]-5)
-    cv2.waitKey(10000)
+        Info = ""
+        if Key == 27:
+            break
+        elif Key == 81 or Key == 2424832:  # arrow left key
+            Info = PanTil.panStep("left", 10)
+            Info = PanTil.getPanPosition()
+        elif Key == 83 or Key == 2555904:  # arrow right key
+            Info = PanTil.panStep("right", 10)
+            Info = PanTil.getPanPosition()
+        elif Key == 82 or Key == 2490368:  # arrow up key
+            Info = PanTil.tiltStep("up", 10)
+            Info = PanTil.getTiltPosition()
+        elif Key == 84 or Key == 2621440:  # arrow down key
+            Info = PanTil.tiltStep("down", 10)
+            Info = PanTil.getTiltPosition()
+        elif Key == 85 or Key == 2162688:  # page up key
+            Info = Camera.zoomStep("in", 50)
+            Info = Camera.getZoomPosition()
+        elif Key == 86 or Key == 2228224:  # page down key
+            Info = Camera.zoomStep("out", 50)
+            Info = Camera.getZoomPosition()
+        elif Key == 115:  # s key
+            Info = PanTil.status()
+            Info += "\n" + Cam.status()
+        elif Key == 72:  # H key
+            Info = PanTil.holdPanTilt(True)
+        elif Key == 104:  # h key
+            Info = PanTil.holdPanTilt(False)
+        elif Key != 255:
+            print("Key = {} is not recognised".format(Key))
 
-    # scan top down from left to right
-    for i, PanPos in enumerate(range(PanRange[0], PanRange[1], PanStep)):
-        for j, TiltPos in enumerate(range(TiltRange[1], TiltRange[0]-TiltStep,
-                                          -TiltStep)):
-            PanTil.setPanTiltPosition(PanPos, TiltPos)
-            cv2.waitKey(5000)
-            while True:
-                # make sure camera finishes refocusing
-                Image = Camera.snapPhoto()
-                if Image is not None:
-                    FileName = Folder + "image_{}_{}_{}.jpg".format(
-                        Zoom, i, j)
-                    cv2.imwrite(FileName, Image)
-                    print("Wrote image " + FileName)
-                    break
-        # move backward a bit over to avoid back lash
-        PanTil.setPanTiltPosition(PanRange[0]-5, TiltPos)
-        cv2.waitKey(10000)
+        print(Info)
+
+
+def PanoFoVDemo(Camera_IP, Camera_User, Camera_Password,
+                PanTil_IP):
+    ImageSize = [1920, 1080]
+    Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
+    Pano.setImageSize(ImageSize)
+
+    Zoom = 800
+    CamHFoV, CamVFoV = Pano.calibrateFoV(Zoom)
+    print("CamHFoV = {}, CamVFoV = {}".format(CamHFoV, CamVFoV))
+    Pano.setCameraFoV(CamHFoV, CamVFoV)
+
+    ZoomList = range(50, 900, 100)
+    CamHFoVList, CamVFoVList = Pano.calibrateFoVList(ZoomList)
+    print("CamHFoVList = {}\nCamVFoVList = {}".format(CamHFoVList, CamVFoVList))
+
+    plt.figure()
+    plt.plot(ZoomList, CamHFoVList, "o-", label="Camera horizontal FOV")
+    plt.hold(True)
+    plt.plot(ZoomList, CamVFoVList, "s-", label="Camera veritical FOV")
+    plt.legend()
+    plt.xlabel("Zoom")
+    plt.ylabel("FoV [degree]")
+    plt.show()
+
+
+def PanoDemo(Camera_IP, Camera_User, Camera_Password,
+             PanTil_IP):
+    ImageSize = [1920, 1080]
+    Zoom = 800
+    ZoomList = range(50, 900, 100)
+    CamHFoVList = [71.297, 59.527, 49.598, 40.838, 34.239, 25.802, 18.331,
+                   12.710, 9.884]
+    CamVFoVList = [39.511, 32.490, 27.593, 22.407, 17.857, 13.332, 10.464,
+                   7.427, 5.315]
+    PanRange = [80, 200]
+    TiltRange = [-20, 20]
+
+    Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
+    Pano.setImageSize(ImageSize)
+    Pano.setCameraFovDist(ZoomList, CamHFoVList, CamVFoVList)
+    Pano.setZoom(Zoom)
+    Pano.setFoVFromZoom(Zoom)
+    print("CamHFoV = {}, CamVFoV = {}".format(Pano.CamHFoV, Pano.CamVFoV))
+
+    Pano.setPanoramaFoVRange(PanRange, TiltRange)
+    Pano.test()
+#    Pano.run()
+
 
 if __name__ == "__main__":
     Camera_IP = "192.168.1.100"
     Camera_User = "Admin"
     Camera_Password = "123456"
-    Camera_ImageSize = [1920, 1080]  # [640, 480]  #
-    Cam = IPCamera(Camera_IP, Camera_User, Camera_Password, Camera_ImageSize)
-
     PanTil_IP = "192.168.1.101"
-    PanTil = PanTilt(PanTil_IP)
 
-#    liveViewDemo(Cam, PanTil)
-#    liveViewDemo2(Cam, PanTil)
-#    testFoV(Cam, PanTil)
-
-    PanPosList = np.linspace(100, 110, 5)
-    PanPos0 = 100
-    TiltPos0 = 0
-    ZoomList0 = np.linspace(50, 950, 4)  # [50]  #
-    FovList0 = getFieldOfView(Cam, PanTil, ZoomList0, PanPosList, TiltPos0)
-#    ZoomList0 = [  50.  350.  650.  950.]
-#    FovList0 = [62.65664020625497, 31.594361616180283, 15.375375375375375, 4.647244871046345]
-    print("ZoomList0 = {}".format(ZoomList0))
-    print("FovList0 = {}".format(FovList0))
-    ZoomList1 = np.linspace(50, 950, 10)
-    FovList1 = refineFieldOfView(Cam, PanTil, ZoomList0, FovList0, ZoomList1,
-                                 PanPos0, TiltPos0)
-    print("ZoomList1 = {}".format(ZoomList1))
-    print("FovList1 = {}".format(FovList1))
-    plt.figure()
-    plt.hold(True)
-    plt.plot(ZoomList0, FovList0, label="Initial estimated FoV")
-    plt.plot(ZoomList1, FovList1, label="Refine FoV")
-    plt.show()
-
-#    Zoom = 950
-#    FovAngle = 4.6
-#    PanRange=[80, 220]
-#    TiltRange=[-20, 20]
-#    Folder="/home/chuong/Workspace/ackwEYEr/images/panorama/",
-#    panorama(Cam, PanTil, Zoom, FovAngle, PanRange, TiltRange)
+#    liveViewDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
+#    PanoFoVDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
+    PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
