@@ -6,6 +6,8 @@ Created on Mon Nov 17 10:24:49 2014
 """
 
 import sys
+import os
+from datetime import date
 import cv2
 import urllib
 import numpy as np
@@ -201,8 +203,8 @@ class IPCamera(object):
         Text = Text.split("=")
         TextValue = re.sub("'", "", Text[1])
         ValueList = TextValue.split(",")
-        ValueList = [float(Value) if Value.replace(".", "", 1).isdigit() else Value
-                     for Value in ValueList]
+        ValueList = [float(Value) if Value.replace(".", "", 1).isdigit()
+                     else Value for Value in ValueList]
         return ValueList
 
     def zoomStep(self, Direction, StepSize):
@@ -246,6 +248,12 @@ class IPCamera(object):
 
     def getZoomRange(self):
         stream = urllib.urlopen(self.HTTPLogin + self.Commands["zoom_range"])
+        Outptput = stream.read(1024).strip()
+        return self.getValue(Outptput)
+
+    def refocus(self):
+        stream = urllib.urlopen(self.HTTPLogin +
+                                self.Commands["focus_mode"].format("REFOCUS"))
         Outptput = stream.read(1024).strip()
         return self.getValue(Outptput)
 
@@ -353,6 +361,7 @@ class PanTilt(object):
         Output = stream.read(1024)
         Info = self.getKeyValue(Output, "Text")
         NoLoops = 0
+        # loop until within 1 degree
         while True:
             PanPos, TiltPos = self.getPanTiltPosition()
             PanDiff = int(abs(PanPos - PanDegree))
@@ -368,6 +377,21 @@ class PanTilt(object):
                 print("  Current position: PanPos={}, TiltPos={}".format(
                     PanPos, TiltPos))
                 break
+        #loop until smallest distance is reached
+        while True:
+            PanPos, TiltPos = self.getPanTiltPosition()
+            PanDiffNew = abs(PanPos - PanDegree)
+            TiltDiffNew = abs(TiltPos - TiltDegree)
+            if PanDiffNew >= PanDiff or TiltDiffNew >= TiltDiff:
+                break
+            else:
+                PanDiff = PanDiffNew
+                TiltDiff = TiltDiffNew
+            cv2.waitKey(100)
+            NoLoops += 1
+            if NoLoops > 100:
+                break
+
         return Info
 
     def setPanPosition(self, Degree):
@@ -516,10 +540,6 @@ class Panorama(object):
         cv2.waitKey(1000)
         for ZoomPos in ZoomList:
             self.Cam.setZoomPosition(ZoomPos)
-            cv2.waitKey(1000)
-            self.Cam.snapPhoto()
-            cv2.waitKey(1000)
-            self.Cam.snapPhoto()
             CamHFoV, CamVFoV = self.calibrateFoV(ZoomPos, PanPos0, TiltPos0,
                                                  PanInc, TiltInc)
             CamHFoVList.append(CamHFoV)
@@ -543,8 +563,10 @@ class Panorama(object):
         for i in range(100):
             self.PanTil.setPanTiltPosition(PanPos0+PanInc*i,
                                            TiltPos0+TiltInc*i)
+            # change zoom to force refocusing
+            self.Cam.refocus()
+            cv2.waitKey(100)
             while True:
-                # make sure camera finishes refocusing
                 Image = self.Cam.snapPhoto()
                 if Image is not None:
                     ImagePanList.append(Image)
@@ -607,9 +629,7 @@ class Panorama(object):
 
         print("Test scanning range")
         self.PanTil.setPanTiltPosition(PanPosList[0], TiltPosList[0])
-#        self.Cam.setZoomPosition(self.CamZoom-5)
-#        Image = self.Cam.snapPhoto()
-        self.Cam.setZoomPosition(self.CamZoom)
+        self.Cam.refocus()
         cv2.waitKey(100)
         Image = self.Cam.snapPhoto()
         cv2.imshow("Top left corner image, Pan={}, Tilt={}".format(
@@ -617,9 +637,7 @@ class Panorama(object):
         cv2.waitKey(100)
 
         self.PanTil.setPanTiltPosition(PanPosList[0], TiltPosList[-1])
-#        self.Cam.setZoomPosition(self.CamZoom-5)
-#        Image = self.Cam.snapPhoto()
-        self.Cam.setZoomPosition(self.CamZoom)
+        self.Cam.refocus()
         cv2.waitKey(100)
         Image = self.Cam.snapPhoto()
         cv2.imshow("Bottom left corner image, Pan={}, Tilt={}".format(
@@ -627,9 +645,7 @@ class Panorama(object):
         cv2.waitKey(100)
 
         self.PanTil.setPanTiltPosition(PanPosList[-1], TiltPosList[0])
-#        self.Cam.setZoomPosition(self.CamZoom-5)
-#        Image = self.Cam.snapPhoto()
-        self.Cam.setZoomPosition(self.CamZoom)
+        self.Cam.refocus()
         cv2.waitKey(100)
         Image = self.Cam.snapPhoto()
         cv2.imshow("Top right corner image, Pan={}, Tilt={}".format(
@@ -637,10 +653,7 @@ class Panorama(object):
         cv2.waitKey(100)
 
         self.PanTil.setPanTiltPosition(PanPosList[-1], TiltPosList[-1])
-#        self.Cam.setZoomPosition(self.CamZoom-5)
-#        Image = self.Cam.snapPhoto()
-        self.Cam.setZoomPosition(self.CamZoom)
-        cv2.waitKey(100)
+        self.Cam.refocus()
         Image = self.Cam.snapPhoto()
         cv2.imshow("Bottom right corner image, Pan={}, Tilt={}".format(
             PanPosList[-1], TiltPosList[-1]), Image)
@@ -648,16 +661,16 @@ class Panorama(object):
 
         self.PanTil.setPanTiltPosition((PanPosList[0]+PanPosList[-1])/2,
                                        (TiltPosList[0]+TiltPosList[-1])/2)
-#        self.Cam.setZoomPosition(self.CamZoom-5)
-#        Image = self.Cam.snapPhoto()
-        self.Cam.setZoomPosition(self.CamZoom)
-        cv2.waitKey(100)
+        self.Cam.refocus()
         Image = self.Cam.snapPhoto()
         cv2.imshow("Center image, Pan={}, Tilt={}".format(
             PanPosList[-1], TiltPosList[-1]), Image)
         cv2.waitKey(0)
 
     def run(self, OutputFolder):
+        if not os.path.exists(OutputFolder):
+            os.makedirs(OutputFolder)
+
         PanStep = (1-self.ImageOverlap)*self.CamHFoV
         TiltStep = (1-self.ImageOverlap)*self.CamVFoV
         PanPosList = np.arange(self.PanRange[0], self.PanRange[1], PanStep)
@@ -673,18 +686,22 @@ class Panorama(object):
             PanStep, TiltStep))
 
         self.setZoom(self.CamZoom)
+        cv2.waitKey(200)
         self.Cam.snapPhoto()
         for i, PanPos in enumerate(PanPosList):
             for j, TiltPos in enumerate(TiltPosList):
                 Info = self.PanTil.setPanTiltPosition(PanPos, TiltPos)
                 if len(Info) > 0:
                     print("Info: {}".format(Info))
+                # change zoom to force refocusing
+                self.Cam.refocus()
+                cv2.waitKey(100)
                 while True:
-                    # make sure camera finishes refocusing
                     Image = self.Cam.snapPhoto()
                     if Image is not None:
-                        FileName = OutputFolder + "image_{}_{}_{}.jpg".format(
-                            self.CamZoom, i, j)
+                        FileName = os.path.join(OutputFolder,
+                                                "image_{}_{}_{}.jpg".format(
+                                                self.CamZoom, i, j))
                         cv2.imwrite(FileName, Image)
                         print("Wrote image " + FileName)
                         break
@@ -729,7 +746,7 @@ def liveViewDemo(Camera_IP, Camera_User, Camera_Password,
             Info = Camera.getZoomPosition()
         elif Key == 115:  # s key
             Info = PanTil.status()
-            Info += "\n" + Cam.status()
+            Info += "\n" + Camera.status()
         elif Key == 72:  # H key
             Info = PanTil.holdPanTilt(True)
         elif Key == 104:  # h key
@@ -746,12 +763,12 @@ def PanoFoVDemo(Camera_IP, Camera_User, Camera_Password,
     Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
     Pano.setImageSize(ImageSize)
 
-    Zoom = 800
+    Zoom = 1000
     CamHFoV, CamVFoV = Pano.calibrateFoV(Zoom)
     print("CamHFoV = {}, CamVFoV = {}".format(CamHFoV, CamVFoV))
     Pano.setCameraFoV(CamHFoV, CamVFoV)
 
-    ZoomList = range(50, 900, 100)
+    ZoomList = range(50, 1050, 100)
     CamHFoVList, CamVFoVList = Pano.calibrateFoVList(ZoomList)
     print("CamHFoVList = {}\nCamVFoVList = {}".format(CamHFoVList, CamVFoVList))
 
@@ -768,14 +785,16 @@ def PanoFoVDemo(Camera_IP, Camera_User, Camera_Password,
 def PanoDemo(Camera_IP, Camera_User, Camera_Password,
              PanTil_IP):
     ImageSize = [1920, 1080]
-    Zoom = 800
-    ZoomList = range(50, 900, 100)
-    CamHFoVList = [71.297, 59.527, 49.598, 40.838, 34.239, 25.802, 18.331,
-                   12.710, 9.884]
-    CamVFoVList = [39.511, 32.490, 27.593, 22.407, 17.857, 13.332, 10.464,
-                   7.427, 5.315]
+    Zoom = 1050
+    ZoomList = range(50, 1100, 100)
+    CamHFoVList = [71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126,
+                   12.782, 9.217, 7.050, 5.824]
+    CamVFoVList = [39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324,
+                   7.7136, 4.787, 3.729, 2.448]
     PanRange = [80, 200]
     TiltRange = [-20, 20]
+    OutputFolder = "/home/chuong/Workspace/EasyPiCam/images/panorama/"
+    Subfolder = date.today().strftime("%Y_%m_%d")
 
     Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
     Pano.setImageSize(ImageSize)
@@ -785,8 +804,8 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
     print("CamHFoV = {}, CamVFoV = {}".format(Pano.CamHFoV, Pano.CamVFoV))
 
     Pano.setPanoramaFoVRange(PanRange, TiltRange)
-    Pano.test()
-#    Pano.run()
+#    Pano.test()
+    Pano.run(os.path.join(OutputFolder, Subfolder))
 
 
 if __name__ == "__main__":
