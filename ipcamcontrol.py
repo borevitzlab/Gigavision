@@ -699,9 +699,10 @@ class Panorama(object):
                 while True:
                     Image = self.Cam.snapPhoto()
                     if Image is not None:
-                        FileName = os.path.join(OutputFolder,
-                                                "image_{}_{}_{}.jpg".format(
-                                                self.CamZoom, i, j))
+                        FileName = \
+                            os.path.join(OutputFolder,
+                                         "image_{:03}_{:03}_{:03}.jpg".format(
+                                         self.CamZoom, i, j))
                         cv2.imwrite(FileName, Image)
                         print("Wrote image " + FileName)
                         break
