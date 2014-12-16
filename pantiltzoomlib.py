@@ -8,123 +8,63 @@ Created on Mon Nov 17 10:24:49 2014
 import sys
 import os
 from datetime import datetime
-import cv2
+from io import BytesIO
 import urllib
 import numpy as np
 import time
 import re
-import shutil
 import glob
-from matplotlib import pyplot as plt
-
-
-def drawMatches(img1, kp1, img2, kp2, matches):
-    """
-    Source: http://stackoverflow.com/questions/20259025/module-object-has-no-attribute-drawmatches-opencv-python
-    This function takes in two images with their associated
-    keypoints, as well as a list of DMatch data structure (matches)
-    that contains which keypoints matched in which images.
-
-    An image will be produced where a montage is shown with
-    the first image followed by the second image beside it.
-
-    Keypoints are delineated with circles, while lines are connected
-    between matching keypoints.
-
-    img1,img2 - Grayscale images
-    kp1,kp2 - Detected list of keypoints through any of the OpenCV keypoint
-              detection algorithms
-    matches - A list of matches of corresponding keypoints through any
-              OpenCV keypoint matching algorithm
-    """
-
-    # Create a new output image that concatenates the two images together
-    # (a.k.a) a montage
-    rows1 = img1.shape[0]
-    cols1 = img1.shape[1]
-    rows2 = img2.shape[0]
-    cols2 = img2.shape[1]
-
-    out = np.zeros((max([rows1, rows2]), cols1+cols2, 3), dtype='uint8')
-
-    # Place the first image to the left
-    out[:rows1, :cols1, :] = np.dstack([img1, img1, img1])
-
-    # Place the next image to the right of it
-    out[:rows2, cols1:cols1+cols2, :] = np.dstack([img2, img2, img2])
-
-    # For each pair of points we have between both images
-    # draw circles, then connect a line between them
-    for mat in matches:
-
-        # Get the matching keypoints for each of the images
-        img1_idx = mat.queryIdx
-        img2_idx = mat.trainIdx
-
-        # x - columns
-        # y - rows
-        (x1, y1) = kp1[img1_idx].pt
-        (x2, y2) = kp2[img2_idx].pt
-
-        # Draw a small circle at both co-ordinates
-        # radius 4
-        # colour blue
-        # thickness = 1
-        cv2.circle(out, (int(x1), int(y1)), 4, (255, 0, 0), 1)
-        cv2.circle(out, (int(x2)+cols1, int(y2)), 4, (255, 0, 0), 1)
-
-        # Draw a line in between the two points
-        # thickness = 1
-        # colour blue
-        cv2.line(out, (int(x1), int(y1)), (int(x2)+cols1, int(y2)),
-                 (255, 0, 0), 1)
-
-    return out
+import shutil
+from skimage import io
+from skimage.feature import (match_descriptors, ORB, plot_matches)
+from skimage.color import rgb2gray
+from scipy.spatial.distance import hamming
 
 
 def getDisplacement(Image0, Image1):
-    img1 = cv2.cvtColor(Image0, cv2.COLOR_BGR2GRAY)
-    img2 = cv2.cvtColor(Image1, cv2.COLOR_BGR2GRAY)
+    Image0Gray = rgb2gray(Image0)
+    Image1Gray = rgb2gray(Image1)
+    descriptor_extractor = ORB(n_keypoints=200)
 
-    # Create ORB detector with 1000 keypoints with a scaling pyramid factor
-    # of 1.2
-    orb = cv2.ORB(1000, 1.2)
+    descriptor_extractor.detect_and_extract(Image0Gray)
+    keypoints1 = descriptor_extractor.keypoints
+    descriptors1 = descriptor_extractor.descriptors
 
-    # Detect keypoints
-    (kp1, des1) = orb.detectAndCompute(img1, None)
-    (kp2, des2) = orb.detectAndCompute(img2, None)
+    descriptor_extractor.detect_and_extract(Image1Gray)
+    keypoints2 = descriptor_extractor.keypoints
+    descriptors2 = descriptor_extractor.descriptors
 
-    # Create matcher and do matching
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-    matches = bf.match(des1, des2)
+    matches12 = match_descriptors(descriptors1, descriptors2, cross_check=True)
 
     # Sort the matches based on distance.  Least distance
     # is better
-    matches = sorted(matches, key=lambda val: val.distance)
+    distances12 = []
+    for match in matches12:
+        distance = hamming(descriptors1[match[0]], descriptors2[match[1]])
+        distances12.append(distance)
+
+    indices = np.range(len(matches12))
+    indices = [index for (_, index) in sorted(zip(distances12, indices))]
+    matches12 = matches12[indices]
 
     # collect displacement from the first 10 matches
     dxList = []
     dyList = []
-    for mat in matches[:10]:
+    for mat in matches12[:10]:
         # Get the matching keypoints for each of the images
-        img1_idx = mat.queryIdx
-        img2_idx = mat.trainIdx
+        img1_idx = mat[0]
+        img2_idx = mat[1]
 
         # x - columns
         # y - rows
-        (x1, y1) = kp1[img1_idx].pt
-        (x2, y2) = kp2[img2_idx].pt
+        (x1, y1) = keypoints1[img1_idx]
+        (x2, y2) = keypoints2[img2_idx]
         dxList.append(abs(x1 - x2))
         dyList.append(abs(y1 - y2))
 
     dxMedian = np.median(np.asarray(dxList, dtype=np.double))
     dyMedian = np.median(np.asarray(dyList, dtype=np.double))
-
-#    img3 = drawMatches(img1, kp1, img2, kp2, matches[:10])
-#    WindowName = "Displacement = {}, {}".format(dxMedian, dyMedian)
-#    cv2.imshow(WindowName, img3)
-#    cv2.waitKey()
-
+    plot_matches(Image0, Image1, descriptors1, descriptors2, matches12[:10])
     return dxMedian, dyMedian
 
 
@@ -187,32 +127,36 @@ class IPCamera(object):
 
     def snapPhoto(self, ImageSize=None):
         if ImageSize and ImageSize in self.IMAGE_SIZES:
-            stream = urllib.urlopen(self.HTTPLogin +
-                                    self.Commands["snap_photo"].format(
-                                        ImageSize[0], ImageSize[1],
-                                        self.PhotoIndex))
+            URL = self.HTTPLogin + self.Commands["snap_photo"].format(
+                ImageSize[0], ImageSize[1], self.PhotoIndex)
         else:
-            stream = urllib.urlopen(self.HTTPLogin +
-                                    self.Commands["snap_photo"].format(
-                                        self.ImageSize[0], self.ImageSize[1],
-                                        self.PhotoIndex))
-        jpg_bytearray = np.asarray(bytearray(stream.read()), dtype=np.uint8)
-        self.Image = cv2.imdecode(jpg_bytearray, cv2.CV_LOAD_IMAGE_COLOR)
+            URL = self.HTTPLogin + self.Commands["snap_photo"].format(
+                self.ImageSize[0], self.ImageSize[1], self.PhotoIndex)
+        try:
+            import PIL
+            stream = urllib.urlopen(URL)
+            byte_array = BytesIO(stream.read())
+            self.Image = np.array(PIL.Image.open(byte_array))
+        except:
+            # fallback slow solution
+            Filename = self.snapPhoto2File(None, ImageSize)
+            self.Image = io.imread(Filename)
         self.PhotoIndex += 1
         return self.Image
 
     def snapPhoto2File(self, Filename, ImageSize=None):
         if ImageSize and ImageSize in self.IMAGE_SIZES:
-            filename, _ = urllib.urlretrieve(
-                self.HTTPLogin + self.Commands["snap_photo"].format(
-                    ImageSize[0], ImageSize[1], self.PhotoIndex), Filename)
+            URL = self.HTTPLogin + self.Commands["snap_photo"].format(
+                ImageSize[0], ImageSize[1], self.PhotoIndex)
         else:
-            filename, _ = urllib.urlretrieve(
-                self.HTTPLogin + self.Commands["snap_photo"].format(
-                    self.ImageSize[0], self.ImageSize[1], self.PhotoIndex),
-                Filename)
-        self.PhotoIndex += 1
-        return filename
+            URL = self.HTTPLogin + self.Commands["snap_photo"].format(
+                self.ImageSize[0], self.ImageSize[1], self.PhotoIndex)
+        try:
+            filename, _ = urllib.urlretrieve(URL, Filename)
+            self.PhotoIndex += 1
+            return filename
+        except:
+            return None
 
     def getValue(self, Text):
         Text = Text.split("=")
@@ -386,7 +330,7 @@ class PanTilt(object):
             TiltDiff = int(abs(TiltPos - TiltDegree))
             if PanDiff <= 1 and TiltDiff <= 1:
                 break
-            cv2.waitKey(100)
+            time.sleep(0.1)
             NoLoops += 1
             if NoLoops > 100:
                 print("Warning: pan-tilt fails to move to correct location")
@@ -405,7 +349,7 @@ class PanTilt(object):
             else:
                 PanDiff = PanDiffNew
                 TiltDiff = TiltDiffNew
-            cv2.waitKey(100)
+            time.sleep(0.1)
             NoLoops += 1
             if NoLoops > 100:
                 break
@@ -555,7 +499,7 @@ class Panorama(object):
         CamHFoVList = []
         CamVFoVList = []
         self.Cam.setZoomPosition(ZoomList[0]-5)
-        cv2.waitKey(1000)
+        time.sleep(1)
         for ZoomPos in ZoomList:
             self.Cam.setZoomPosition(ZoomPos)
             CamHFoV, CamVFoV = self.calibrateFoV(ZoomPos, PanPos0, TiltPos0,
@@ -583,7 +527,7 @@ class Panorama(object):
                                            TiltPos0+TiltInc*i)
             # change zoom to force refocusing
             self.Cam.refocus()
-            cv2.waitKey(100)
+            time.sleep(0.1)
             while True:
                 Image = self.Cam.snapPhoto()
                 if Image is not None:
@@ -630,60 +574,6 @@ class Panorama(object):
         CamVFoV = Image0.shape[0]*TiltFoVSmall/dy
 
         return CamHFoV, CamVFoV
-
-    def test(self):
-        PanStep = (1-self.ImageOverlap)*self.CamHFoV
-        TiltStep = (1-self.ImageOverlap)*self.CamVFoV
-        print("PanStep = {}, TiltStep = {}".format(PanStep, TiltStep))
-
-        self.Cam.setZoomPosition(self.CamZoom)
-        cv2.waitKey(100)
-        self.Cam.snapPhoto()
-        self.Cam.snapPhoto()
-
-        PanPosList = np.arange(self.PanRange[0], self.PanRange[1], PanStep)
-        TiltPosList = np.arange(self.TiltRange[1], self.TiltRange[0]-TiltStep,
-                                -TiltStep)
-
-        print("Test scanning range")
-        self.PanTil.setPanTiltPosition(PanPosList[0], TiltPosList[0])
-        self.Cam.refocus()
-        cv2.waitKey(100)
-        Image = self.Cam.snapPhoto()
-        cv2.imshow("Top left corner image, Pan={}, Tilt={}".format(
-            PanPosList[0], TiltPosList[0]), Image)
-        cv2.waitKey(100)
-
-        self.PanTil.setPanTiltPosition(PanPosList[0], TiltPosList[-1])
-        self.Cam.refocus()
-        cv2.waitKey(100)
-        Image = self.Cam.snapPhoto()
-        cv2.imshow("Bottom left corner image, Pan={}, Tilt={}".format(
-            PanPosList[0], TiltPosList[-1]), Image)
-        cv2.waitKey(100)
-
-        self.PanTil.setPanTiltPosition(PanPosList[-1], TiltPosList[0])
-        self.Cam.refocus()
-        cv2.waitKey(100)
-        Image = self.Cam.snapPhoto()
-        cv2.imshow("Top right corner image, Pan={}, Tilt={}".format(
-            PanPosList[-1], TiltPosList[0]), Image)
-        cv2.waitKey(100)
-
-        self.PanTil.setPanTiltPosition(PanPosList[-1], TiltPosList[-1])
-        self.Cam.refocus()
-        Image = self.Cam.snapPhoto()
-        cv2.imshow("Bottom right corner image, Pan={}, Tilt={}".format(
-            PanPosList[-1], TiltPosList[-1]), Image)
-        cv2.waitKey(100)
-
-        self.PanTil.setPanTiltPosition((PanPosList[0]+PanPosList[-1])/2,
-                                       (TiltPosList[0]+TiltPosList[-1])/2)
-        self.Cam.refocus()
-        Image = self.Cam.snapPhoto()
-        cv2.imshow("Center image, Pan={}, Tilt={}".format(
-            PanPosList[-1], TiltPosList[-1]), Image)
-        cv2.waitKey(0)
 
     def run(self, OutputFolder, Prefix="ARB-HILL-GV01", LastImageIndex=0,
             RecoveryFilename=None, SecondsPerImage=7):
@@ -761,84 +651,9 @@ class Panorama(object):
         os.remove(RecoverFilename)
 
 
-def liveViewDemo(Camera_IP, Camera_User, Camera_Password,
-                 PanTil):
-    ImageSize = [1920, 1080]  # [640, 480]  #
-    Camera = IPCamera(Camera_IP, Camera_User, Camera_Password, ImageSize)
-    PanTil = PanTilt(PanTil_IP)
-    WindowName = "Live view from {}".format(Camera.IP)
-    while True:
-        Image = Camera.snapPhoto()
-        if Image is not None:
-            cv2.imshow(WindowName, Image)
-        time.sleep(0.1)
-        if sys.platform == 'win32':
-            Key = cv2.waitKey(50)
-        else:
-            Key = 0xFF & cv2.waitKey(50)
-
-        Info = ""
-        if Key == 27:
-            break
-        elif Key == 81 or Key == 2424832:  # arrow left key
-            Info = PanTil.panStep("left", 10)
-            Info = PanTil.getPanPosition()
-        elif Key == 83 or Key == 2555904:  # arrow right key
-            Info = PanTil.panStep("right", 10)
-            Info = PanTil.getPanPosition()
-        elif Key == 82 or Key == 2490368:  # arrow up key
-            Info = PanTil.tiltStep("up", 10)
-            Info = PanTil.getTiltPosition()
-        elif Key == 84 or Key == 2621440:  # arrow down key
-            Info = PanTil.tiltStep("down", 10)
-            Info = PanTil.getTiltPosition()
-        elif Key == 85 or Key == 2162688:  # page up key
-            Info = Camera.zoomStep("in", 50)
-            Info = Camera.getZoomPosition()
-        elif Key == 86 or Key == 2228224:  # page down key
-            Info = Camera.zoomStep("out", 50)
-            Info = Camera.getZoomPosition()
-        elif Key == 115:  # s key
-            Info = PanTil.status()
-            Info += "\n" + Camera.status()
-        elif Key == 72:  # H key
-            Info = PanTil.holdPanTilt(True)
-        elif Key == 104:  # h key
-            Info = PanTil.holdPanTilt(False)
-        elif Key != 255:
-            print("Key = {} is not recognised".format(Key))
-
-        print(Info)
-
-
-def PanoFoVDemo(Camera_IP, Camera_User, Camera_Password,
-                PanTil_IP):
-    ImageSize = [1920, 1080]
-    Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
-    Pano.setImageSize(ImageSize)
-
-    Zoom = 1000
-    CamHFoV, CamVFoV = Pano.calibrateFoV(Zoom)
-    print("CamHFoV = {}, CamVFoV = {}".format(CamHFoV, CamVFoV))
-    Pano.setCameraFoV(CamHFoV, CamVFoV)
-
-    ZoomList = range(50, 1050, 100)
-    CamHFoVList, CamVFoVList = Pano.calibrateFoVList(ZoomList)
-    print("CamHFoVList = {}\nCamVFoVList = {}".format(CamHFoVList, CamVFoVList))
-
-    plt.figure()
-    plt.plot(ZoomList, CamHFoVList, "o-", label="Camera horizontal FOV")
-    plt.hold(True)
-    plt.plot(ZoomList, CamVFoVList, "s-", label="Camera veritical FOV")
-    plt.legend()
-    plt.xlabel("Zoom")
-    plt.ylabel("FoV [degree]")
-    plt.show()
-
-
 def PanoDemo(Camera_IP, Camera_User, Camera_Password,
              PanTil_IP,
-             OutputFolder="/home/chuong/Data/a_data/Gigavision/chuong_tests/"):
+             OutputFolder):
     ImageSize = [1920, 1080]
     Zoom = 800  # 1050
     ZoomList = range(50, 1100, 100)
@@ -879,7 +694,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                 if RemainingSeconds//60 + int(Now.strftime("%M")) <= 60:
                     # remove last file that may be corrupted
                     FileList = glob.glob(
-                        os.path.join(PanoFolder, "*{:04}.jpg".format(int(nums[2]))))
+                        os.path.join(PanoFolder, "{:04}.jpg".format(nums[2])))
                     if len(FileList) > 0:
                         for Filename in FileList:
                             os.remove(Filename)
@@ -904,11 +719,10 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
 
 
 if __name__ == "__main__":
-    Camera_IP = "192.168.1.100:80"
+    Camera_IP = "192.168.1.100"
     Camera_User = "Admin"
     Camera_Password = "123456"
     PanTil_IP = "192.168.1.101:81"
+    OutputFolder = "/home/chuong/Data/a_data/Gigavision/chuong_tests/"
 
-#    liveViewDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
-#    PanoFoVDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
-    PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
+    PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP, OutputFolder)
