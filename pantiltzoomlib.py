@@ -717,18 +717,17 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
 
     Config = None
     while True and os.path.exists(OutputFolder):
-    if ConfigFilename is not None:
-        with open(ConfigFilename) as File:
-            Fields = ["ImgIndex", "PanDeg", "TiltDeg", "Zoom", "FocusPos"]
-            csvread = csv.DictReader(ConfigFilename, Fields)
-            Config = {"ImgIndex": [], "PanDeg": [], "TiltDeg": [],
-                      "Zoom": [], "FocusPos": []}
-            for row in csvread:
-                Config["ImgIndex"].append(int(row["ImgIndex"]))
-                Config["PanDeg"].append(float(row["PanDeg"]))
-                Config["TiltDeg"].append(float(row["TiltDeg"]))
-                Config["Zoom"].append(int(row["Zoom"]))
-                Config["FocusPos"].append(int(row["FocusPos"]))
+        if ConfigFilename is not None:
+            with open(ConfigFilename) as File:
+                csvread = csv.DictReader(File)
+                Config = {"ImgIndex": [], "PanDeg": [], "TiltDeg": [],
+                          "Zoom": [], "FocusPos": []}
+                for row in csvread:
+                    Config["ImgIndex"].append(int(row["ImgIndex"]))
+                    Config["PanDeg"].append(float(row["PanDeg"]))
+                    Config["TiltDeg"].append(float(row["TiltDeg"]))
+                    Config["Zoom"].append(int(row["Zoom"]))
+                    Config["FocusPos"].append(int(float(row["FocusPos"])))
 
         Now = datetime.now()
         PanoFolder = os.path.join(OutputFolder,
@@ -793,7 +792,7 @@ if __name__ == "__main__":
     Camera_Password = "123456"
     PanTil_IP = "192.168.1.101:81"
     OutputFolder = "/home/chuong/Data/a_data/Gigavision/chuong_tests/"
-    ConfigFileName = None
+    ConfigFileName = "/home/chuong/Data/a_data/Gigavision/chuong_tests/2014/2014_12/2014_12_17/2014_12_17_18/_data/config.csv"
 
     PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP,
              OutputFolder, ConfigFileName)
