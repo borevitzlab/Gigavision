@@ -715,6 +715,8 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
     Pano.setPanoramaFoVRange(PanRange, TiltRange)
     print("CamHFoV = {}, CamVFoV = {}".format(Pano.CamHFoV, Pano.CamVFoV))
 
+    Config = None
+    while True and os.path.exists(OutputFolder):
     if ConfigFilename is not None:
         with open(ConfigFilename) as File:
             Fields = ["ImgIndex", "PanDeg", "TiltDeg", "Zoom", "FocusPos"]
@@ -728,8 +730,6 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                 Config["Zoom"].append(int(row["Zoom"]))
                 Config["FocusPos"].append(int(row["FocusPos"]))
 
-    Config = None
-    while True and os.path.exists(OutputFolder):
         Now = datetime.now()
         PanoFolder = os.path.join(OutputFolder,
                                   Now.strftime("%Y"),
