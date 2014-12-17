@@ -332,7 +332,7 @@ class PanTilt(object):
                 break
             time.sleep(0.1)
             NoLoops += 1
-            if NoLoops > 100:
+            if NoLoops > 50:
                 print("Warning: pan-tilt fails to move to correct location")
                 print("  Desire position: PanPos={}, TiltPos={}".format(
                     PanDegree, TiltDegree))
@@ -351,7 +351,7 @@ class PanTilt(object):
                 TiltDiff = TiltDiffNew
             time.sleep(0.1)
             NoLoops += 1
-            if NoLoops > 100:
+            if NoLoops > 50:
                 break
 
         return Info
@@ -641,7 +641,8 @@ class Panorama(object):
                         print("Wrote image " + FileName)
                         break
                     else:
-                        print("Warning: failed to snap an image. Try again")
+                        os.remove(FileName)
+                        print("Warning: invalid image file size. Try again.")
 
                 # update time per image
                 CurrentTime = time.time()
@@ -705,6 +706,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                 else:
                     print("Found recovery data but it's too late to recover.")
 
+        Now = datetime.now()
         if int(Now.strftime("%M")) <= 5:
             print("Started recording new panorama at {}".format(PanoFolder))
 #            Pano.test()
@@ -712,6 +714,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                 shutil.rmtree(PanoFolder)
             Pano.run(PanoFolder, RecoveryFilename=RecoveryFilename)
 
+        Now = datetime.now()
         RemainingMinutes = 60-int(Now.strftime("%M"))
         print("It's {}.".format(Now.strftime("%H:%M"))),
         print("Wait for {} minutes before start.".format(RemainingMinutes))
