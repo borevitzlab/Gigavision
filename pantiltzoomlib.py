@@ -15,6 +15,7 @@ import time
 import re
 import glob
 import shutil
+import csv
 from skimage import io
 from skimage.feature import (match_descriptors, ORB, plot_matches)
 from skimage.color import rgb2gray
@@ -76,14 +77,13 @@ class IPCamera(object):
     For high zoom, zoom value needs to change slowly for the camera to auto focus
 
     """
-    def __init__(self, IP, User, Password, ImageSize=None):
+    def __init__(self, IP, User, Password, ImageSize=None, ImageQuality=100):
         self.IP = IP
         self.HTTPLogin = "http://{}/cgi-bin/encoder?"\
             "USER={}&PWD={}".format(IP, User, Password)
         self.IMAGE_SIZES = [[1920, 1080], [1280, 720], [640, 480]]
         if ImageSize:
-            assert(ImageSize in self.IMAGE_SIZES)
-            self.ImageSize = ImageSize
+            self.setImageSize(ImageSize)
         self.Image = None
         self.PhotoIndex = 0
 
@@ -100,7 +100,10 @@ class IPCamera(object):
         self.Commands["focus_set"] = "&FOCUS={},{}"
         self.Commands["focus_step"] = "&STEPPED_FOCUS={},{}"
 
-        self.Commands["snap_photo"] = "&SNAPSHOT=N{}x{},100&DUMMY={}"
+        self.Commands["image_resolution"] = "&VIDEO_RESOLUTION=N{}x{}"
+        self.Commands["image_quality"] = "&VIDEO_MJPEG_QUALITY={}"
+        self.Commands["snap_photo"] = "&SNAPSHOT&DUMMY={}"
+        self.Commands["snap_photo2"] = "&SNAPSHOT=N{}x{},100&DUMMY={}"
 
         # Valid values for ACTi camera
         self.ZOOM_MODES = ["STOPS"]
@@ -117,21 +120,37 @@ class IPCamera(object):
         self.FOCUS_DIRECT_RANGE = self.getFocusRange()
 
         print(self.status())
+        self.setImageQuality(ImageQuality)
+
+    def setImageQuality(self, ImageQuality):
+        assert(ImageQuality >= 1 and ImageQuality <= 100)
+        stream = urllib.urlopen(self.HTTPLogin +
+                                self.Commands["image_quality"].format(
+                                    ImageQuality))
+
+        Output = stream.read(1024).strip()
+        return Output
 
     def setImageSize(self, ImageSize):
         assert(ImageSize in self.IMAGE_SIZES)
+        stream = urllib.urlopen(self.HTTPLogin +
+                                self.Commands["image_resolution"].format(
+                                    ImageSize[0], ImageSize[1]))
+
+        Output = stream.read(1024).strip()
         self.ImageSize = ImageSize
+        return Output
 
     def getImageSize(self, ImageSize):
         return self.ImageSize
 
     def snapPhoto(self, ImageSize=None):
         if ImageSize and ImageSize in self.IMAGE_SIZES:
-            URL = self.HTTPLogin + self.Commands["snap_photo"].format(
+            URL = self.HTTPLogin + self.Commands["snap_photo2"].format(
                 ImageSize[0], ImageSize[1], self.PhotoIndex)
         else:
             URL = self.HTTPLogin + self.Commands["snap_photo"].format(
-                self.ImageSize[0], self.ImageSize[1], self.PhotoIndex)
+                self.PhotoIndex)
         try:
             import PIL
             stream = urllib.urlopen(URL)
@@ -146,11 +165,11 @@ class IPCamera(object):
 
     def snapPhoto2File(self, Filename, ImageSize=None):
         if ImageSize and ImageSize in self.IMAGE_SIZES:
-            URL = self.HTTPLogin + self.Commands["snap_photo"].format(
+            URL = self.HTTPLogin + self.Commands["snap_photo2"].format(
                 ImageSize[0], ImageSize[1], self.PhotoIndex)
         else:
             URL = self.HTTPLogin + self.Commands["snap_photo"].format(
-                self.ImageSize[0], self.ImageSize[1], self.PhotoIndex)
+                self.PhotoIndex)
         try:
             filename, _ = urllib.urlretrieve(URL, Filename)
             self.PhotoIndex += 1
@@ -576,9 +595,16 @@ class Panorama(object):
         return CamHFoV, CamVFoV
 
     def run(self, OutputFolder, Prefix="ARB-HILL-GV01", LastImageIndex=0,
-            RecoveryFilename=None, SecondsPerImage=7):
+            RecoveryFilename=None, ConfigFilename=None, Config=None,
+            SecondsPerImage=7):
         if not os.path.exists(OutputFolder):
             os.makedirs(OutputFolder)
+        if RecoveryFilename is not None and \
+                not os.path.exists(os.path.dirname(RecoveryFilename)):
+            os.makedirs(os.path.dirname(RecoveryFilename))
+        if ConfigFilename is not None and \
+                not os.path.exists(os.path.dirname(ConfigFilename)):
+            os.makedirs(os.path.dirname(ConfigFilename))
 
         PanStep = (1-self.ImageOverlap)*self.CamHFoV
         TiltStep = (1-self.ImageOverlap)*self.CamVFoV
@@ -603,7 +629,6 @@ class Panorama(object):
             print("This will complete in about {} min:{} sec".format(
                 Minutes, Seconds))
 
-        RecoverFilename = os.path.join(OutputFolder, ".recover")
         self.setZoom(self.CamZoom)
         time.sleep(0.2)
         StartTime = time.time()
@@ -614,19 +639,36 @@ class Panorama(object):
                 if ImageIndex < LastImageIndex:
                     continue
 
+                Info = self.PanTil.setPanTiltPosition(PanPos, TiltPos)
+                if len(Info) > 0:
+                    print("Info: {}".format(Info))
+
+                if Config is None:
+                    FocusPos = self.Cam.refocus()
+                else:
+                    FocusPos = self.Cam.setFocusPosition(
+                        Config["FocusPos"][ImageIndex])
+                    if int(FocusPos) != Config["FocusPos"][ImageIndex]:
+                        print("Warning: cannot set focus to {}".format(
+                            Config["FocusPos"][ImageIndex]))
+                time.sleep(0.1)
+
+                if ConfigFilename is not None:
+                    if not os.path.exists(ConfigFilename):
+                        with open(ConfigFilename, 'w') as File:
+                            File.write("ImgIndex,PanDeg,TiltDeg,Zoom,FocusPos\n")
+                    with open(ConfigFilename, 'a') as File:
+                        File.write("{},{},{},{},{}\n".format(
+                            ImageIndex, PanPos, TiltPos, self.CamZoom,
+                            self.Cam.getFocusPosition()))
+
                 if RecoveryFilename is not None:
-                    with open(RecoverFilename, 'w') as File:
+                    with open(RecoveryFilename, 'w') as File:
                         File.write("NoCols,NoRows,CurImgIndex,SecPerImg\n")
                         File.write("{},{},{},{}\n".format(
                             len(PanPosList), len(TiltPosList), ImageIndex,
                             SecondsPerImage))
 
-                Info = self.PanTil.setPanTiltPosition(PanPos, TiltPos)
-                if len(Info) > 0:
-                    print("Info: {}".format(Info))
-
-                self.Cam.refocus()
-                time.sleep(0.1)
                 while True:
                     Now = datetime.now()
                     FileName = os.path.join(OutputFolder,
@@ -649,12 +691,12 @@ class Panorama(object):
                 ImageCaptured += 1
                 SecondsPerImage = (CurrentTime - StartTime)/ImageCaptured
         # finally remove this file
-        os.remove(RecoverFilename)
+        os.remove(RecoveryFilename)
 
 
 def PanoDemo(Camera_IP, Camera_User, Camera_Password,
              PanTil_IP,
-             OutputFolder):
+             OutputFolder, ConfigFilename=None):
     ImageSize = [1920, 1080]
     Zoom = 800  # 1050
     ZoomList = range(50, 1100, 100)
@@ -673,6 +715,20 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
     Pano.setPanoramaFoVRange(PanRange, TiltRange)
     print("CamHFoV = {}, CamVFoV = {}".format(Pano.CamHFoV, Pano.CamVFoV))
 
+    if ConfigFilename is not None:
+        with open(ConfigFilename) as File:
+            Fields = ["ImgIndex", "PanDeg", "TiltDeg", "Zoom", "FocusPos"]
+            csvread = csv.DictReader(ConfigFilename, Fields)
+            Config = {"ImgIndex": [], "PanDeg": [], "TiltDeg": [],
+                      "Zoom": [], "FocusPos": []}
+            for row in csvread:
+                Config["ImgIndex"].append(int(row["ImgIndex"]))
+                Config["PanDeg"].append(float(row["PanDeg"]))
+                Config["TiltDeg"].append(float(row["TiltDeg"]))
+                Config["Zoom"].append(int(row["Zoom"]))
+                Config["FocusPos"].append(int(row["FocusPos"]))
+
+    Config = None
     while True and os.path.exists(OutputFolder):
         Now = datetime.now()
         PanoFolder = os.path.join(OutputFolder,
@@ -680,7 +736,8 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                                   Now.strftime("%Y_%m"),
                                   Now.strftime("%Y_%m_%d"),
                                   Now.strftime("%Y_%m_%d_%H"))
-        RecoveryFilename = os.path.join(PanoFolder, ".recover")
+        RecoveryFilename = os.path.join(PanoFolder, "_data", "recovery.csv")
+        ConfigFilename = os.path.join(PanoFolder, "_data", "config.csv")
         if os.path.exists(RecoveryFilename):
             with open(RecoveryFilename, "r") as File:
                 # header "NoCols,NoRows,CurImgIndex,SecPerImg"
@@ -701,18 +758,27 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                             os.remove(Filename)
 
                     Pano.run(PanoFolder, LastImageIndex=nums[2],
-                             RecoveryFilename=RecoveryFilename)
+                             RecoveryFilename=RecoveryFilename,
+                             ConfigFilename=ConfigFilename, Config=Config)
                     continue
                 else:
                     print("Found recovery data but it's too late to recover.")
 
         Now = datetime.now()
-        if int(Now.strftime("%M")) <= 5:
+        PanoFolder = os.path.join(OutputFolder,
+                                  Now.strftime("%Y"),
+                                  Now.strftime("%Y_%m"),
+                                  Now.strftime("%Y_%m_%d"),
+                                  Now.strftime("%Y_%m_%d_%H"))
+        RecoveryFilename = os.path.join(PanoFolder, "_data", "recovery.csv")
+        ConfigFilename = os.path.join(PanoFolder, "_data", "config.csv")
+        if int(Now.strftime("%M")) <= 10:
             print("Started recording new panorama at {}".format(PanoFolder))
 #            Pano.test()
             if os.path.exists(PanoFolder):
                 shutil.rmtree(PanoFolder)
-            Pano.run(PanoFolder, RecoveryFilename=RecoveryFilename)
+            Pano.run(PanoFolder, RecoveryFilename=RecoveryFilename,
+                     ConfigFilename=ConfigFilename, Config=Config)
 
         Now = datetime.now()
         RemainingMinutes = 60-int(Now.strftime("%M"))
@@ -727,5 +793,7 @@ if __name__ == "__main__":
     Camera_Password = "123456"
     PanTil_IP = "192.168.1.101:81"
     OutputFolder = "/home/chuong/Data/a_data/Gigavision/chuong_tests/"
+    ConfigFileName = None
 
-    PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP, OutputFolder)
+    PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP,
+             OutputFolder, ConfigFileName)
