@@ -102,7 +102,7 @@ class IPCamera(object):
 
         self.Commands["image_resolution"] = "&VIDEO_RESOLUTION=N{}x{}"
         self.Commands["image_quality"] = "&VIDEO_MJPEG_QUALITY={}"
-        self.Commands["snap_photo"] = "&SNAPSHOT&DUMMY={}"
+        self.Commands["snap_photo"] = "&SNAPSHOT"
         self.Commands["snap_photo2"] = "&SNAPSHOT=N{}x{},100&DUMMY={}"
 
         # Valid values for ACTi camera
@@ -149,8 +149,7 @@ class IPCamera(object):
             URL = self.HTTPLogin + self.Commands["snap_photo2"].format(
                 ImageSize[0], ImageSize[1], self.PhotoIndex)
         else:
-            URL = self.HTTPLogin + self.Commands["snap_photo"].format(
-                self.PhotoIndex)
+            URL = self.HTTPLogin + self.Commands["snap_photo"]
         try:
             import PIL
             stream = urllib.urlopen(URL)
@@ -168,8 +167,7 @@ class IPCamera(object):
             URL = self.HTTPLogin + self.Commands["snap_photo2"].format(
                 ImageSize[0], ImageSize[1], self.PhotoIndex)
         else:
-            URL = self.HTTPLogin + self.Commands["snap_photo"].format(
-                self.PhotoIndex)
+            URL = self.HTTPLogin + self.Commands["snap_photo"]
         try:
             filename, _ = urllib.urlretrieve(URL, Filename)
             self.PhotoIndex += 1
@@ -210,6 +208,20 @@ class IPCamera(object):
                                     "DIRECT", AbsPosition))
         Output = stream.read(1024).strip()
         return Output
+
+    def setFocusMode(self, mode):
+        assert(mode.upper() in self.FOCUS_MODES)
+        stream = urllib.urlopen(self.HTTPLogin +
+                                self.Commands["focus_mode"].format(
+                                    mode.upper()))
+        Output = stream.read(1024).strip()
+        return Output
+
+    def getFocusMode(self):
+        stream = urllib.urlopen(self.HTTPLogin + "&FOCUS")
+        Output = stream.read(1024).strip()
+        Mode = self.getValue(Output)
+        return Mode
 
     def setFocusPosition(self, AbsPosition):
         assert(AbsPosition >= self.FOCUS_DIRECT_RANGE[0] and
@@ -447,6 +459,7 @@ class Panorama(object):
         self.Cam = IPCamera(CameraURL, CameraUsername, CameraPassword)
         self.PanTil = PanTilt(PanTiltURL, PanTiltUsername, PanTiltPassword)
         self.CamZoom = None
+        self.CamFocus = None
         self.CamHFoV = None
         self.CamVFoV = None
         self.CamZoomList = None
@@ -461,6 +474,12 @@ class Panorama(object):
 
     def setImageOverlap(self, ImageOverlap):
         self.ImageOverlap = ImageOverlap
+
+    def setFocus(self, Focus):
+        if self.Cam.getFocusMode() != "MANUAL":
+            self.Cam.setFocusMode("MANUAL")
+        self.Cam.setFocusPosition(Focus)
+        self.CamFocus = Focus
 
     def setZoom(self, Zoom):
         self.Cam.setZoomPosition(Zoom)
@@ -511,6 +530,12 @@ class Panorama(object):
     def setPanoramaFoVRange(self, PanRange, TiltRange):
         self.PanRange = PanRange
         self.TiltRange = TiltRange
+        PanStep = (1-self.ImageOverlap)*self.CamHFoV
+        TiltStep = (1-self.ImageOverlap)*self.CamVFoV
+        PanPosList = np.arange(self.PanRange[0], self.PanRange[1], PanStep)
+        TiltPosList = np.arange(self.TiltRange[1], self.TiltRange[0]-TiltStep,
+                                -TiltStep)
+        self.MaxNoImages = len(PanPosList)*len(TiltPosList)
 
     def calibrateFoVList(self, ZoomList=range(50, 1000, 100),
                          PanPos0=150, TiltPos0=0,
@@ -596,7 +621,7 @@ class Panorama(object):
 
     def run(self, OutputFolder, Prefix="ARB-HILL-GV01", LastImageIndex=0,
             RecoveryFilename=None, ConfigFilename=None, Config=None,
-            SecondsPerImage=7):
+            SecondsPerImage=5):
         if not os.path.exists(OutputFolder):
             os.makedirs(OutputFolder)
         if RecoveryFilename is not None and \
@@ -605,6 +630,10 @@ class Panorama(object):
         if ConfigFilename is not None and \
                 not os.path.exists(os.path.dirname(ConfigFilename)):
             os.makedirs(os.path.dirname(ConfigFilename))
+        if Config is not None:
+            self.Cam.setFocusMode("MANUAL")
+        else:
+            self.Cam.setFocusMode("AUTO")
 
         PanStep = (1-self.ImageOverlap)*self.CamHFoV
         TiltStep = (1-self.ImageOverlap)*self.CamVFoV
@@ -629,8 +658,14 @@ class Panorama(object):
             print("This will complete in about {} min:{} sec".format(
                 Minutes, Seconds))
 
-        self.setZoom(self.CamZoom)
-        time.sleep(0.2)
+        # check and update zoom
+        if self.CamZoom is not None and \
+                self.Cam.getZoomPosition() != self.CamZoom:
+            print("Set focus from {} to {}".format(self.Cam.getZoomPosition(),
+                                                   self.CamZoom))
+            self.setZoom(self.CamZoom)
+        time.sleep(0.1)
+
         StartTime = time.time()
         ImageCaptured = 0
         for i, PanPos in enumerate(PanPosList):
@@ -643,14 +678,22 @@ class Panorama(object):
                 if len(Info) > 0:
                     print("Info: {}".format(Info))
 
-                if Config is None:
-                    FocusPos = self.Cam.refocus()
+                # Check and update focus
+                if self.CamFocus is not None and \
+                        self.Cam.getFocusPosition() != self.CamFocus:
+                    print("Set focus from {} to {}".format(
+                        self.Cam.getFocusPosition(), self.CamFocus))
+                    self.Cam.setFocusMode("MANUAL")
+                    self.Cam.setFocusPosition(self.CamFocus)
                 else:
-                    FocusPos = self.Cam.setFocusPosition(
-                        Config["FocusPos"][ImageIndex])
-                    if int(FocusPos) != Config["FocusPos"][ImageIndex]:
-                        print("Warning: cannot set focus to {}".format(
-                            Config["FocusPos"][ImageIndex]))
+                    if Config is None and self.CamFocus is None:
+                        FocusPos = self.Cam.refocus()
+                    elif Config is not None and self.CamFocus is None:
+                        FocusPos = self.Cam.setFocusPosition(
+                            Config["FocusPos"][ImageIndex])
+                        if int(FocusPos) != Config["FocusPos"][ImageIndex]:
+                            print("Warning: cannot set focus to {}".format(
+                                Config["FocusPos"][ImageIndex]))
                 time.sleep(0.1)
 
                 if ConfigFilename is not None:
@@ -659,7 +702,8 @@ class Panorama(object):
                             File.write("ImgIndex,PanDeg,TiltDeg,Zoom,FocusPos\n")
                     with open(ConfigFilename, 'a') as File:
                         File.write("{},{},{},{},{}\n".format(
-                            ImageIndex, PanPos, TiltPos, self.CamZoom,
+                            ImageIndex, PanPos, TiltPos,
+                            self.CamZoom, # this should be read from camera
                             self.Cam.getFocusPosition()))
 
                 if RecoveryFilename is not None:
@@ -698,6 +742,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
              PanTil_IP,
              OutputFolder, ConfigFilename=None):
     ImageSize = [1920, 1080]
+    Focus = 935
     Zoom = 800  # 1050
     ZoomList = range(50, 1100, 100)
     CamHFoVList = [71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126,
@@ -706,6 +751,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                    7.7136, 4.787, 3.729, 2.448]
     PanRange = [80, 200]
     TiltRange = [-20, 20]
+    SecondsPerImage = 5  # just an estimate
 
     Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
     Pano.setImageSize(ImageSize)
@@ -714,9 +760,11 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
     Pano.setFoVFromZoom(Zoom)
     Pano.setPanoramaFoVRange(PanRange, TiltRange)
     print("CamHFoV = {}, CamVFoV = {}".format(Pano.CamHFoV, Pano.CamVFoV))
+    if Focus is not None:
+        Pano.setFocus(Focus)
 
-    Config = None
     while True and os.path.exists(OutputFolder):
+        Config = None
         if ConfigFilename is not None:
             with open(ConfigFilename) as File:
                 csvread = csv.DictReader(File)
@@ -771,7 +819,8 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                                   Now.strftime("%Y_%m_%d_%H"))
         RecoveryFilename = os.path.join(PanoFolder, "_data", "recovery.csv")
         ConfigFilename = os.path.join(PanoFolder, "_data", "config.csv")
-        if int(Now.strftime("%M")) <= 10:
+        # run if finishing before the begining of the next o'clock
+        if int(Now.strftime("%M")) + Pano.MaxNoImages*SecondsPerImage//60 <= 60:
             print("Started recording new panorama at {}".format(PanoFolder))
 #            Pano.test()
             if os.path.exists(PanoFolder):
@@ -792,7 +841,7 @@ if __name__ == "__main__":
     Camera_Password = "123456"
     PanTil_IP = "192.168.1.101:81"
     OutputFolder = "/home/chuong/Data/a_data/Gigavision/chuong_tests/"
-    ConfigFileName = "/home/chuong/Data/a_data/Gigavision/chuong_tests/2014/2014_12/2014_12_17/2014_12_17_18/_data/config.csv"
+    ConfigFileName = None #"/home/chuong/Data/a_data/Gigavision/chuong_tests/2014/2014_12/2014_12_17/2014_12_17_18/_data/config.csv"
 
     PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP,
              OutputFolder, ConfigFileName)
