@@ -8,10 +8,10 @@ Created on Mon Nov 24 18:22:54 2014
 import sys
 import time
 from PyQt4 import QtGui, QtCore, uic
-from ipcamcontrol import IPCamera, PanTilt
+from pantiltzoomlib import IPCamera, PanTilt
 import cv2
 
-form_class = uic.loadUiType("controller.ui")[0]
+form_class = uic.loadUiType("controller2.ui")[0]
 
 class MyWindowClass(QtGui.QMainWindow, form_class):
     def __init__(self, parent=None):
@@ -56,7 +56,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.PanTiltPassword = self.lineEditPanTiltPassword.text()
         self.PanTilt = PanTilt(self.PanTiltIP, self.PanTiltUsername,
                                self.PanTiltPassword)
-        self.textEditMessages.append("Initialised pan-tilt")
+        self.textEditMessages.append("Initialised pan-tilt.")
         self.PanPos, self.TiltPos = self.PanTilt.getPanTiltPosition()
         self.updatePositions()
 
