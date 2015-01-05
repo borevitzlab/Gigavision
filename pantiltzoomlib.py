@@ -82,10 +82,6 @@ class IPCamera(object):
         self.HTTPLogin = "http://{}/cgi-bin/encoder?"\
             "USER={}&PWD={}".format(IP, User, Password)
         self.IMAGE_SIZES = [[1920, 1080], [1280, 720], [640, 480]]
-        if ImageSize:
-            self.setImageSize(ImageSize)
-        self.Image = None
-        self.PhotoIndex = 0
 
         self.Commands = {}
         self.Commands["zoom_range"] = "&ZOOM_CAP_GET"
@@ -119,6 +115,10 @@ class IPCamera(object):
         self.FOCUS_STEP_RANGE = [1, 255]
         self.FOCUS_DIRECT_RANGE = self.getFocusRange()
 
+        if ImageSize:
+            self.setImageSize(ImageSize)
+        self.Image = None
+        self.PhotoIndex = 0
         print(self.status())
         self.setImageQuality(ImageQuality)
 
@@ -487,7 +487,8 @@ class Panorama(object):
 
     def setFoVFromZoom(self, Zoom=None):
         if Zoom is not None and self.CamZoom is None:
-            self.Zoom = Zoom
+            self.Cam.setZoomPosition(Zoom)
+            self.CamZoom = Zoom
         elif Zoom is None and self.CamZoom is None:
             print("Zoom is not set")
             raise
@@ -503,9 +504,16 @@ class Panorama(object):
             self.CamVFoV = np.interp(self.CamZoom,
                                      self.CamZoomList, self.CamVFoVList)
 
-    def setCameraFoV(self, CamHFoV, CamVFoV):
-        self.CamHFoV = CamHFoV
-        self.CamVFoV = CamVFoV
+    def setCameraFoV(self, CamHFoV=None, CamVFoV=None):
+        assert(CamHFoV is not None or CamVFoV is not None)
+        if CamHFoV is None:
+            self.CamHFoV = CamVFoV*self.Cam.ImageSize[0]/self.Cam.ImageSize[1]
+        else:
+            self.CamHFoV = CamHFoV
+        if CamVFoV is None:
+            self.CamVFoV = CamHFoV*self.Cam.ImageSize[1]/self.Cam.ImageSize[0]
+        else:
+            self.CamVFoV = CamVFoV
 
     def setCameraFovDist(self, ZoomList, HFoVList, VFoVList=None):
         self.CamZoomList = ZoomList
@@ -740,10 +748,11 @@ class Panorama(object):
 
 def PanoDemo(Camera_IP, Camera_User, Camera_Password,
              PanTil_IP,
-             OutputFolder, ConfigFilename=None):
+             OutputFolder, ConfigFilename=None,
+             Focus=None, Zoom=None, FoV=None):
     ImageSize = [1920, 1080]
-    Focus = 935
-    Zoom = 800  # 1050
+#    Focus = 935
+#    Zoom = 800  # 1050
     ZoomList = range(50, 1100, 100)
     CamHFoVList = [71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126,
                    12.782, 9.217, 7.050, 5.824]
@@ -756,12 +765,18 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
     Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
     Pano.setImageSize(ImageSize)
     Pano.setCameraFovDist(ZoomList, CamHFoVList, CamVFoVList)
-    Pano.setZoom(Zoom)
-    Pano.setFoVFromZoom(Zoom)
     Pano.setPanoramaFoVRange(PanRange, TiltRange)
     print("CamHFoV = {}, CamVFoV = {}".format(Pano.CamHFoV, Pano.CamVFoV))
+    if Zoom is not None:
+#        Pano.setZoom(Zoom)
+        Pano.setFoVFromZoom(Zoom)
     if Focus is not None:
         Pano.setFocus(Focus)
+
+    if FoV is not None:
+        Pano.setCameraFoV(FoV)
+    elif Zoom is None and Focus is None:
+        print("")
 
     while True and os.path.exists(OutputFolder):
         Config = None
@@ -840,8 +855,17 @@ if __name__ == "__main__":
     Camera_User = "Admin"
     Camera_Password = "123456"
     PanTil_IP = "192.168.1.101:81"
+    # On Raspberry Pi, run:
+    # $ mkdir /home/pi/Data/a_data
+    # $ sshfs chuong@percy.anu.edu.au:/network/phenocam-largedatasets/a_data /home/pi/Data/a_data
+    # and change OutputFolder
+    # OutputFolder = "/home/pi/Data/a_data/Gigavision/chuong_tests/"
     OutputFolder = "/home/chuong/Data/a_data/Gigavision/chuong_tests/"
-    ConfigFileName = None #"/home/chuong/Data/a_data/Gigavision/chuong_tests/2014/2014_12/2014_12_17/2014_12_17_18/_data/config.csv"
+    Zoom = 800
+#    ConfigFileName = "/home/chuong/Data/a_data/Gigavision/chuong_tests/2014/2014_12/2014_12_17/2014_12_17_18/_data/config.csv"
+#    PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP,
+#             OutputFolder, Zoom=Zoom, ConfigFileName)
+    Focus = 935
 
     PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP,
-             OutputFolder, ConfigFileName)
+             OutputFolder, Zoom=Zoom, Focus=Focus)
