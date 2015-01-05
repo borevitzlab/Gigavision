@@ -17,10 +17,10 @@
    <widget class="QWidget" name="verticalLayoutWidget">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>40</y>
-      <width>671</width>
-      <height>521</height>
+      <x>10</x>
+      <y>10</y>
+      <width>721</width>
+      <height>541</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
@@ -36,14 +36,14 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>250</width>
-           <height>210</height>
+           <width>320</width>
+           <height>310</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>270</width>
-           <height>210</height>
+           <width>320</width>
+           <height>310</height>
           </size>
          </property>
          <property name="currentIndex">
@@ -61,27 +61,34 @@
             <rect>
              <x>10</x>
              <y>10</y>
-             <width>210</width>
-             <height>165</height>
+             <width>302</width>
+             <height>264</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">
             <item>
-             <layout class="QGridLayout" name="gridLayout_3">
+             <layout class="QGridLayout" name="gridLayout_3" rowstretch="0,0,0,0,0,0,0,0" rowminimumheight="0,0,0,0,0,0,0,0">
               <property name="sizeConstraint">
                <enum>QLayout::SetFixedSize</enum>
               </property>
+              <item row="3" column="2">
+               <widget class="QPushButton" name="pushButtonLoadCameraConfigFile">
+                <property name="text">
+                 <string>Load</string>
+                </property>
+               </widget>
+              </item>
               <item row="0" column="0">
                <widget class="QLabel" name="label_5">
                 <property name="text">
-                 <string>URL</string>
+                 <string>IP address</string>
                 </property>
                </widget>
               </item>
               <item row="1" column="0">
                <widget class="QLabel" name="label_6">
                 <property name="text">
-                 <string>Username</string>
+                 <string>User name</string>
                 </property>
                </widget>
               </item>
@@ -93,7 +100,7 @@
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QLineEdit" name="lineEditIPCamURL">
+               <widget class="QLineEdit" name="lineEditIPCamAddress">
                 <property name="inputMethodHints">
                  <set>Qt::ImhUrlCharactersOnly</set>
                 </property>
@@ -125,20 +132,57 @@
                 </property>
                </widget>
               </item>
-              <item row="3" column="0">
+              <item row="4" column="0">
                <widget class="QLabel" name="label_3">
                 <property name="text">
                  <string>Image size</string>
                 </property>
                </widget>
               </item>
-              <item row="3" column="1">
+              <item row="4" column="1">
                <widget class="QComboBox" name="comboBoxImageSize"/>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_4">
+                <property name="text">
+                 <string>Config file</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_11">
+                <property name="text">
+                 <string>Zoom</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QLineEdit" name="lineEditConfigFilename">
+                <property name="text">
+                 <string>ActiCamera.yml</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QLineEdit" name="lineEditZoom"/>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_12">
+                <property name="text">
+                 <string>Focus</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="QLineEdit" name="lineEditFocus"/>
+              </item>
+              <item row="6" column="2">
+               <widget class="QComboBox" name="comboBoxFocusMode"/>
               </item>
              </layout>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_6">
+             <layout class="QHBoxLayout" name="horizontalLayout">
               <item>
                <widget class="QPushButton" name="pushButtonStartCamera">
                 <property name="text">
@@ -167,7 +211,7 @@
             <rect>
              <x>10</x>
              <y>10</y>
-             <width>208</width>
+             <width>221</width>
              <height>132</height>
             </rect>
            </property>
@@ -184,7 +228,7 @@
               <item row="0" column="0">
                <widget class="QLabel" name="label_8">
                 <property name="text">
-                 <string>URL</string>
+                 <string>IP address</string>
                 </property>
                </widget>
               </item>
@@ -196,7 +240,7 @@
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QLineEdit" name="lineEditPanTiltURL">
+               <widget class="QLineEdit" name="lineEditPanTiltAddress">
                 <property name="inputMethodHints">
                  <set>Qt::ImhUrlCharactersOnly</set>
                 </property>
@@ -251,6 +295,11 @@
            </layout>
           </widget>
          </widget>
+         <widget class="QWidget" name="tab_5">
+          <attribute name="title">
+           <string>FoV</string>
+          </attribute>
+         </widget>
          <widget class="QWidget" name="tab_3">
           <attribute name="title">
            <string>Panorama</string>
@@ -303,6 +352,9 @@
              <width>400</width>
              <height>300</height>
             </size>
+           </property>
+           <property name="mouseTracking">
+            <bool>true</bool>
            </property>
            <property name="autoFillBackground">
             <bool>false</bool>
