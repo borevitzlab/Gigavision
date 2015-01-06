@@ -67,7 +67,7 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">
             <item>
-             <layout class="QGridLayout" name="gridLayout_3" rowstretch="0,0,0,0,0,0,0,0" rowminimumheight="0,0,0,0,0,0,0,0">
+             <layout class="QGridLayout" name="gridLayout_3" rowstretch="0,0,0,0,0,0,0" rowminimumheight="0,0,0,0,0,0,0">
               <property name="sizeConstraint">
                <enum>QLayout::SetFixedSize</enum>
               </property>
@@ -314,8 +314,8 @@
             <rect>
              <x>10</x>
              <y>10</y>
-             <width>281</width>
-             <height>161</height>
+             <width>291</width>
+             <height>241</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -323,6 +323,15 @@
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
+           </property>
+           <property name="font">
+            <font>
+             <family>Courier New</family>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="lineWrapMode">
+            <enum>QTextEdit::NoWrap</enum>
            </property>
           </widget>
          </widget>
