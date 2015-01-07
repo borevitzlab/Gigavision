@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>807</width>
+    <height>745</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,8 +19,8 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>721</width>
-      <height>541</height>
+      <width>781</width>
+      <height>676</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
@@ -36,22 +36,136 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>320</width>
-           <height>310</height>
+           <width>350</width>
+           <height>370</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>320</width>
-           <height>310</height>
+           <width>360</width>
+           <height>410</height>
           </size>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>2</number>
          </property>
          <property name="movable">
           <bool>true</bool>
          </property>
+         <widget class="QWidget" name="tab_2">
+          <attribute name="title">
+           <string>Pan-Tilt</string>
+          </attribute>
+          <widget class="QWidget" name="verticalLayoutWidget_4">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>10</y>
+             <width>301</width>
+             <height>165</height>
+            </rect>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_6">
+            <item>
+             <layout class="QGridLayout" name="gridLayout_4">
+              <item row="3" column="1">
+               <widget class="QLineEdit" name="lineEditPanTiltConfigFilename">
+                <property name="text">
+                 <string>JSystemsPanTilt.yml</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_8">
+                <property name="text">
+                 <string>IP address</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="lineEditPanTiltUsername">
+                <property name="text">
+                 <string>admin</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="lineEditPanTiltPassword">
+                <property name="inputMethodHints">
+                 <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText</set>
+                </property>
+                <property name="text">
+                 <string>admin</string>
+                </property>
+                <property name="echoMode">
+                 <enum>QLineEdit::Password</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLineEdit" name="lineEditPanTiltAddress">
+                <property name="inputMethodHints">
+                 <set>Qt::ImhUrlCharactersOnly</set>
+                </property>
+                <property name="text">
+                 <string>192.168.1.101:81</string>
+                </property>
+                <property name="echoMode">
+                 <enum>QLineEdit::Normal</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="text">
+                 <string>Username</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_10">
+                <property name="text">
+                 <string>Password</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_21">
+                <property name="text">
+                 <string>Config file</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="2">
+               <widget class="QPushButton" name="pushButtonLoadPanTiltConfigFile">
+                <property name="text">
+                 <string>Load</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <item>
+               <widget class="QPushButton" name="pushButtonStartPanTilt">
+                <property name="text">
+                 <string>Start</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonStopPanTilt">
+                <property name="text">
+                 <string>Stop</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </widget>
          <widget class="QWidget" name="tab">
           <attribute name="title">
            <string>Camera</string>
@@ -157,7 +271,7 @@
                </widget>
               </item>
               <item row="3" column="1">
-               <widget class="QLineEdit" name="lineEditConfigFilename">
+               <widget class="QLineEdit" name="lineEditCameraConfigFilename">
                 <property name="text">
                  <string>ActiCamera.yml</string>
                 </property>
@@ -191,100 +305,14 @@
                </widget>
               </item>
               <item>
+               <widget class="QPushButton" name="pushButtonSnapPhoto">
+                <property name="text">
+                 <string>Snap photo</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QPushButton" name="pushButtonStopCamera">
-                <property name="text">
-                 <string>Stop</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </widget>
-         <widget class="QWidget" name="tab_2">
-          <attribute name="title">
-           <string>Pan-Tilt</string>
-          </attribute>
-          <widget class="QWidget" name="verticalLayoutWidget_4">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>10</y>
-             <width>221</width>
-             <height>132</height>
-            </rect>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_6">
-            <item>
-             <layout class="QGridLayout" name="gridLayout_4">
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_10">
-                <property name="text">
-                 <string>Password</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_8">
-                <property name="text">
-                 <string>IP address</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="lineEditPanTiltUsername">
-                <property name="text">
-                 <string>admin</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="lineEditPanTiltAddress">
-                <property name="inputMethodHints">
-                 <set>Qt::ImhUrlCharactersOnly</set>
-                </property>
-                <property name="text">
-                 <string>192.168.1.101:81</string>
-                </property>
-                <property name="echoMode">
-                 <enum>QLineEdit::Normal</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_9">
-                <property name="text">
-                 <string>Username</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLineEdit" name="lineEditPanTiltPassword">
-                <property name="inputMethodHints">
-                 <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText</set>
-                </property>
-                <property name="text">
-                 <string>admin</string>
-                </property>
-                <property name="echoMode">
-                 <enum>QLineEdit::Password</enum>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_9">
-              <item>
-               <widget class="QPushButton" name="pushButtonStartPanTilt">
-                <property name="text">
-                 <string>Start</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButtonStopPanTilt">
                 <property name="text">
                  <string>Stop</string>
                 </property>
@@ -299,11 +327,460 @@
           <attribute name="title">
            <string>FoV</string>
           </attribute>
+          <widget class="QWidget" name="gridLayoutWidget_2">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>90</y>
+             <width>331</width>
+             <height>121</height>
+            </rect>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_2">
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_24">
+              <property name="text">
+               <string>Field of View</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_23">
+              <property name="text">
+               <string>2nd corner (deg)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="2">
+             <widget class="QPushButton" name="pushButtonCurrentAsViewFirstCorner">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Set</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QPushButton" name="pushButtonCurrentAsViewSecondCorner">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Set</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_22">
+              <property name="text">
+               <string>1st corner (deg)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="lineEditViewSecondCorner">
+              <property name="text">
+               <string>x2,y2</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="2">
+             <widget class="QPushButton" name="pushButtonCalculateFoV">
+              <property name="text">
+               <string>Recalculate</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLineEdit" name="lineEditFieldOfView_2">
+              <property name="text">
+               <string>HorFoV,VerFoV</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="lineEditViewFirstCorner">
+              <property name="text">
+               <string>x1,y1</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="gridLayoutWidget_3">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>10</y>
+             <width>331</width>
+             <height>80</height>
+            </rect>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_5">
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_26">
+              <property name="text">
+               <string>Tilt</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_25">
+              <property name="text">
+               <string>Pan</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QSlider" name="horizontalSliderPan">
+              <property name="minimum">
+               <number>-360</number>
+              </property>
+              <property name="maximum">
+               <number>360</number>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QSlider" name="horizontalSliderTilt">
+              <property name="minimum">
+               <number>-360</number>
+              </property>
+              <property name="maximum">
+               <number>360</number>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
          </widget>
          <widget class="QWidget" name="tab_3">
           <attribute name="title">
            <string>Panorama</string>
           </attribute>
+          <widget class="QWidget" name="gridLayoutWidget">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>351</width>
+             <height>330</height>
+            </rect>
+           </property>
+           <layout class="QGridLayout" name="gridLayout">
+            <item row="6" column="1">
+             <widget class="QLineEdit" name="lineEditPanoGridSize">
+              <property name="text">
+               <string>MxN</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_14">
+              <property name="text">
+               <string>1st corner (deg)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0">
+             <widget class="QLabel" name="label_17">
+              <property name="text">
+               <string>Pano grid size</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QLabel" name="label_18">
+              <property name="text">
+               <string>Pano folder</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QComboBox" name="comboBoxPanoScanOrder">
+              <item>
+               <property name="text">
+                <string>column wise</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>row wise</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_15">
+              <property name="text">
+               <string>2nd corner (deg)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="lineEditFieldOfView">
+              <property name="text">
+               <string>HorFoV,VerFoV</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="2">
+             <widget class="QPushButton" name="pushButtonPanoFolder">
+              <property name="text">
+               <string>Open</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLineEdit" name="lineEditPanoFirstCorner">
+              <property name="text">
+               <string>x1,y1</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_13">
+              <property name="text">
+               <string>Field of view</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLineEdit" name="lineEditPanoSecondCorner">
+              <property name="text">
+               <string>x2,y2</string>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="0">
+             <layout class="QHBoxLayout" name="horizontalLayout_8">
+              <item>
+               <widget class="QPushButton" name="pushButtonLoadPanoSettings">
+                <property name="text">
+                 <string>Load</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonSavePanoSettings">
+                <property name="text">
+                 <string>Save</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="8" column="1">
+             <widget class="QSpinBox" name="spinBoxPanoLoopPeriod">
+              <property name="minimum">
+               <number>5</number>
+              </property>
+              <property name="maximum">
+               <number>1440</number>
+              </property>
+              <property name="singleStep">
+               <number>5</number>
+              </property>
+              <property name="value">
+               <number>60</number>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="2">
+             <layout class="QHBoxLayout" name="horizontalLayout_6">
+              <item>
+               <widget class="QPushButton" name="pushButtonCurrentAsPanoSecondCorner">
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Set</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonGotoSecondCorner">
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Go</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="6" column="2">
+             <widget class="QPushButton" name="pushButton_2">
+              <property name="text">
+               <string>Recalculate</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="2">
+             <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <item>
+               <widget class="QPushButton" name="pushButtonCurrentAsPanoFirstCorner">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Set</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonGotoFirstCorner">
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Go</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="9" column="1">
+             <widget class="QPushButton" name="pushButtonTakeOnePano">
+              <property name="text">
+               <string>Take a panorama</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="1">
+             <widget class="QLineEdit" name="lineEditPanoFolder"/>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_16">
+              <property name="text">
+               <string>Scan order</string>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="2">
+             <widget class="QPushButton" name="pushButton">
+              <property name="text">
+               <string>Loop panorama</string>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="0">
+             <widget class="QLabel" name="label_20">
+              <property name="text">
+               <string>Loop (min)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QComboBox" name="comboBoxPanoOverlap">
+              <property name="currentIndex">
+               <number>5</number>
+              </property>
+              <item>
+               <property name="text">
+                <string>0</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>10</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>20</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>30</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>40</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>50</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>60</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>70</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>80</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>90</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_19">
+              <property name="text">
+               <string>Overlap (%)</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
          </widget>
          <widget class="QWidget" name="tab_4">
           <attribute name="title">
@@ -314,8 +791,8 @@
             <rect>
              <x>10</x>
              <y>10</y>
-             <width>291</width>
-             <height>241</height>
+             <width>331</width>
+             <height>321</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -382,16 +859,16 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_7">
            <item>
-            <widget class="QLabel" name="label">
+            <widget class="QLabel" name="labelPositions">
              <property name="text">
-              <string>Panorama Overview</string>
+              <string>Pan/tilt/zoom/focus positions</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QLabel" name="labelPositions">
+            <widget class="QLabel" name="label">
              <property name="text">
-              <string>Pan/tilt/zoom/focus positions</string>
+              <string>Current live view</string>
              </property>
             </widget>
            </item>

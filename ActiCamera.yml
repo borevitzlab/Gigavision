@@ -1,0 +1,39 @@
+#IPVAL: '192.168.1.100'
+#USERVAL: Admin
+#PASSVAL: '123456'
+
+ImageSizeList:
+- [1920, 1080]
+- [1280, 720]
+- [640, 480]
+Zoom_HorFoVList:  # In degrees
+ - [50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000]
+ - [71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126, 12.782, 9.217, 7.050, 5.824]
+Zoom_VirFoVList: # In degrees
+ - [50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000]
+ - [39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324, 7.7136, 4.787, 3.729, 2.448]
+ZoomListOut: [80, 336, 592, 848, 1104, 1360, 1616, 1872, 2128, 2384, 2520]
+ZoomVal: 800
+#FocusVal: 935
+#FocusMode: MANUAL
+URL_SetImageSize: IPVAL/cgi-bin/encoder?USER=USERVAL&PWD=PASSVAL&VIDEO_RESOLUTION=NWIDTHVALxHEIGHTVAL
+URL_SetZoom: IPVAL/cgi-bin/encoder?USER=USERVAL&PWD=PASSVAL&ZOOM=DIRECT,ZOOMVAL
+URL_SetFocus: IPVAL/cgi-bin/encoder?USER=USERVAL&PWD=PASSVAL&FOCUS=DIRECT,FOCUSVAL
+URL_SetFocusAuto: IPVAL/cgi-bin/encoder?USER=USERVAL&PWD=PASSVAL&FOCUS=AUTO
+URL_SetFocusManual: IPVAL/cgi-bin/encoder?USER=USERVAL&PWD=PASSVAL&FOCUS=MANUAL
+URL_GetImage: IPVAL/cgi-bin/encoder?USER=USERVAL&PWD=PASSVAL&SNAPSHOT
+URL_GetImageSize: IPVAL/cgi-bin/encoder?USER=USERVAL&PWD=PASSVAL&VIDEO_RESOLUTION
+URL_GetVideo: IPVAL/cgi-bin/encoder?USER=USERVAL&PWD=PASSVAL&GET_STREAM
+URL_GetZoom: IPVAL/cgi-bin/encoder?USER=USERVAL&PWD=PASSVAL&ZOOM_POSITION
+URL_GetFocus: IPVAL/cgi-bin/encoder?USER=USERVAL&PWD=PASSVAL&FOCUS_POSITION
+RET_GetImage: RAW_JPG ## need to parse binary JPG data like:
+                      # stream = urllib.urlopen(URL_GetImage)
+                      # byte_array = io.BytesIO(stream.read())
+                      # Image = np.array(PIL.Image.open(byte_array))
+RET_SetImageSize: 'OK: VIDEO_RESOLUTION=''N{}x{}'''
+RET_SetZoom: 'OK: OK: ZOOM=''DIRECT,{}'''
+RET_SetFocus: 'OK: FOCUS=''DIRECT,{}'''
+RET_GetImageSize: 'VIDEO_RESOLUTION=''N{}x{}'''
+RET_GetZoom: 'ZOOM_POSITION=''{}''' 
+RET_GetFocus: 'FOCUS_POSITION=''{}''' 
+

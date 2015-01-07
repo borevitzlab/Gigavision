@@ -1,0 +1,13 @@
+IPVAL: '192.168.1.101:81'
+USERVAL: admin
+PASSVAL: admin
+
+PanRange: [-2, 358]
+TiltRange: [-90, 30]
+PanTiltScale: 10.0
+
+URL_SetPanTilt: IPVAL/Bump.xml?GoToP=PANVAL&GoToT=TILTVAL
+URL_GetPanTilt: IPVAL/CP_Update.xml
+
+RET_GetPanTilt: '*<PanPos>{}</PanPos>*<TiltPos>{}</TiltPos>*'
+
