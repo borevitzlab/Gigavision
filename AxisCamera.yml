@@ -1,12 +1,12 @@
-IPVAL: '192.168.1.112'
+IPVAL: '192.168.1.114'
 USERVAL: root
 PASSVAL: admin
 
 # camera
 ImageSizeList:
-#- [1280, 720]
-#- [800, 450]
-#- [480, 270]
+- [1280, 720]
+- [800, 450]
+- [480, 270]
 - [320, 180]
 #URL_SetImageSize: IPVAL/axis-cgi/param.cgi?action=update&Image.I0.Resolution=WIDTHVALxHEIGHTVAL
 URL_SetZoom: IPVAL/axis-cgi/com/ptz.cgi?zoom=ZOOMVAL
@@ -31,6 +31,7 @@ RET_GetFocus: '*focus={}*'
 # pan and tilt
 PanRange: [-180, 180]
 TiltRange: [-90, 19]
+ZoomRange: [1, 18]
 URL_SetPan: IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL
 URL_SetTilt: IPVAL/axis-cgi/com/ptz.cgi?tilt=TILTVAL
 URL_SetPanTilt: IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL&tilt=TILTVAL
