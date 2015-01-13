@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>807</width>
-    <height>745</height>
+    <width>797</width>
+    <height>771</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
       <x>10</x>
       <y>10</y>
       <width>781</width>
-      <height>721</height>
+      <height>711</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
@@ -202,7 +202,7 @@
               <item row="1" column="0">
                <widget class="QLabel" name="label_6">
                 <property name="text">
-                 <string>User name</string>
+                 <string>Username</string>
                 </property>
                </widget>
               </item>
@@ -292,6 +292,13 @@
               </item>
               <item row="6" column="2">
                <widget class="QComboBox" name="comboBoxFocusMode"/>
+              </item>
+              <item row="5" column="2">
+               <widget class="QPushButton" name="pushButtonApplyZoom">
+                <property name="text">
+                 <string>Apply</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>
@@ -507,6 +514,13 @@
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout">
+            <item row="3" column="1">
+             <widget class="QLineEdit" name="lineEditPanoSecondCorner">
+              <property name="text">
+               <string>x2,y2</string>
+              </property>
+             </widget>
+            </item>
             <item row="6" column="1">
              <widget class="QLineEdit" name="lineEditPanoGridSize">
               <property name="text">
@@ -531,7 +545,7 @@
             <item row="7" column="0">
              <widget class="QLabel" name="label_18">
               <property name="text">
-               <string>Pano folder</string>
+               <string>Pano root folder</string>
               </property>
              </widget>
             </item>
@@ -564,7 +578,7 @@
              </widget>
             </item>
             <item row="7" column="2">
-             <widget class="QPushButton" name="pushButtonPanoFolder">
+             <widget class="QPushButton" name="pushButtonPanoRootFolder">
               <property name="text">
                <string>Open</string>
               </property>
@@ -584,46 +598,23 @@
               </property>
              </widget>
             </item>
-            <item row="3" column="1">
-             <widget class="QLineEdit" name="lineEditPanoSecondCorner">
-              <property name="text">
-               <string>x2,y2</string>
-              </property>
-             </widget>
-            </item>
             <item row="9" column="0">
              <layout class="QHBoxLayout" name="horizontalLayout_8">
               <item>
-               <widget class="QPushButton" name="pushButtonLoadPanoSettings">
+               <widget class="QPushButton" name="pushButtonLoadPanoConfig">
                 <property name="text">
                  <string>Load</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="pushButtonSavePanoSettings">
+               <widget class="QPushButton" name="pushButtonSavePanoConfig">
                 <property name="text">
                  <string>Save</string>
                 </property>
                </widget>
               </item>
              </layout>
-            </item>
-            <item row="8" column="1">
-             <widget class="QSpinBox" name="spinBoxPanoLoopPeriod">
-              <property name="minimum">
-               <number>5</number>
-              </property>
-              <property name="maximum">
-               <number>1440</number>
-              </property>
-              <property name="singleStep">
-               <number>5</number>
-              </property>
-              <property name="value">
-               <number>60</number>
-              </property>
-             </widget>
             </item>
             <item row="3" column="2">
              <layout class="QHBoxLayout" name="horizontalLayout_6">
@@ -698,18 +689,8 @@
               </item>
              </layout>
             </item>
-            <item row="9" column="1">
-             <widget class="QPushButton" name="pushButtonTakeOnePano">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="text">
-               <string>Take a panorama</string>
-              </property>
-             </widget>
-            </item>
             <item row="7" column="1">
-             <widget class="QLineEdit" name="lineEditPanoFolder"/>
+             <widget class="QLineEdit" name="lineEditPanoRootFolder"/>
             </item>
             <item row="5" column="0">
              <widget class="QLabel" name="label_16">
@@ -718,84 +699,145 @@
               </property>
              </widget>
             </item>
-            <item row="9" column="2">
-             <widget class="QPushButton" name="pushButtonLoopPanorama">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
+            <item row="8" column="2">
+             <layout class="QHBoxLayout" name="horizontalLayout_4">
+              <item>
+               <widget class="QSpinBox" name="spinBoxStartHour">
+                <property name="maximum">
+                 <number>23</number>
+                </property>
+                <property name="value">
+                 <number>7</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>to</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSpinBox" name="spinBoxEndHour">
+                <property name="maximum">
+                 <number>23</number>
+                </property>
+                <property name="value">
+                 <number>17</number>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_19">
               <property name="text">
-               <string>Loop panorama</string>
+               <string>Overlap (%)</string>
               </property>
              </widget>
             </item>
             <item row="8" column="0">
              <widget class="QLabel" name="label_20">
               <property name="text">
-               <string>Loop (min)</string>
+               <string>Loop every</string>
               </property>
              </widget>
+            </item>
+            <item row="8" column="1">
+             <layout class="QHBoxLayout" name="horizontalLayout_10">
+              <item>
+               <widget class="QSpinBox" name="spinBoxPanoLoopInterval">
+                <property name="maximumSize">
+                 <size>
+                  <width>45</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="minimum">
+                 <number>5</number>
+                </property>
+                <property name="maximum">
+                 <number>1440</number>
+                </property>
+                <property name="singleStep">
+                 <number>5</number>
+                </property>
+                <property name="value">
+                 <number>60</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_28">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>min, from</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="9" column="1">
+             <layout class="QHBoxLayout" name="horizontalLayout_12">
+              <item>
+               <widget class="QPushButton" name="pushButtonTakeOnePano">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Take one</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonLoopPanorama">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>Loop</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="9" column="2">
+             <layout class="QHBoxLayout" name="horizontalLayout_13">
+              <item>
+               <widget class="QPushButton" name="pushButtonPausePanorama">
+                <property name="text">
+                 <string>Pause</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonStopPanorama">
+                <property name="text">
+                 <string>Stop</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
             <item row="1" column="1">
-             <widget class="QComboBox" name="comboBoxPanoOverlap">
-              <property name="currentIndex">
+             <widget class="QSpinBox" name="spinBoxPanoOverlap">
+              <property name="singleStep">
                <number>5</number>
               </property>
-              <item>
-               <property name="text">
-                <string>0</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>10</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>20</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>30</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>40</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>50</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>60</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>70</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>80</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>90</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_19">
-              <property name="text">
-               <string>Overlap (%)</string>
+              <property name="value">
+               <number>50</number>
               </property>
              </widget>
             </item>
@@ -928,6 +970,8 @@
      </item>
     </layout>
    </widget>
+   <zorder>verticalLayoutWidget</zorder>
+   <zorder>label_20</zorder>
   </widget>
  </widget>
  <resources/>
