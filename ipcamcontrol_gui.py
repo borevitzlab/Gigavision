@@ -18,11 +18,17 @@ import urllib
 import io
 from datetime import datetime
 
+"""
+IPCAMCONTROL_GUI.PY controls ip cameras with pan-tilt-zoom features.
+Different cameras and pan-tilt unit need different config file in YAML format.
+See ActiCamera.yml, JSystem.yml and AxisCamera.yml for examples of config files
+"""
+
 
 def executeURL(URL_Str, RET_Str=None):
     if "http://" not in URL_Str:
         URL_Str = "http://" + URL_Str
-    print(URL_Str)
+#    print(URL_Str)
 #    print(RET_Str)
     if RET_Str is None:
         stream = urllib.urlopen(URL_Str)
@@ -132,11 +138,14 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.TopLeftCorner = []
         self.BottomRIghtCorner = []
         self.PanoImageNo = 0
+        self.PanoTotal = 0
         self.threadPool = []
         self.hasMJPGVideo = False
         self.PausePanorama = False
         self.StopPanorama = False
         self.PanoOverView = None
+        self.CamConfigUpdated = None
+        self.PanTiltConfigUpdated = None
 
     def applyZoom(self):
         Zoom = int(self.lineEditZoom.text())
@@ -188,7 +197,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.lineEditFieldOfView.setText("{},{}".format(HFoV, VFoV))
             self.lineEditFieldOfView_2.setText("{},{}".format(HFoV, VFoV))
         else:
-            print("Invalid selection of field of view")
+            print("Invalid selection of field of view ({}, {})".format(
+                HFoV, VFoV))
 
     def setCurrentAsFirstCorner(self):
         self.lineEditPanoFirstCorner.setText("{},{}".format(self.PanPos,
@@ -229,31 +239,28 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.BottomRightCorner = [RightPan, BottomTilt]
         self.PanoRows = int(round((TopTilt - BottomTilt)/self.VFoV/self.Overlap))
         self.PanoCols = int(round((RightPan - LeftPan)/self.HFoV/self.Overlap))
+        self.PanoTotal = self.PanoRows*self.PanoCols
         self.lineEditPanoGridSize.setText("{}x{}".format(
             self.PanoRows, self.PanoCols))
         if self.PanoRows >= 0 or self.PanoCols >= 0:
             self.pushButtonTakeOnePano.setEnabled(True)
             self.pushButtonLoopPanorama.setEnabled(True)
             Scale = 2
+            ImageWidthStr, ImageHeightStr = \
+                self.comboBoxImageSize.currentText().split(",")
+            self.ImageHeight = int(ImageHeightStr)
+            self.ImageWidth = int(ImageWidthStr)
             while Scale > 0:
-                ScaledHeight = int(Scale*self.Image.shape[0])
-                ScaledWidth = int(Scale*self.Image.shape[1])
+                ScaledHeight = int(Scale*self.ImageHeight)
+                ScaledWidth = int(Scale*self.ImageWidth)
                 if ScaledHeight*self.PanoRows <= 1080 and \
                         ScaledWidth*self.PanoCols <= 1920:
                     break
                 Scale = Scale - 0.001
-            print(ScaledHeight*self.PanoRows, ScaledWidth*self.PanoCols, Scale)
             self.PanoOverViewScale = Scale
-            self.PanoOverView = np.zeros_like(self.Image)
-            self.PanoOverView = np.resize(self.PanoOverView,
-                                          (ScaledHeight*self.PanoRows,
-                                           ScaledWidth*self.PanoCols,
-                                           self.Image.shape[2]))
-            # add lines shows rows and columns
-            for i in range(self.PanoCols):
-                self.PanoOverView[:, ScaledWidth*i: ScaledWidth*i+1, :] = 255
-            for j in range(self.PanoRows):
-                self.PanoOverView[ScaledHeight*j:ScaledHeight*j+1, :, :] = 255
+            self.PanoOverViewHeight = ScaledHeight*self.PanoRows
+            self.PanoOverViewWidth = ScaledWidth*self.PanoCols
+            self.initialisePanoOverView()
 
             self.updatePanoOverView()
 
@@ -324,7 +331,12 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.spinBoxStartHour.setValue(PanoConfigDic["PanoStartHour"])
             self.spinBoxEndHour.setValue(PanoConfigDic["PanoEndHour"])
 
-    def takeOnePanorama(self):
+    def takePanorama(self, IsOneTime=True):
+        if not self.initilisedCamera:
+            self.initCamera()
+        if not self.initilisedPanTilt:
+            self.initPanTilt()
+
         self.calculatePanoGrid()  # make sure everything is up-to-date
         self.PanoImageNo = 0
         if not os.path.exists(str(self.lineEditPanoRootFolder.text())):
@@ -332,14 +344,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
         self.PausePanorama = False
         self.StopPanorama = False
-        Now = datetime.now()
-        self.PanoFolder = os.path.join(str(self.lineEditPanoRootFolder.text()),
-                                       Now.strftime("%Y"),
-                                       Now.strftime("%Y_%m"),
-                                       Now.strftime("%Y_%m_%d"),
-                                       Now.strftime("%Y_%m_%d_%H"))
-        if not os.path.exists(self.PanoFolder):
-            os.makedirs(self.PanoFolder)
+
+        LoopInterval = 60*int(self.spinBoxPanoLoopInterval.text())
+        StartHour = self.spinBoxStartHour.value()
+        EndHour = self.spinBoxEndHour.value()
 
         createdPanoThread = False
         for i in range(len(self.threadPool)):
@@ -348,7 +356,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 if not self.threadPool[i].isRunning():
                     self.threadPool[i].run()
         if not createdPanoThread:
-            self.threadPool.append(PanoThread(self))
+            self.threadPool.append(PanoThread(self, IsOneTime, LoopInterval,
+                                              StartHour, EndHour))
             self.connect(self.threadPool[len(self.threadPool)-1],
                          QtCore.SIGNAL('PanoImageSnapped()'),
                          self.updatePanoImage)
@@ -361,20 +370,19 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.connect(self.threadPool[len(self.threadPool)-1],
                          QtCore.SIGNAL('PanoThreadDone()'),
                          self.activateLiveView)
+            self.connect(self.threadPool[len(self.threadPool)-1],
+                         QtCore.SIGNAL('OnePanoStarted()'),
+                         self.initialisePanoOverView)
+            self.connect(self.threadPool[len(self.threadPool)-1],
+                         QtCore.SIGNAL('OnePanoDone()'),
+                         self.savePanoOverView)
             self.threadPool[len(self.threadPool)-1].start()
 
+    def takeOnePanorama(self):
+        self.takePanorama(IsOneTime=True)
+
     def loopPanorama(self):
-        self.PausePanorama = False
-        self.StopPanorama = False
-        while not self.StopPanorama:
-            while self.PausePanorama:
-                time.sleep(30)
-            LoopInterval = int(self.spinBoxPanoLoopInterval.text())
-            StartHour = int(self.spinBoxStartHour.currentText())
-            EndHour = int(self.spinBoxEndHour.currentText())
-            Now = datetime.now()
-            if Now.hour >= StartHour and Now.hour > EndHour:
-                self.takeOnePanorama()
+        self.takePanorama(IsOneTime=False)
 
     def pausePanorama(self):
         self.PausePanorama = not(self.PausePanorama)
@@ -393,16 +401,23 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonTakeOnePano.setEnabled(True)
         self.pushButtonLoopPanorama.setEnabled(True)
 
-        if self.PanoOverView is not None:
-            FileName = os.path.join(self.PanoFolder, "_data",
-                                    "PanoOverView.jpg")
-            misc.imsave(FileName, self.PanoOverView)
+        # update current pan-tilt position
+        self.horizontalSliderPan.setValue(int(self.PanPosDesired))
+        self.horizontalSliderTilt.setValue(int(self.TiltPosDesired))
 
     def deactivateLiveView(self):
         self.stopPanTilt()
         self.stopCamera()
         self.pushButtonTakeOnePano.setEnabled(False)
         self.pushButtonLoopPanorama.setEnabled(False)
+
+#        for i in range(len(self.threadPool)):
+#            print(self.threadPool[i].Name)
+#            if self.threadPool[i].Name == "PanoThread":
+##                self.threadPool[i].stop()
+#                self.threadPool[i].wait()
+#                del self.threadPool[i]
+#                break
 
     def updatePanoImage(self):
         self.updateImage()
@@ -423,6 +438,35 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
         self.PanoImageNo += 1
 
+    def initialisePanoOverView(self):
+        ScaledHeight = int(self.PanoOverViewScale*self.ImageHeight)
+        ScaledWidth = int(self.PanoOverViewScale*self.ImageWidth)
+        self.PanoOverView = np.zeros((self.PanoOverViewHeight,
+                                      self.PanoOverViewWidth, 3),
+                                     dtype=np.uint8)
+        # add lines shows rows and columns
+        for i in range(self.PanoCols):
+            self.PanoOverView[:, ScaledWidth*i: ScaledWidth*i+1, :] = 255
+        for j in range(self.PanoRows):
+            self.PanoOverView[ScaledHeight*j:ScaledHeight*j+1, :, :] = 255
+
+    def savePanoOverView(self):
+        try:
+            # try saving PanoOverView
+            DataFolder = os.path.join(self.PanoFolder, "_data")
+            if not os.path.exists(DataFolder):
+                os.mkdir(DataFolder)
+            Prefix = "PanoOverView"
+            Now = datetime.now()
+            FileName = os.path.join(DataFolder,
+                                    "{}_{}_00_00.jpg".format(
+                                        Prefix,
+                                        Now.strftime("%Y_%m_%d_%H_%M")))
+            misc.imsave(FileName, self.PanoOverView)
+        except:
+            print("Cannot save PanoOverView")
+
+
     def setPan(self, Pan):
         self.setPanTilt(Pan, self.TiltPosDesired)
 
@@ -430,9 +474,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.setPanTilt(self.PanPosDesired, Tilt)
 
     def setZoom2(self, Zoom):
-        self.setZoom(Zoom)
-        self.lineEditZoom.setText(str(Zoom))
-        self.updateFoVFromZoom(Zoom)
+        if self.CamConfigUpdated is not None:
+            self.setZoom(Zoom)
+            self.lineEditZoom.setText(str(Zoom))
+            self.updateFoVFromZoom(Zoom)
 
     def updateFoVFromZoom(self, Zoom):
         if "Zoom_HorFoVList" in self.CamConfigUpdated.keys():
@@ -447,8 +492,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.lineEditFieldOfView.setText("{},{}".format(self.HFoV, self.VFoV))
             self.lineEditFieldOfView_2.setText("{},{}".format(self.HFoV, self.VFoV))
 
-    def setPanTilt(self, Pan, Tilt, Verified=False):
-        print("Call setPanTilt ({},{})".format(Pan, Tilt))
+    def setPanTilt(self, Pan, Tilt):
         if "PanTiltScale" in self.PanTiltConfigUpdated.keys():
             # this is for Acti camera
             PanTiltScale = self.PanTiltConfigUpdated["PanTiltScale"]
@@ -462,7 +506,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         URL = URL.replace("TILTVAL", TILTVAL)
         executeURL(URL)
 
-        if Verified:
+        if self.PanTiltConfigUpdated["Type"] == "ServoMotors":
             NoLoops = 0
             # loop until within 1 degree
             while True:
@@ -471,7 +515,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 TiltDiff = int(abs(float(TiltCur) - float(Tilt)))
                 if PanDiff <= 1 and TiltDiff <= 1:
                     break
-                time.sleep(0.1)
+                time.sleep(0.2)
                 NoLoops += 1
                 if NoLoops > 50:
                     print("Warning: pan-tilt fails to move to correct location")
@@ -492,15 +536,21 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 else:
                     PanDiff = PanDiffNew
                     TiltDiff = TiltDiffNew
-                time.sleep(0.1)
+                time.sleep(0.2)
                 NoLoops += 1
                 if NoLoops > 50:
                     break
+            self.PanPos, self.TiltPos = PanPos, TiltPos
+            # TODO: check if this is necessary
+            time.sleep(2)  # Acti camera need this extra time
+        else:
+            PanCur, TiltCur = self.getPanTilt()
+            self.PanPos, self.TiltPos = PanCur, TiltCur
+            time.sleep(0.2)  # Acti camera need this extra time
 
         self.PanPosDesired = float(Pan)
         self.TiltPosDesired = float(Tilt)
-        self.horizontalSliderPan.setValue(int(self.PanPosDesired))
-        self.horizontalSliderTilt.setValue(int(self.TiltPosDesired))
+        self.updatePositions()
 
     def getPanTilt(self):
         URL = self.PanTiltConfigUpdated["URL_GetPanTilt"]
@@ -633,8 +683,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 text = text.replace("IPVAL", self.CameraIP)
                 text = text.replace("USERVAL", self.CameraUsername)
                 text = text.replace("PASSVAL", self.CameraPassword)
-                text = text.replace("WIDTHVAL", str(self.ImageSize[0]))
-                text = text.replace("HEIGHTVAL", str(self.ImageSize[1]))
+                text = text.replace("WIDTHVAL", str(self.ImageWidth))
+                text = text.replace("HEIGHTVAL", str(self.ImageHeight))
                 self.CamConfigUpdated[Key] = text
             else:
                 self.CamConfigUpdated[Key] = self.CamConfig[Key]
@@ -646,8 +696,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.CameraIP = self.lineEditIPCamAddress.text()
         self.CameraUsername = self.lineEditIPCamUsername.text()
         self.CameraPassword = self.lineEditIPCamPassword.text()
-        ImageSizeQStr = self.comboBoxImageSize.currentText()
-        self.ImageSize = [int(size) for size in str(ImageSizeQStr).split(",")]
+        ImageWidthStr, ImageHeightStr = \
+            self.comboBoxImageSize.currentText().split(",")
+        self.ImageHeight = int(ImageHeightStr)
+        self.ImageWidth = int(ImageWidthStr)
         self.updateCameraURLs()
         if "URL_Login" in self.CamConfigUpdated.keys():
             URL_Str = self.CamConfigUpdated["URL_Login"]
@@ -666,6 +718,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         if len(Focus) > 0 and int(Focus) != self.FocusPos:
             self.Camera.setFocusPosition(int(Focus))
 
+        self.Image = self.snapPhoto().next()
+        self.updateImage()
         self.updatePositions()
         self.updateFoVFromZoom(Zoom)
         self.initilisedCamera = True
@@ -709,13 +763,15 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             URL_Str = self.PanTiltConfigUpdated["URL_Login"]
             executeURL(URL_Str)
 
-        self.textEditMessages.append("Initialised pan-tilt.")
         PanPosStr, TiltPosStr = self.getPanTilt()
+        self.setPanTilt(float(PanPosStr), float(TiltPosStr))
+        time.sleep(1)  # make sure it wakes up
         self.PanPosDesired = float(PanPosStr)
         self.TiltPosDesired = float(TiltPosStr)
         self.horizontalSliderPan.setValue(int(self.PanPosDesired))
         self.horizontalSliderTilt.setValue(int(self.TiltPosDesired))
         self.initilisedPanTilt = True
+        self.textEditMessages.append("Initialised pan-tilt.")
 
     def startPanTilt(self):
         if not self.initilisedPanTilt:
@@ -766,9 +822,14 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 #                QtCore.QRect(0, 0, Image.shape[1], Image.shape[0]))
 
     def updatePositions(self):
-        self.labelPositions.setText(
-            "P={}, T={}, Z={}, F={}".format(
-                self.PanPos, self.TiltPos, self.ZoomPos, self.FocusPos))
+        self.labelPositions.setText("P={}, T={}, Z={}, F={}".format(
+            self.PanPos, self.TiltPos, self.ZoomPos, self.FocusPos))
+        if self.PanoImageNo > 0:
+            self.labelCurrentLiveView.setText(
+                "Current image of {}/{} ".format(self.PanoImageNo,
+                                                           self.PanoTotal))
+        else:
+            self.labelCurrentLiveView.setText("Current live view")
 
     def updatePanTiltInfo(self, PanTiltPos):
         self.PanPos, self.TiltPos = PanTiltPos.split(",")
@@ -839,7 +900,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 print("Pan/tilt camera {},{} degrees".format(dp, dt))
                 self.PanPosDesired = self.PanPosDesired - dp
                 self.TiltPosDesired = self.TiltPosDesired + dt
-                self.setPanTilt(self.PanPosDesired, self.TiltPosDesired)
+                self.setPanTilt(self.PanPosDesired, self.TiltPosDesired,
+                                "Called from mouseReleaseEvent")
 
 
 class CameraThread(QtCore.QThread):
@@ -864,7 +926,7 @@ class CameraThread(QtCore.QThread):
         for Image in ImageSource:
             if self.stopped:
                 break
-            time.sleep(0.3)  # time delay between queries
+            time.sleep(0.5)  # time delay between queries
             self.emit(QtCore.SIGNAL('ImageSnapped()'))
             ZoomPos = self.Pano.getZoom()
             FocusPos = self.Pano.getFocus()
@@ -893,7 +955,7 @@ class PanTiltThread(QtCore.QThread):
         print("Started {}".format(self.Name))
         self.stopped = False
         while not self.stopped:
-            time.sleep(0.3)  # time delay between queries
+            time.sleep(0.5)  # time delay between queries
             PanPos, TiltPos = self.Pano.getPanTilt()
             self.emit(QtCore.SIGNAL('PanTiltPos(QString)'),
                       "{},{}".format(PanPos, TiltPos))
@@ -906,9 +968,13 @@ class PanTiltThread(QtCore.QThread):
 
 
 class PanoThread(QtCore.QThread):
-    def __init__(self, Pano):
+    def __init__(self, Pano, IsOneTime=True, LoopInterval=60, StartHour=0, EndHour=0):
         QtCore.QThread.__init__(self)
         self.Pano = Pano
+        self.IsOneTime = IsOneTime
+        self.LoopInterval = LoopInterval
+        self.StartHour = StartHour
+        self.EndHour = EndHour
         self.NoImages = 0
         self.Name = "PanoThread"
         self.stopped = False
@@ -917,58 +983,91 @@ class PanoThread(QtCore.QThread):
     def __del__(self):
         self.wait()
 
+    def _moveAndSnap(self, iCol, jRow):
+        self.Pano.setPanTilt(
+            self.Pano.TopLeftCorner[0] + iCol*self.Pano.HFoV*self.Pano.Overlap,
+            self.Pano.TopLeftCorner[1] - jRow*self.Pano.VFoV*self.Pano.Overlap)
+        PanPos, TiltPos = self.Pano.getPanTilt()
+        while True:
+            Image = self.Pano.snapPhoto().next()
+            if Image is not None:
+                break
+            else:
+                print("Try recapturing image")
+        ScaledHeight = int(self.Pano.PanoOverViewScale*self.Pano.ImageHeight)
+        ScaledWidth = int(self.Pano.PanoOverViewScale*self.Pano.ImageWidth)
+        ImageResized = misc.imresize(Image,
+                                     (ScaledHeight, ScaledWidth,
+                                      Image.shape[2]))
+        self.Pano.PanoOverView[
+            ScaledHeight*jRow:ScaledHeight*(jRow+1),
+            ScaledWidth*iCol:ScaledWidth*(iCol+1), :] = ImageResized
+        self.emit(QtCore.SIGNAL('PanTiltPos(QString)'),
+                  "{},{}".format(PanPos, TiltPos))
+        self.emit(QtCore.SIGNAL('PanoImageSnapped()'))
+
     def run(self):
         print("Started {}".format(self.Name))
         self.emit(QtCore.SIGNAL('PanoThreadStarted()'))
         self.stopped = False
-        ScaledHeight = int(self.Pano.PanoOverViewScale*self.Pano.Image.shape[0])
-        ScaledWidth = int(self.Pano.PanoOverViewScale*self.Pano.Image.shape[1])
 
-        def acquireImage(i, j):
-#            # Verified=True for JSystem pan tilt
-#            self.Pano.setPanTilt(
-#                self.Pano.TopLeftCorner[0] + i*self.Pano.HFoV*self.Pano.Overlap,
-#                self.Pano.TopLeftCorner[1] - j*self.Pano.VFoV*self.Pano.Overlap,
-#                Verified=True)
-            print("i=", i, self.Pano.HFoV, self.Pano.Overlap)
-            print("j=", j, self.Pano.VFoV, self.Pano.Overlap)
-            self.Pano.setPanTilt(
-                self.Pano.TopLeftCorner[0] + i*self.Pano.HFoV*self.Pano.Overlap,
-                self.Pano.TopLeftCorner[1] - j*self.Pano.VFoV*self.Pano.Overlap)
-            time.sleep(2) # need this extra time
-            while True:
-                Image = self.Pano.snapPhoto().next()
-                if Image is not None:
-                    break
+        while not self.Pano.StopPanorama:
+            while self.Pano.PausePanorama:
+                time.sleep(5)
+            Start = datetime.now()
+            IgnoreHourRange = (self.StartHour == self.EndHour)
+            WithinHourRange = (Start.hour >= self.StartHour and \
+                               Start.hour < self.EndHour)
+            if self.IsOneTime or IgnoreHourRange or WithinHourRange:
+                PanoRootFolder = str(self.Pano.lineEditPanoRootFolder.text())
+                self.Pano.PanoFolder = os.path.join(PanoRootFolder,
+                                                    Start.strftime("%Y"),
+                                                    Start.strftime("%Y_%m"),
+                                                    Start.strftime("%Y_%m_%d"),
+                                                    Start.strftime("%Y_%m_%d_%H"))
+                if not os.path.exists(self.Pano.PanoFolder):
+                    os.makedirs(self.Pano.PanoFolder)
+
+                self.emit(QtCore.SIGNAL('OnePanoStarted()'))
+                self.Pano.PanoImageNo = 0
+                if str(self.Pano.comboBoxPanoScanOrder.currentText()) == \
+                        "column wise":
+                    for i in range(self.Pano.PanoCols):
+                        for j in range(self.Pano.PanoRows):
+                            while self.Pano.PausePanorama:
+                                time.sleep(5)
+                            if self.stopped or self.Pano.StopPanorama:
+                                break
+                            self._moveAndSnap(i, j)
+                else:  # row wise
+                    for j in range(self.Pano.PanoRows):
+                        for i in range(self.Pano.PanoCols):
+                            while self.Pano.PausePanorama:
+                                time.sleep(5)
+                            if self.stopped or self.Pano.StopPanorama:
+                                break
+                            self._moveAndSnap(i, j)
+                self.Pano.PanoImageNo = 0
+                self.emit(QtCore.SIGNAL('OnePanoDone()'))
+
+            elif not IgnoreHourRange and not WithinHourRange:
+                print("Outside hour range ({} to {})".format(self.StartHour,
+                                                             self.EndHour))
+
+            if self.IsOneTime:
+                break
+            else:
+                End = datetime.now()
+                Elapse = End - Start
+                ElapseSeconds = Elapse.days*86400 + Elapse.seconds
+                if self.LoopInterval > ElapseSeconds:
+                    WaitTime = self.LoopInterval - ElapseSeconds
                 else:
-                    print("Try recapturing image")
-            PanPos, TiltPos = self.Pano.getPanTilt()
-            ImageResized = misc.imresize(Image,
-                                         (ScaledHeight, ScaledWidth,
-                                          Image.shape[2]))
-            self.Pano.PanoOverView[
-                ScaledHeight*j:ScaledHeight*(j+1),
-                ScaledWidth*i: ScaledWidth*(i+1), :] = ImageResized
-            self.emit(QtCore.SIGNAL('PanTiltPos(QString)'),
-                      "{},{}".format(PanPos, TiltPos))
-            self.emit(QtCore.SIGNAL('PanoImageSnapped()'))
-
-        if str(self.Pano.comboBoxPanoScanOrder.currentText()) == "column wise":
-            for i in range(self.Pano.PanoCols):
-                for j in range(self.Pano.PanoRows):
-                    while self.Pano.PausePanorama:
-                        time.sleep(5)
-                    if self.stopped or self.Pano.StopPanorama:
-                        break
-                    acquireImage(i, j)
-        else:  # row wise
-            for j in range(self.Pano.PanoRows):
-                for i in range(self.Pano.PanoCols):
-                    while self.Pano.PausePanorama:
-                        time.sleep(30)
-                    if self.stopped or self.Pano.StopPanorama:
-                        break
-                    acquireImage(i, j)
+                    print("Warning: it takes more time than loop interval")
+                    WaitTime = 0
+                print("It's {}.".format(End.strftime("%H:%M"))),
+                print("Wait for {} minutes before start.".format(WaitTime/60))
+                time.sleep(WaitTime)
 
         self.emit(QtCore.SIGNAL('PanoThreadDone()'))
         return

@@ -29,6 +29,7 @@ RET_GetZoom: '*zoom={}*'
 RET_GetFocus: '*focus={}*'
 
 # pan and tilt
+Type: StepperMotors
 PanRange: [-180, 180]
 TiltRange: [-90, 19]
 ZoomRange: [1, 9999]

@@ -2,6 +2,7 @@ IPVAL: '192.168.1.101:81'
 USERVAL: admin
 PASSVAL: admin
 
+Type: ServoMotors
 PanRange: [-2, 358]
 TiltRange: [-90, 30]
 PanTiltScale: 10.0

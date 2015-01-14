@@ -1,0 +1,3 @@
+{1stCorner: '87,0', 2ndCorner: '180,-22', FieldOfView: '4.4,2.5', Overlap: 50, PanoEndHour: 18,
+  PanoGridSize: 18x47, PanoLoopInterval: 30, PanoRootFolder: /home/chuong/Data/a_data/Gigavision/chuong_tests,
+  PanoStartHour: 7, ScanOrder: column wise}

@@ -921,7 +921,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_7">
            <item>
-            <widget class="QLabel" name="label">
+            <widget class="QLabel" name="labelCurrentLiveView">
              <property name="text">
               <string>Current live view</string>
              </property>
@@ -970,8 +970,6 @@
      </item>
     </layout>
    </widget>
-   <zorder>verticalLayoutWidget</zorder>
-   <zorder>label_20</zorder>
   </widget>
  </widget>
  <resources/>
