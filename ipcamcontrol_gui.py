@@ -340,7 +340,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.calculatePanoGrid()  # make sure everything is up-to-date
         self.PanoImageNo = 0
         if not os.path.exists(str(self.lineEditPanoRootFolder.text())):
-            self.lineEditPanoRootFolder.setText(self.selectPanoRootFolder())
+            self.selectPanoRootFolder()
 
         self.PausePanorama = False
         self.StopPanorama = False
