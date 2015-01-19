@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function
 import sys
 import time
 from PyQt4 import QtGui, QtCore, uic
+from functools import partial
 import yaml
 import os
 import numpy as np
@@ -23,7 +24,6 @@ IPCAMCONTROL_GUI.PY controls ip cameras with pan-tilt-zoom features.
 Different cameras and pan-tilt unit need different config file in YAML format.
 See ActiCamera.yml, JSystem.yml and AxisCamera.yml for examples of config files
 """
-
 
 def executeURL(URL_Str, RET_Str=None):
     if "http://" not in URL_Str:
@@ -76,6 +76,7 @@ def executeURL(URL_Str, RET_Str=None):
 #        print(Vals)
         return Vals
 
+
 form_class = uic.loadUiType("controller2.ui")[0]
 
 
@@ -92,6 +93,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
         # Camera tab
         self.pushButtonStartCamera.clicked.connect(self.startCamera)
+        self.lineEditZoom.textChanged.connect(self.lineEditZoom2.setText)
         self.pushButtonApplyZoom.clicked.connect(self.applyZoom)
         self.pushButtonSnapPhoto.clicked.connect(self.snapPhoto)
         self.pushButtonStopCamera.clicked.connect(self.stopCamera)
@@ -109,18 +111,25 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonCalculateFoV.clicked.connect(self.calculateFoV)
 
         # panorama tab
+        self.lineEditZoom2.textChanged.connect(self.lineEditZoom.setText)
         self.pushButtonCurrentAsPanoFirstCorner.clicked.connect(
             self.setCurrentAsFirstCorner)
         self.pushButtonGotoFirstCorner.clicked.connect(
             self.gotoFirstCorner)
         self.pushButtonCurrentAsPanoSecondCorner.clicked.connect(
             self.setCurrentAsSecondCorner)
+        ScanOrders = ["Cols, right", "Cols, left", "Rows, down", "Rows, up"]
+        for ScanOrder in ScanOrders:
+            self.comboBoxPanoScanOrder.addItem(ScanOrder)
         self.pushButtonGotoSecondCorner.clicked.connect(
             self.gotoSecondCorner)
+        self.pushButtonExplainScanOrder.clicked.connect(self.explaintScanOrders)
         self.pushButtonCalculatePanoGrid.clicked.connect(self.calculatePanoGrid)
         self.pushButtonPanoRootFolder.clicked.connect(self.selectPanoRootFolder)
-        self.pushButtonLoadPanoConfig.clicked.connect(self.loadPanoConfig)
-        self.pushButtonSavePanoConfig.clicked.connect(self.savePanoConfig)
+        self.pushButtonLoadPanoConfig.clicked.connect(
+            partial(self.loadPanoConfig, None))
+        self.pushButtonSavePanoConfig.clicked.connect(
+            partial(self.savePanoConfig, None))
         self.pushButtonTakeOnePano.clicked.connect(self.takeOnePanorama)
         self.pushButtonLoopPanorama.clicked.connect(self.loopPanorama)
         self.pushButtonPausePanorama.clicked.connect(self.pausePanorama)
@@ -216,6 +225,23 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         PANVAL, TILTVAL = self.lineEditPanoSecondCorner.text().split(",")
         self.setPanTilt(PANVAL, TILTVAL)
 
+    def explaintScanOrders(self):
+        class MyDialog(QtGui.QDialog):
+            def __init__(self, parent=None):
+                super(MyDialog, self).__init__(parent)
+
+                pic = QtGui.QLabel(self)
+                try:
+                    pixmap = QtGui.QPixmap("ScanOrders.png")
+                    pic.setGeometry(0, 0, pixmap.width(), pixmap.height())
+                    pic.setPixmap(pixmap)
+                except:
+                    print("Failed to load ScanOrders.png")
+
+        dialog = MyDialog(self)
+        dialog.setWindowTitle('Scanning orders')
+        dialog.show()
+
     def calculatePanoGrid(self):
         Pan0, Tilt0 = self.lineEditPanoFirstCorner.text().split(",")
         Pan1, Tilt1 = self.lineEditPanoSecondCorner.text().split(",")
@@ -283,10 +309,21 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         if len(Folder) > 0:
             self.lineEditPanoRootFolder.setText(Folder)
 
-    def savePanoConfig(self):
+    def savePanoConfig(self, FileName=None):
+        if FileName is None:
+            FileName = QtGui.QFileDialog.getSaveFileName(
+                self, "Save config", os.path.curdir, "YAML Files (*.yml)")
+            if len(FileName) == 0:
+                return
+
         PanoConfigDic = {}
+        PanoConfigDic["CameraConfigFile"] = \
+            str(self.lineEditCameraConfigFilename.text())
+        PanoConfigDic["PanTiltConfigFile"] = \
+            str(self.lineEditPanTiltConfigFilename.text())
         PanoConfigDic["FieldOfView"] = str(self.lineEditFieldOfView.text())
         PanoConfigDic["Overlap"] = self.spinBoxPanoOverlap.value()
+        PanoConfigDic["Zoom"] = int(self.lineEditZoom.text())
         PanoConfigDic["1stCorner"] = str(self.lineEditPanoFirstCorner.text())
         PanoConfigDic["2ndCorner"] = str(self.lineEditPanoSecondCorner.text())
         PanoConfigDic["ScanOrder"] = str(self.comboBoxPanoScanOrder.currentText())
@@ -295,28 +332,38 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         PanoConfigDic["PanoLoopInterval"] = self.spinBoxPanoLoopInterval.value()
         PanoConfigDic["PanoStartHour"] = self.spinBoxStartHour.value()
         PanoConfigDic["PanoEndHour"] = self.spinBoxEndHour.value()
-        FileName = QtGui.QFileDialog.getSaveFileName(
-            self, "Save config", os.path.curdir, "YAML Files (*.yml)")
-        if len(FileName) == 0:
-            return
+
         with open(FileName, 'w') as YAMLFile:
-            YAMLFile.write(yaml.dump(PanoConfigDic, default_flow_style=True))
+            YAMLFile.write(yaml.dump(PanoConfigDic, default_flow_style=False))
             self.textEditMessages.append("Saved {}:".format(FileName))
             self.textEditMessages.append("----------")
             self.textEditMessages.append(yaml.dump(self.PanTiltConfig))
 
-    def loadPanoConfig(self):
-        FileName = QtGui.QFileDialog.getOpenFileName(
-            self, "Load config", os.path.curdir, "YAML Files (*.yml)")
-        if len(FileName) == 0:
-            return
+    def loadPanoConfig(self, FileName=None):
+        if FileName is None:
+            FileName = QtGui.QFileDialog.getOpenFileName(
+                self, "Load config", os.path.curdir, "YAML Files (*.yml)")
+            if len(FileName) == 0:
+                return
+
         with open(FileName, 'r') as YAMLFile:
             PanoConfigDic = yaml.load(YAMLFile)
             self.textEditMessages.append("Loaded {}:".format(FileName))
             self.textEditMessages.append("----------")
-            self.textEditMessages.append(yaml.dump(self.PanTiltConfig))
+            self.textEditMessages.append(yaml.dump(PanoConfigDic))
+
+            if "CameraConfigFile" in PanoConfigDic.keys():
+                self.lineEditCameraConfigFilename.setText(
+                    PanoConfigDic["CameraConfigFile"])
+                self.loadCameraConfig()
+            if "PanTiltConfigFile" in PanoConfigDic.keys():
+                self.lineEditPanTiltConfigFilename.setText(
+                    str(PanoConfigDic["PanTiltConfigFile"]))
+                self.loadPanTiltConfig()
+
             self.lineEditFieldOfView.setText(PanoConfigDic["FieldOfView"])
             self.spinBoxPanoOverlap.setValue(PanoConfigDic["Overlap"])
+            self.lineEditZoom.setText(str(PanoConfigDic["Zoom"]))
             self.lineEditPanoFirstCorner.setText(PanoConfigDic["1stCorner"])
             self.lineEditPanoSecondCorner.setText(PanoConfigDic["2ndCorner"])
             Index = self.comboBoxPanoScanOrder.findText(PanoConfigDic["ScanOrder"])
@@ -449,6 +496,14 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.PanoOverView[:, ScaledWidth*i: ScaledWidth*i+1, :] = 255
         for j in range(self.PanoRows):
             self.PanoOverView[ScaledHeight*j:ScaledHeight*j+1, :, :] = 255
+        try:
+            # try saving panorama config
+            DataFolder = os.path.join(self.PanoFolder, "_data")
+            if not os.path.exists(DataFolder):
+                os.mkdir(DataFolder)
+            self.savePanoConfig(os.path.join(DataFolder, "PanoConfig.yml"))
+        except:
+            print("Cannot save PanoConfig.yml")
 
     def savePanoOverView(self):
         try:
@@ -464,8 +519,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                                         Now.strftime("%Y_%m_%d_%H_%M")))
             misc.imsave(FileName, self.PanoOverView)
         except:
-            print("Cannot save PanoOverView")
-
+            print("Cannot save PanoOverView image")
 
     def setPan(self, Pan):
         self.setPanTilt(Pan, self.TiltPosDesired)
@@ -841,7 +895,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
     def keyPressEvent(self, event):
         Key = event.key()
-        print("Key = {}".format(Key))
+#        print("Key = {}".format(Key))
         if Key == QtCore.Qt.Key_Escape:
             self.close()
         elif Key == QtCore.Qt.DownArrow:
@@ -983,11 +1037,13 @@ class PanoThread(QtCore.QThread):
     def __del__(self):
         self.wait()
 
-    def _moveAndSnap(self, iCol, jRow):
+    def _moveAndSnap(self, iCol, jRow, DelaySeconds=0):
         self.Pano.setPanTilt(
             self.Pano.TopLeftCorner[0] + iCol*self.Pano.HFoV*self.Pano.Overlap,
             self.Pano.TopLeftCorner[1] - jRow*self.Pano.VFoV*self.Pano.Overlap)
         PanPos, TiltPos = self.Pano.getPanTilt()
+        if DelaySeconds != 0:
+            time.sleep(DelaySeconds)
         while True:
             Image = self.Pano.snapPhoto().next()
             if Image is not None:
@@ -1015,7 +1071,7 @@ class PanoThread(QtCore.QThread):
             while self.Pano.PausePanorama:
                 time.sleep(5)
             Start = datetime.now()
-            IgnoreHourRange = (self.StartHour == self.EndHour)
+            IgnoreHourRange = (self.StartHour >= self.EndHour)
             WithinHourRange = (Start.hour >= self.StartHour and \
                                Start.hour < self.EndHour)
             if self.IsOneTime or IgnoreHourRange or WithinHourRange:
@@ -1030,23 +1086,52 @@ class PanoThread(QtCore.QThread):
 
                 self.emit(QtCore.SIGNAL('OnePanoStarted()'))
                 self.Pano.PanoImageNo = 0
-                if str(self.Pano.comboBoxPanoScanOrder.currentText()) == \
-                        "column wise":
+                ScanOrder = str(self.Pano.comboBoxPanoScanOrder.currentText())
+                DelaySeconds = 1  # delay to reduce blurring
+                if ScanOrder == "Cols, right":
                     for i in range(self.Pano.PanoCols):
                         for j in range(self.Pano.PanoRows):
                             while self.Pano.PausePanorama:
                                 time.sleep(5)
                             if self.stopped or self.Pano.StopPanorama:
                                 break
-                            self._moveAndSnap(i, j)
-                else:  # row wise
+                            if j == 0:
+                                self._moveAndSnap(i, j, DelaySeconds)
+                            else:
+                                self._moveAndSnap(i, j)
+                elif ScanOrder == "Cols, left":
+                    for i in range(self.Pano.PanoCols-1, -1, -1):
+                        for j in range(self.Pano.PanoRows):
+                            while self.Pano.PausePanorama:
+                                time.sleep(5)
+                            if self.stopped or self.Pano.StopPanorama:
+                                break
+                            if j == 0:
+                                self._moveAndSnap(i, j, DelaySeconds)
+                            else:
+                                self._moveAndSnap(i, j)
+                elif ScanOrder == "Rows, down":
                     for j in range(self.Pano.PanoRows):
                         for i in range(self.Pano.PanoCols):
                             while self.Pano.PausePanorama:
                                 time.sleep(5)
                             if self.stopped or self.Pano.StopPanorama:
                                 break
-                            self._moveAndSnap(i, j)
+                            if i == 0:
+                                self._moveAndSnap(i, j, DelaySeconds)
+                            else:
+                                self._moveAndSnap(i, j)
+                else:  # ScanOrder == "Rows, up"
+                    for j in range(self.Pano.PanoRows-1, -1, -1):
+                        for i in range(self.Pano.PanoCols):
+                            while self.Pano.PausePanorama:
+                                time.sleep(5)
+                            if self.stopped or self.Pano.StopPanorama:
+                                break
+                            if i == 0:
+                                self._moveAndSnap(i, j, DelaySeconds)
+                            else:
+                                self._moveAndSnap(i, j)
                 self.Pano.PanoImageNo = 0
                 self.emit(QtCore.SIGNAL('OnePanoDone()'))
 
@@ -1079,5 +1164,6 @@ class PanoThread(QtCore.QThread):
 
 app = QtGui.QApplication(sys.argv)
 myWindow = MyWindowClass(None)
+myWindow.setWindowTitle("Panorama control using IP Pan-Tilt-Zoom camera")
 myWindow.show()
 app.exec_()

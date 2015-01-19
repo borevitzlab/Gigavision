@@ -20,7 +20,7 @@
       <x>10</x>
       <y>10</y>
       <width>781</width>
-      <height>711</height>
+      <height>741</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
@@ -47,7 +47,7 @@
           </size>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>3</number>
          </property>
          <property name="movable">
           <bool>true</bool>
@@ -550,18 +550,7 @@
              </widget>
             </item>
             <item row="5" column="1">
-             <widget class="QComboBox" name="comboBoxPanoScanOrder">
-              <item>
-               <property name="text">
-                <string>column wise</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>row wise</string>
-               </property>
-              </item>
-             </widget>
+             <widget class="QComboBox" name="comboBoxPanoScanOrder"/>
             </item>
             <item row="3" column="0">
              <widget class="QLabel" name="label_15">
@@ -838,6 +827,27 @@
               </property>
               <property name="value">
                <number>50</number>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="2">
+             <layout class="QHBoxLayout" name="horizontalLayout_9">
+              <item>
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>Zoom</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="lineEditZoom2"/>
+              </item>
+             </layout>
+            </item>
+            <item row="5" column="2">
+             <widget class="QPushButton" name="pushButtonExplainScanOrder">
+              <property name="text">
+               <string>Explain orders</string>
               </property>
              </widget>
             </item>
