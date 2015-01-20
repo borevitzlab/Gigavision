@@ -935,6 +935,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
     def mouseReleaseEvent(self, event):
         modifiers = QtGui.QApplication.keyboardModifiers()
         if event.button() == QtCore.Qt.RightButton:
+            # pan and tilt camera if click on areas around the edge or drag
             self.mouseEndPos = self.labelCurrentViewImage.mapFromGlobal(
                 event.globalPos())
             if self.objectSelected == self.labelCurrentViewImage:
@@ -963,17 +964,34 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 self.TiltPosDesired = self.TiltPosDesired + dt
                 self.setPanTilt(self.PanPosDesired, self.TiltPosDesired)
         elif event.button() == QtCore.Qt.MidButton:
-            self.mousePos = self.labelCurrentViewImage.mapFromGlobal(
-                event.globalPos())
-            size = self.labelCurrentViewImage.size()
-            if modifiers == QtCore.Qt.ShiftModifier:
-                self.lineEditViewFirstCornerPixels.setText("{},{}".format(
-                    self.mousePos.x()/size.width()*self.ImageWidth,
-                    self.mousePos.y()/size.height()*self.ImageHeight))
-            elif modifiers == QtCore.Qt.ControlModifier:
-                self.lineEditViewSecondCornerPixels.setText("{},{}".format(
-                    self.mousePos.x()/size.width()*self.ImageWidth,
-                    self.mousePos.y()/size.height()*self.ImageHeight))
+            objectSelected = self.childAt(event.pos())
+            if objectSelected == self.labelCurrentViewImage:
+                # convert Shift/Ctrl + Mouse Mid-Click to image pixel position
+                self.mousePos = self.labelCurrentViewImage.mapFromGlobal(
+                    event.globalPos())
+                size = self.labelCurrentViewImage.size()
+                if modifiers == QtCore.Qt.ShiftModifier:
+                    self.lineEditViewFirstCornerPixels.setText("{},{}".format(
+                        self.mousePos.x()/size.width()*self.ImageWidth,
+                        self.mousePos.y()/size.height()*self.ImageHeight))
+                elif modifiers == QtCore.Qt.ControlModifier:
+                    self.lineEditViewSecondCornerPixels.setText("{},{}".format(
+                        self.mousePos.x()/size.width()*self.ImageWidth,
+                        self.mousePos.y()/size.height()*self.ImageHeight))
+            elif objectSelected == self.labelPanoOverviewImage:
+                # show panorama view of Mid-Click on panorama grid
+                self.mousePos = self.labelPanoOverviewImage.mapFromGlobal(
+                    event.globalPos())
+                size = self.labelPanoOverviewImage.size()
+                clickedX = self.mousePos.x()/size.width()
+                clickedY = self.mousePos.y()/size.height()
+                if clickedX >= 0 and clickedX < self.PanoOverViewWidth and \
+                        clickedY >= 0 and clickedY < self.PanoOverViewHeight:
+                    Pan = self.TopLeftCorner[0] + clickedX*abs(
+                        self.BottomRightCorner[0]-self.TopLeftCorner[0])
+                    Tilt = self.TopLeftCorner[1] - clickedY*abs(
+                        self.BottomRightCorner[1]-self.TopLeftCorner[1])
+                    self.setPanTilt(Pan, Tilt)
 
 
 class CameraThread(QtCore.QThread):
