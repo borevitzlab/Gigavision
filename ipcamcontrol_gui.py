@@ -119,8 +119,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonCurrentAsPanoSecondCorner.clicked.connect(
             self.setCurrentAsSecondCorner)
         ScanOrders = ["Cols, right", "Cols, left", "Rows, down", "Rows, up"]
-        for ScanOrder in ScanOrders:
-            self.comboBoxPanoScanOrder.addItem(ScanOrder)
+        self.comboBoxPanoScanOrder.addItems(ScanOrders)
         self.pushButtonGotoSecondCorner.clicked.connect(
             self.gotoSecondCorner)
         self.pushButtonExplainScanOrder.clicked.connect(self.explaintScanOrders)
@@ -198,16 +197,25 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
     def calculateFoV(self):
         Pan1, Tilt1 = self.lineEditViewFirstCorner.text().split(",")
         Pan2, Tilt2 = self.lineEditViewSecondCorner.text().split(",")
-        HFoV = abs(float(Pan1)-float(Pan2))
-        VFoV = abs(float(Tilt1)-float(Tilt2))
+        try:
+            PanPix1, TiltPix1 = self.lineEditViewFirstCornerPixels.text().split(",")
+            PanPix2, TiltPix2 = self.lineEditViewSecondCornerPixels.text().split(",")
+            HFoV = abs(float(Pan1)-float(Pan2))/ \
+                abs(float(PanPix1)-float(PanPix2))*self.ImageWidth
+            VFoV = abs(float(Tilt1)-float(Tilt2))/ \
+                abs(float(TiltPix1)-float(TiltPix2))*self.ImageHeight
+        except: #4.4,2.5
+            HFoV = abs(float(Pan1)-float(Pan2))
+            VFoV = abs(float(Tilt1)-float(Tilt2))
+
         if HFoV >= VFoV and HFoV <= 2*VFoV:
             self.HFoV = HFoV
             self.VFoV = VFoV
-            self.lineEditFieldOfView.setText("{},{}".format(HFoV, VFoV))
-            self.lineEditFieldOfView_2.setText("{},{}".format(HFoV, VFoV))
         else:
             print("Invalid selection of field of view ({}, {})".format(
                 HFoV, VFoV))
+        self.lineEditFieldOfView.setText("{},{}".format(HFoV, VFoV))
+        self.lineEditFieldOfView_2.setText("{},{}".format(HFoV, VFoV))
 
     def setCurrentAsFirstCorner(self):
         self.lineEditPanoFirstCorner.setText("{},{}".format(self.PanPos,
@@ -872,11 +880,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.labelCurrentViewImage.setScaledContents(True)
             self.labelCurrentViewImage.setGeometry(
                 QtCore.QRect(0, 0, Image.shape[1], Image.shape[0]))
-#            self.scrollAreaWidgetContentsCurrentView.setGeometry(
-#                QtCore.QRect(0, 0, Image.shape[1], Image.shape[0]))
 
     def updatePositions(self):
-        self.labelPositions.setText("P={}, T={}, Z={}, F={}".format(
+        self.labelPositions.setText("P={:.2f}, T={:.2f}, Z={}, F={}".format(
             self.PanPos, self.TiltPos, self.ZoomPos, self.FocusPos))
         if self.PanoImageNo > 0:
             self.labelCurrentLiveView.setText(
@@ -927,6 +933,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 event.globalPos())
 
     def mouseReleaseEvent(self, event):
+        modifiers = QtGui.QApplication.keyboardModifiers()
         if event.button() == QtCore.Qt.RightButton:
             self.mouseEndPos = self.labelCurrentViewImage.mapFromGlobal(
                 event.globalPos())
@@ -944,18 +951,29 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                     x *= self.Image.shape[1]
                     y *= self.Image.shape[0]
                     if x <= 100:
-                        dp = 1
+                        dp = float(self.lineEditPanStep.text())
                     elif x >= self.Image.shape[1]-100:
-                        dp = -1
+                        dp = -float(self.lineEditPanStep.text())
                     if y <= 100:
-                        dt = 1
+                        dt = float(self.lineEditTiltStep.text())
                     elif y >= self.Image.shape[0]-100:
-                        dt = -1
+                        dt = -float(self.lineEditTiltStep.text())
                 print("Pan/tilt camera {},{} degrees".format(dp, dt))
                 self.PanPosDesired = self.PanPosDesired - dp
                 self.TiltPosDesired = self.TiltPosDesired + dt
-                self.setPanTilt(self.PanPosDesired, self.TiltPosDesired,
-                                "Called from mouseReleaseEvent")
+                self.setPanTilt(self.PanPosDesired, self.TiltPosDesired)
+        elif event.button() == QtCore.Qt.MidButton:
+            self.mousePos = self.labelCurrentViewImage.mapFromGlobal(
+                event.globalPos())
+            size = self.labelCurrentViewImage.size()
+            if modifiers == QtCore.Qt.ShiftModifier:
+                self.lineEditViewFirstCornerPixels.setText("{},{}".format(
+                    self.mousePos.x()/size.width()*self.ImageWidth,
+                    self.mousePos.y()/size.height()*self.ImageHeight))
+            elif modifiers == QtCore.Qt.ControlModifier:
+                self.lineEditViewSecondCornerPixels.setText("{},{}".format(
+                    self.mousePos.x()/size.width()*self.ImageWidth,
+                    self.mousePos.y()/size.height()*self.ImageHeight))
 
 
 class CameraThread(QtCore.QThread):
@@ -1037,13 +1055,14 @@ class PanoThread(QtCore.QThread):
     def __del__(self):
         self.wait()
 
-    def _moveAndSnap(self, iCol, jRow, DelaySeconds=0):
+    def _moveAndSnap(self, iCol, jRow, DelaySeconds=0.1):
         self.Pano.setPanTilt(
             self.Pano.TopLeftCorner[0] + iCol*self.Pano.HFoV*self.Pano.Overlap,
             self.Pano.TopLeftCorner[1] - jRow*self.Pano.VFoV*self.Pano.Overlap)
         PanPos, TiltPos = self.Pano.getPanTilt()
         if DelaySeconds != 0:
             time.sleep(DelaySeconds)
+
         while True:
             Image = self.Pano.snapPhoto().next()
             if Image is not None:

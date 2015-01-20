@@ -1,7 +1,7 @@
 1stCorner: 87,0
 2ndCorner: 180,-22
 CameraConfigFile: AxisCamera.yml
-FieldOfView: 4.4,2.5
+FieldOfView: 4.2570212766,2.3465625
 Overlap: 50
 PanTiltConfigFile: AxisCamera.yml
 PanoEndHour: 18
