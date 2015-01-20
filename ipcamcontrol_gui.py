@@ -95,6 +95,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonStartCamera.clicked.connect(self.startCamera)
         self.lineEditZoom.textChanged.connect(self.lineEditZoom2.setText)
         self.pushButtonApplyZoom.clicked.connect(self.applyZoom)
+        self.comboBoxFocusMode.currentIndexChanged.connect(self.setFocusMode)
         self.pushButtonSnapPhoto.clicked.connect(self.snapPhoto)
         self.pushButtonStopCamera.clicked.connect(self.stopCamera)
         self.pushButtonLoadCameraConfigFile.clicked.connect(
@@ -154,6 +155,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.PanoOverView = None
         self.CamConfigUpdated = None
         self.PanTiltConfigUpdated = None
+        self.ZoomList = []
+        self.FocusList = []
 
     def applyZoom(self):
         Zoom = int(self.lineEditZoom.text())
@@ -491,6 +494,16 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         else:
             print("Warning: failed to snap an image")
 
+        ConfigFilename = os.path.join(self.PanoFolder, "_data", "ImageInfo.cvs")
+        if not os.path.exists(ConfigFilename):
+            with open(ConfigFilename, 'w') as File:
+                File.write("ImgIndex,PanDeg,TiltDeg,Zoom,FocusPos\n")
+        with open(ConfigFilename, 'a') as File:
+            File.write("{},{},{},{},{}\n".format(
+                self.PanoImageNo, self.PanPos, self.TiltPos,
+                self.ZoomPos,
+                self.FocusPos))
+
         self.PanoImageNo += 1
 
     def initialisePanoOverView(self):
@@ -511,7 +524,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 os.mkdir(DataFolder)
             self.savePanoConfig(os.path.join(DataFolder, "PanoConfig.yml"))
         except:
-            print("Cannot save PanoConfig.yml")
+            print("Cannot save {}".format(
+                os.path.join(self.PanoFolder, "_data")))
 
     def savePanoOverView(self):
         try:
@@ -635,6 +649,20 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             ZoomScale = self.CamConfigUpdated["ZoomScale"]
         ZOOMVAL = int(float(ZOOMVAL)*ZoomScale)
         return ZOOMVAL
+
+    def setFocus(self, FOCUSVAL):
+        URL = self.CamConfigUpdated["URL_SetFocus"].replace("FOCUSVAL",
+                                                            str(FOCUSVAL))
+        executeURL(URL)
+        self.FocusPos = int(FOCUSVAL)
+
+    def setFocusMode(self):
+        if str(self.comboBoxFocusMode.currentText()) == "AUTO":
+            URL = self.CamConfigUpdated["URL_SetFocusAuto"]
+            executeURL(URL)
+        elif str(self.comboBoxFocusMode.currentText()) == "MANUAL":
+            URL = self.CamConfigUpdated["URL_SetFocusManual"]
+            executeURL(URL)
 
     def getFocus(self):
         URL = self.CamConfigUpdated["URL_GetFocus"]
@@ -778,7 +806,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.FocusPos = self.getFocus()
         Focus = self.lineEditFocus.text()
         if len(Focus) > 0 and int(Focus) != self.FocusPos:
-            self.Camera.setFocusPosition(int(Focus))
+#            self.Camera.setFocusPosition(int(Focus))
+            self.setFocus(int(Focus))
 
         self.Image = self.snapPhoto().next()
         self.updateImage()
@@ -916,12 +945,12 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         elif Key == QtCore.Qt.RightArrow:
             self.PanTilt.panStep("right", 10)
             event.accept()
-        elif Key == QtCore.Qt.Key_PageDown:
-            self.Camera.zoomStep("out", 50)
-            event.accept()
-        elif Key == QtCore.Qt.Key_PageUp:
-            self.Camera.zoomStep("in", 50)
-            event.accept()
+#        elif Key == QtCore.Qt.Key_PageDown:
+#            self.Camera.zoomStep("out", 50)
+#            event.accept()
+#        elif Key == QtCore.Qt.Key_PageUp:
+#            self.Camera.zoomStep("in", 50)
+#            event.accept()
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.RightButton:
@@ -1081,6 +1110,10 @@ class PanoThread(QtCore.QThread):
             time.sleep(DelaySeconds)
         PanPos, TiltPos = self.Pano.getPanTilt()
 
+        # apply zoom if available
+        if len(self.Pano.FocusList) == self.Pano.PanoCols*self.Pano.PanoRows:
+            self.Pano.setZoom(self.Pano.FocusList[self.Pano.PanoImageNo])
+
         while True:
             Image = self.Pano.snapPhoto().next()
             if Image is not None:
@@ -1202,5 +1235,6 @@ class PanoThread(QtCore.QThread):
 app = QtGui.QApplication(sys.argv)
 myWindow = MyWindowClass(None)
 myWindow.setWindowTitle("Panorama control using IP Pan-Tilt-Zoom camera")
+myWindow.setWindowIcon(QtGui.QIcon("PanoControl.png"))
 myWindow.show()
 app.exec_()
