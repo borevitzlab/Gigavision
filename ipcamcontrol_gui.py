@@ -883,7 +883,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
     def updatePositions(self):
         self.labelPositions.setText("P={:.2f}, T={:.2f}, Z={}, F={}".format(
-            self.PanPos, self.TiltPos, self.ZoomPos, self.FocusPos))
+            float(self.PanPos), float(self.TiltPos), self.ZoomPos, self.FocusPos))
         if self.PanoImageNo > 0:
             self.labelCurrentLiveView.setText(
                 "Current image of {}/{} ".format(self.PanoImageNo,
@@ -1059,9 +1059,9 @@ class PanoThread(QtCore.QThread):
         self.Pano.setPanTilt(
             self.Pano.TopLeftCorner[0] + iCol*self.Pano.HFoV*self.Pano.Overlap,
             self.Pano.TopLeftCorner[1] - jRow*self.Pano.VFoV*self.Pano.Overlap)
-        PanPos, TiltPos = self.Pano.getPanTilt()
         if DelaySeconds != 0:
             time.sleep(DelaySeconds)
+        PanPos, TiltPos = self.Pano.getPanTilt()
 
         while True:
             Image = self.Pano.snapPhoto().next()
