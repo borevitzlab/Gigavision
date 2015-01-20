@@ -524,8 +524,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 os.mkdir(DataFolder)
             self.savePanoConfig(os.path.join(DataFolder, "PanoConfig.yml"))
         except:
-            print("Cannot save {}".format(
-                os.path.join(self.PanoFolder, "_data")))
+            print("Cannot save PanoConfig.yml")
 
     def savePanoOverView(self):
         try:
