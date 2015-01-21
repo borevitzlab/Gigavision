@@ -1201,7 +1201,6 @@ class PanoThread(QtCore.QThread):
                                 self._moveAndSnap(i, j, DelaySeconds)
                             else:
                                 self._moveAndSnap(i, j)
-                self.Pano.PanoImageNo = 0
                 self.emit(QtCore.SIGNAL('OnePanoDone()'))
 
             elif not IgnoreHourRange and not WithinHourRange:
