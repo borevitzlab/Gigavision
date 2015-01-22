@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>797</width>
-    <height>771</height>
+    <height>682</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
       <x>10</x>
       <y>10</y>
       <width>781</width>
-      <height>741</height>
+      <height>661</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
@@ -567,10 +567,17 @@
              <x>0</x>
              <y>0</y>
              <width>351</width>
-             <height>330</height>
+             <height>338</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout">
+            <item row="8" column="0">
+             <widget class="QLabel" name="label_18">
+              <property name="text">
+               <string>Pano root folder</string>
+              </property>
+             </widget>
+            </item>
             <item row="3" column="1">
              <widget class="QLineEdit" name="lineEditPanoSecondCorner">
               <property name="text">
@@ -599,13 +606,6 @@
               </property>
              </widget>
             </item>
-            <item row="7" column="0">
-             <widget class="QLabel" name="label_18">
-              <property name="text">
-               <string>Pano root folder</string>
-              </property>
-             </widget>
-            </item>
             <item row="5" column="1">
              <widget class="QComboBox" name="comboBoxPanoScanOrder"/>
             </item>
@@ -623,7 +623,7 @@
               </property>
              </widget>
             </item>
-            <item row="7" column="2">
+            <item row="8" column="2">
              <widget class="QPushButton" name="pushButtonPanoRootFolder">
               <property name="text">
                <string>Open</string>
@@ -644,7 +644,7 @@
               </property>
              </widget>
             </item>
-            <item row="9" column="0">
+            <item row="10" column="0">
              <layout class="QHBoxLayout" name="horizontalLayout_8">
               <item>
                <widget class="QPushButton" name="pushButtonLoadPanoConfig">
@@ -735,7 +735,7 @@
               </item>
              </layout>
             </item>
-            <item row="7" column="1">
+            <item row="8" column="1">
              <widget class="QLineEdit" name="lineEditPanoRootFolder"/>
             </item>
             <item row="5" column="0">
@@ -745,7 +745,7 @@
               </property>
              </widget>
             </item>
-            <item row="8" column="2">
+            <item row="9" column="2">
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <item>
                <widget class="QSpinBox" name="spinBoxStartHour">
@@ -783,14 +783,14 @@
               </property>
              </widget>
             </item>
-            <item row="8" column="0">
+            <item row="9" column="0">
              <widget class="QLabel" name="label_20">
               <property name="text">
                <string>Loop every</string>
               </property>
              </widget>
             </item>
-            <item row="8" column="1">
+            <item row="9" column="1">
              <layout class="QHBoxLayout" name="horizontalLayout_10">
               <item>
                <widget class="QSpinBox" name="spinBoxPanoLoopInterval">
@@ -829,7 +829,7 @@
               </item>
              </layout>
             </item>
-            <item row="9" column="1">
+            <item row="10" column="1">
              <layout class="QHBoxLayout" name="horizontalLayout_12">
               <item>
                <widget class="QPushButton" name="pushButtonTakeOnePano">
@@ -859,7 +859,7 @@
               </item>
              </layout>
             </item>
-            <item row="9" column="2">
+            <item row="10" column="2">
              <layout class="QHBoxLayout" name="horizontalLayout_13">
               <item>
                <widget class="QPushButton" name="pushButtonPausePanorama">
@@ -907,6 +907,34 @@
                <string>Explain orders</string>
               </property>
              </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QLabel" name="label_29">
+              <property name="text">
+               <string>Run config file</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="1">
+             <widget class="QLineEdit" name="lineEditRunConfigInFileName"/>
+            </item>
+            <item row="7" column="2">
+             <layout class="QHBoxLayout" name="horizontalLayout_15">
+              <item>
+               <widget class="QPushButton" name="pushButtonRunConfigInFileName">
+                <property name="text">
+                 <string>Open</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="checkBoxUserRunConfigIn">
+                <property name="text">
+                 <string>Use</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
           </widget>

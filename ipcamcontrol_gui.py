@@ -18,6 +18,7 @@ import scipy.misc as misc
 import urllib
 import io
 from datetime import datetime
+import csv
 
 """
 IPCAMCONTROL_GUI.PY controls ip cameras with pan-tilt-zoom features.
@@ -125,6 +126,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.gotoSecondCorner)
         self.pushButtonExplainScanOrder.clicked.connect(self.explaintScanOrders)
         self.pushButtonCalculatePanoGrid.clicked.connect(self.calculatePanoGrid)
+        self.pushButtonRunConfigInFileName.clicked.connect(self.selectRunConfig)
+        self.checkBoxUserRunConfigIn.stateChanged.connect(self.useRunConfig)
         self.pushButtonPanoRootFolder.clicked.connect(self.selectPanoRootFolder)
         self.pushButtonLoadPanoConfig.clicked.connect(
             partial(self.loadPanoConfig, None))
@@ -155,8 +158,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.PanoOverView = None
         self.CamConfigUpdated = None
         self.PanTiltConfigUpdated = None
-        self.ZoomList = []
-        self.FocusList = []
+        self.RunConfig = None
 
     def applyZoom(self):
         Zoom = int(self.lineEditZoom.text())
@@ -252,6 +254,38 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         dialog = MyDialog(self)
         dialog.setWindowTitle('Scanning orders')
         dialog.show()
+
+    def selectRunConfig(self):
+        FileName = QtGui.QFileDialog.getOpenFileName(
+            self, "Open run config", os.path.curdir, "CVS Files (*.cvs)")
+        if len(FileName) == 0:
+            return
+        else:
+            self.lineEditRunConfigInFileName.setText(FileName)
+            self.checkBoxUserRunConfigIn.setCheckState(QtCore.Qt.Checked)
+
+    def useRunConfig(self):
+        if self.checkBoxUserRunConfigIn.checkState() == QtCore.Qt.Checked:
+            with open(str(self.lineEditRunConfigInFileName.text())) as File:
+                csvread = csv.DictReader(File)
+                self.RunConfig = {"Index": [], "Col": [], "Row": [],
+                                  "PanDeg": [], "TiltDeg": [],
+                                  "Zoom": [], "Focus": []}
+                for row in csvread:
+                    self.RunConfig["Index"].append(int(row["Index"]))
+                    self.RunConfig["Col"].append(int(row["Col"]))
+                    self.RunConfig["Row"].append(int(row["Row"]))
+                    self.RunConfig["PanDeg"].append(float(row["PanDeg"]))
+                    self.RunConfig["TiltDeg"].append(float(row["TiltDeg"]))
+                    self.RunConfig["Zoom"].append(int(row["Zoom"]))
+                    self.RunConfig["Focus"].append(int(float(row["Focus"])))
+                index = self.comboBoxFocusMode.findText("MANUAL")
+                if index >= 0:
+                    self.comboBoxFocusMode.setCurrentIndex(index)
+                    self.setFocusMode()
+
+        else:
+            self.RunConfig = None
 
     def calculatePanoGrid(self):
         Pan0, Tilt0 = self.lineEditPanoFirstCorner.text().split(",")
@@ -420,8 +454,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                          QtCore.SIGNAL('PanoImageSnapped()'),
                          self.updatePanoImage)
             self.connect(self.threadPool[len(self.threadPool)-1],
-                         QtCore.SIGNAL('PanTiltPos(QString)'),
-                         self.updatePanTiltInfo)
+                         QtCore.SIGNAL('ColRowPanTiltPos(QString)'),
+                         self.updateColRowPanTiltInfo)
             self.connect(self.threadPool[len(self.threadPool)-1],
                          QtCore.SIGNAL('PanoThreadStarted()'),
                          self.deactivateLiveView)
@@ -494,15 +528,15 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         else:
             print("Warning: failed to snap an image")
 
-        ConfigFilename = os.path.join(self.PanoFolder, "_data", "ImageInfo.cvs")
-        if not os.path.exists(ConfigFilename):
-            with open(ConfigFilename, 'w') as File:
-                File.write("ImgIndex,PanDeg,TiltDeg,Zoom,FocusPos\n")
-        with open(ConfigFilename, 'a') as File:
-            File.write("{},{},{},{},{}\n".format(
-                self.PanoImageNo, self.PanPos, self.TiltPos,
-                self.ZoomPos,
-                self.FocusPos))
+        RunConfigOutFileName = os.path.join(
+            self.PanoFolder, "_data", "RunInfo.cvs")
+        if not os.path.exists(RunConfigOutFileName):
+            with open(RunConfigOutFileName, 'w') as File:
+                File.write("Index,Col,Row,PanDeg,TiltDeg,Zoom,Focus\n")
+        with open(RunConfigOutFileName, 'a') as File:
+            File.write("{},{},{},{},{},{},{}\n".format(
+                self.PanoImageNo, self.PanoCol, self.PanoRow,
+                self.PanPos, self.TiltPos, self.ZoomPos, self.FocusPos))
 
         self.PanoImageNo += 1
 
@@ -656,12 +690,13 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.FocusPos = int(FOCUSVAL)
 
     def setFocusMode(self):
-        if str(self.comboBoxFocusMode.currentText()) == "AUTO":
-            URL = self.CamConfigUpdated["URL_SetFocusAuto"]
-            executeURL(URL)
-        elif str(self.comboBoxFocusMode.currentText()) == "MANUAL":
-            URL = self.CamConfigUpdated["URL_SetFocusManual"]
-            executeURL(URL)
+        if self.CamConfigUpdated is not None:
+            if str(self.comboBoxFocusMode.currentText()) == "AUTO":
+                URL = self.CamConfigUpdated["URL_SetFocusAuto"]
+                executeURL(URL)
+            elif str(self.comboBoxFocusMode.currentText()) == "MANUAL":
+                URL = self.CamConfigUpdated["URL_SetFocusManual"]
+                executeURL(URL)
 
     def getFocus(self):
         URL = self.CamConfigUpdated["URL_GetFocus"]
@@ -923,6 +958,12 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.PanPos, self.TiltPos = PanTiltPos.split(",")
         self.updatePositions()
 
+    def updateColRowPanTiltInfo(self, ColRowPanTiltPos):
+        self.PanoCol, self.PanoRow, self.PanPos, self.TiltPos = \
+            ColRowPanTiltPos.split(",")
+        self.PanoCol, self.PanoRow = int(self.PanoCol), int(self.PanoRow)
+        self.updatePositions()
+
     def updateZoomFocusInfo(self, ZoomFocusPos):
         self.ZoomPos, self.FocusPos = ZoomFocusPos.split(",")
         self.updatePositions()
@@ -1086,14 +1127,15 @@ class PanTiltThread(QtCore.QThread):
 
 
 class PanoThread(QtCore.QThread):
-    def __init__(self, Pano, IsOneTime=True, LoopInterval=60, StartHour=0, EndHour=0):
+    def __init__(self, Pano, IsOneTime=True,
+                 LoopInterval=60, StartHour=0, EndHour=0):
         QtCore.QThread.__init__(self)
         self.Pano = Pano
         self.IsOneTime = IsOneTime
         self.LoopInterval = LoopInterval
         self.StartHour = StartHour
         self.EndHour = EndHour
-        self.NoImages = 0
+        self.NoImages = self.Pano.PanoCols*self.Pano.PanoRows
         self.Name = "PanoThread"
         self.stopped = False
         self.mutex = QtCore.QMutex()
@@ -1102,16 +1144,26 @@ class PanoThread(QtCore.QThread):
         self.wait()
 
     def _moveAndSnap(self, iCol, jRow, DelaySeconds=0.1):
-        self.Pano.setPanTilt(
-            self.Pano.TopLeftCorner[0] + iCol*self.Pano.HFoV*self.Pano.Overlap,
-            self.Pano.TopLeftCorner[1] - jRow*self.Pano.VFoV*self.Pano.Overlap)
-        if DelaySeconds != 0:
-            time.sleep(DelaySeconds)
+        if self.Pano.RunConfig is not None and \
+                len(self.Pano.RunConfig["Index"]) == self.NoImages:
+            self.Pano.setPanTilt(
+                self.Pano.RunConfig["PanDeg"][self.Pano.PanoImageNo],
+                self.Pano.RunConfig["TiltDeg"][self.Pano.PanoImageNo])
+            self.Pano.setZoom(
+                self.Pano.RunConfig["Zoom"][self.Pano.PanoImageNo])
+            self.Pano.setFocus(
+                self.Pano.RunConfig["Focus"][self.Pano.PanoImageNo])
+        else:
+            self.Pano.setPanTilt(
+                self.Pano.TopLeftCorner[0] +
+                iCol*self.Pano.HFoV*self.Pano.Overlap,
+                self.Pano.TopLeftCorner[1] -
+                jRow*self.Pano.VFoV*self.Pano.Overlap)
         PanPos, TiltPos = self.Pano.getPanTilt()
 
-        # apply zoom if available
-        if len(self.Pano.FocusList) == self.Pano.PanoCols*self.Pano.PanoRows:
-            self.Pano.setZoom(self.Pano.FocusList[self.Pano.PanoImageNo])
+        # extra time to settle down
+        if DelaySeconds != 0:
+            time.sleep(DelaySeconds)
 
         while True:
             Image = self.Pano.snapPhoto().next()
@@ -1127,8 +1179,8 @@ class PanoThread(QtCore.QThread):
         self.Pano.PanoOverView[
             ScaledHeight*jRow:ScaledHeight*(jRow+1),
             ScaledWidth*iCol:ScaledWidth*(iCol+1), :] = ImageResized
-        self.emit(QtCore.SIGNAL('PanTiltPos(QString)'),
-                  "{},{}".format(PanPos, TiltPos))
+        self.emit(QtCore.SIGNAL('ColRowPanTiltPos(QString)'),
+                  "{},{},{},{}".format(iCol, jRow, PanPos, TiltPos))
         self.emit(QtCore.SIGNAL('PanoImageSnapped()'))
 
     def run(self):
@@ -1157,50 +1209,57 @@ class PanoThread(QtCore.QThread):
                 self.Pano.PanoImageNo = 0
                 ScanOrder = str(self.Pano.comboBoxPanoScanOrder.currentText())
                 DelaySeconds = 1  # delay to reduce blurring
-                if ScanOrder == "Cols, right":
-                    for i in range(self.Pano.PanoCols):
-                        for j in range(self.Pano.PanoRows):
-                            while self.Pano.PausePanorama:
-                                time.sleep(5)
-                            if self.stopped or self.Pano.StopPanorama:
-                                break
-                            if j == 0:
-                                self._moveAndSnap(i, j, DelaySeconds)
-                            else:
-                                self._moveAndSnap(i, j)
-                elif ScanOrder == "Cols, left":
-                    for i in range(self.Pano.PanoCols-1, -1, -1):
-                        for j in range(self.Pano.PanoRows):
-                            while self.Pano.PausePanorama:
-                                time.sleep(5)
-                            if self.stopped or self.Pano.StopPanorama:
-                                break
-                            if j == 0:
-                                self._moveAndSnap(i, j, DelaySeconds)
-                            else:
-                                self._moveAndSnap(i, j)
-                elif ScanOrder == "Rows, down":
-                    for j in range(self.Pano.PanoRows):
+
+                if self.Pano.RunConfig is not None:
+                    for k in self.Pano.RunConfig["Index"]:
+                        i = self.Pano.RunConfig["Col"][self.Pano.PanoImageNo]
+                        j = self.Pano.RunConfig["Row"][self.Pano.PanoImageNo]
+                        self._moveAndSnap(i, j)
+                else:
+                    if ScanOrder == "Cols, right":
                         for i in range(self.Pano.PanoCols):
-                            while self.Pano.PausePanorama:
-                                time.sleep(5)
-                            if self.stopped or self.Pano.StopPanorama:
-                                break
-                            if i == 0:
-                                self._moveAndSnap(i, j, DelaySeconds)
-                            else:
-                                self._moveAndSnap(i, j)
-                else:  # ScanOrder == "Rows, up"
-                    for j in range(self.Pano.PanoRows-1, -1, -1):
-                        for i in range(self.Pano.PanoCols):
-                            while self.Pano.PausePanorama:
-                                time.sleep(5)
-                            if self.stopped or self.Pano.StopPanorama:
-                                break
-                            if i == 0:
-                                self._moveAndSnap(i, j, DelaySeconds)
-                            else:
-                                self._moveAndSnap(i, j)
+                            for j in range(self.Pano.PanoRows):
+                                while self.Pano.PausePanorama:
+                                    time.sleep(5)
+                                if self.stopped or self.Pano.StopPanorama:
+                                    break
+                                if j == 0:
+                                    self._moveAndSnap(i, j, DelaySeconds)
+                                else:
+                                    self._moveAndSnap(i, j)
+                    elif ScanOrder == "Cols, left":
+                        for i in range(self.Pano.PanoCols-1, -1, -1):
+                            for j in range(self.Pano.PanoRows):
+                                while self.Pano.PausePanorama:
+                                    time.sleep(5)
+                                if self.stopped or self.Pano.StopPanorama:
+                                    break
+                                if j == 0:
+                                    self._moveAndSnap(i, j, DelaySeconds)
+                                else:
+                                    self._moveAndSnap(i, j)
+                    elif ScanOrder == "Rows, down":
+                        for j in range(self.Pano.PanoRows):
+                            for i in range(self.Pano.PanoCols):
+                                while self.Pano.PausePanorama:
+                                    time.sleep(5)
+                                if self.stopped or self.Pano.StopPanorama:
+                                    break
+                                if i == 0:
+                                    self._moveAndSnap(i, j, DelaySeconds)
+                                else:
+                                    self._moveAndSnap(i, j)
+                    else:  # ScanOrder == "Rows, up"
+                        for j in range(self.Pano.PanoRows-1, -1, -1):
+                            for i in range(self.Pano.PanoCols):
+                                while self.Pano.PausePanorama:
+                                    time.sleep(5)
+                                if self.stopped or self.Pano.StopPanorama:
+                                    break
+                                if i == 0:
+                                    self._moveAndSnap(i, j, DelaySeconds)
+                                else:
+                                    self._moveAndSnap(i, j)
                 self.emit(QtCore.SIGNAL('OnePanoDone()'))
 
             elif not IgnoreHourRange and not WithinHourRange:
