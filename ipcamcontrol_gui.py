@@ -19,6 +19,7 @@ import urllib
 import io
 from datetime import datetime
 import csv
+import logging
 
 """
 IPCAMCONTROL_GUI.PY controls ip cameras with pan-tilt-zoom features.
@@ -71,7 +72,7 @@ def executeURL(URL_Str, RET_Str=None):
                 if Pos1 >= 0 and Pos2 >= Pos1:
                     Vals.append(Output[Pos1 + len(WordList[0]):Pos2])
             else:
-                print("Unhandled case {}". format(Str))
+                self.printError("Unhandled case {}". format(Str))
         if len(Vals) == 1:
             return Vals[0]
 #        print(Vals)
@@ -160,6 +161,16 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.PanTiltConfigUpdated = None
         self.RunConfig = None
 
+        # create logger
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.DEBUG)
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+        self.logger.addHandler(ch)
+
     def applyZoom(self):
         Zoom = int(self.lineEditZoom.text())
         self.setZoom(Zoom)
@@ -209,7 +220,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 abs(float(PanPix1)-float(PanPix2))*self.ImageWidth
             VFoV = abs(float(Tilt1)-float(Tilt2))/ \
                 abs(float(TiltPix1)-float(TiltPix2))*self.ImageHeight
-        except: #4.4,2.5
+        except:
             HFoV = abs(float(Pan1)-float(Pan2))
             VFoV = abs(float(Tilt1)-float(Tilt2))
 
@@ -217,7 +228,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.HFoV = HFoV
             self.VFoV = VFoV
         else:
-            print("Invalid selection of field of view ({}, {})".format(
+            self.printMessage("Invalid selection of field of view ({}, {})".format(
                 HFoV, VFoV))
         self.lineEditFieldOfView.setText("{},{}".format(HFoV, VFoV))
         self.lineEditFieldOfView_2.setText("{},{}".format(HFoV, VFoV))
@@ -249,7 +260,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                     pic.setGeometry(0, 0, pixmap.width(), pixmap.height())
                     pic.setPixmap(pixmap)
                 except:
-                    print("Failed to load ScanOrders.png")
+                    self.printError("Failed to load ScanOrders.png")
 
         dialog = MyDialog(self)
         dialog.setWindowTitle('Scanning orders')
@@ -366,6 +377,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             str(self.lineEditCameraConfigFilename.text())
         PanoConfigDic["PanTiltConfigFile"] = \
             str(self.lineEditPanTiltConfigFilename.text())
+        if self.checkBoxUserRunConfigIn.checkState() == QtCore.Qt.Checked:
+            PanoConfigDic["RunConfigInFile"] = \
+                str(self.lineEditRunConfigInFileName.text())
         PanoConfigDic["FieldOfView"] = str(self.lineEditFieldOfView.text())
         PanoConfigDic["Overlap"] = self.spinBoxPanoOverlap.value()
         PanoConfigDic["Zoom"] = int(self.lineEditZoom.text())
@@ -380,9 +394,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
         with open(FileName, 'w') as YAMLFile:
             YAMLFile.write(yaml.dump(PanoConfigDic, default_flow_style=False))
-            self.textEditMessages.append("Saved {}:".format(FileName))
-            self.textEditMessages.append("----------")
-            self.textEditMessages.append(yaml.dump(self.PanTiltConfig))
+            Message = "Saved {}:\n".format(FileName) + \
+                      "----------\n" + \
+                      yaml.dump(PanoConfigDic)
+            self.printMessage(Message)
 
     def loadPanoConfig(self, FileName=None):
         if FileName is None:
@@ -393,9 +408,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
         with open(FileName, 'r') as YAMLFile:
             PanoConfigDic = yaml.load(YAMLFile)
-            self.textEditMessages.append("Loaded {}:".format(FileName))
-            self.textEditMessages.append("----------")
-            self.textEditMessages.append(yaml.dump(PanoConfigDic))
+            Message = "Loaded {}:\n".format(FileName) + \
+                      "----------\n" + \
+                      yaml.dump(PanoConfigDic)
+            self.printMessage(Message)
 
             if "CameraConfigFile" in PanoConfigDic.keys():
                 self.lineEditCameraConfigFilename.setText(
@@ -405,6 +421,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 self.lineEditPanTiltConfigFilename.setText(
                     str(PanoConfigDic["PanTiltConfigFile"]))
                 self.loadPanTiltConfig()
+            if "RunConfigInFile" in PanoConfigDic.keys():
+                self.lineEditRunConfigInFileName.setText(
+                    PanoConfigDic["RunConfigInFile"])
 
             self.lineEditFieldOfView.setText(PanoConfigDic["FieldOfView"])
             self.spinBoxPanoOverlap.setValue(PanoConfigDic["Overlap"])
@@ -415,7 +434,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             if Index >= 0:
                 self.comboBoxPanoScanOrder.setCurrentIndex(Index)
             else:
-                print("Error when applying ScanOrder = {}".format(
+                self.printError("Error when applying ScanOrder = {}".format(
                     PanoConfigDic["ScanOrder"]))
             self.lineEditPanoGridSize.setText(PanoConfigDic["PanoGridSize"])
             self.lineEditPanoRootFolder.setText(PanoConfigDic["PanoRootFolder"])
@@ -524,9 +543,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         misc.imsave(FileName, self.Image)
 
         if os.path.getsize(FileName) > 1000:
-            print("Wrote image " + FileName)
+            self.printMessage("Wrote image " + FileName)
         else:
-            print("Warning: failed to snap an image")
+            self.printError("Warning: failed to snap an image")
 
         RunConfigOutFileName = os.path.join(
             self.PanoFolder, "_data", "RunInfo.cvs")
@@ -558,7 +577,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 os.mkdir(DataFolder)
             self.savePanoConfig(os.path.join(DataFolder, "PanoConfig.yml"))
         except:
-            print("Cannot save PanoConfig.yml")
+            self.printError("Cannot save PanoConfig.yml")
 
     def savePanoOverView(self):
         try:
@@ -574,7 +593,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                                         Now.strftime("%Y_%m_%d_%H_%M")))
             misc.imsave(FileName, self.PanoOverView)
         except:
-            print("Cannot save PanoOverView image")
+            self.printError("Cannot save PanoOverView image")
 
     def setPan(self, Pan):
         self.setPanTilt(Pan, self.TiltPosDesired)
@@ -627,10 +646,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 time.sleep(0.2)
                 NoLoops += 1
                 if NoLoops > 50:
-                    print("Warning: pan-tilt fails to move to correct location")
-                    print("  Desired position: PanPos={}, TiltPos={}".format(
+                    self.printMessage("Warning: pan-tilt fails to move to correct location")
+                    self.printMessage("  Desired position: PanPos={}, TiltPos={}".format(
                         Pan, Tilt))
-                    print("  Current position: PanPos={}, TiltPos={}".format(
+                    self.printMessage("  Current position: PanPos={}, TiltPos={}".format(
                         PanCur, TiltCur))
                     break
             #loop until smallest distance is reached
@@ -712,9 +731,11 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         with open(Filename, 'r') as ConfigFile:
             self.lineEditPanTiltConfigFilename.setText(Filename)
             self.PanTiltConfig = yaml.load(ConfigFile)
-            self.textEditMessages.append("Loaded {}:".format(Filename))
-            self.textEditMessages.append("----------")
-            self.textEditMessages.append(yaml.dump(self.PanTiltConfig))
+            Message = "Loaded {}:\n".format(Filename) + \
+                      "----------\n" + \
+                      yaml.dump(self.PanTiltConfig)
+            self.printMessage(Message)
+
             if "IPVAL" in self.PanTiltConfig.keys():
                 self.lineEditPanTiltAddress.setText(
                     self.PanTiltConfig["IPVAL"])
@@ -746,9 +767,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 self.PanTiltConfigUpdated[Key] = text
             else:
                 self.PanTiltConfigUpdated[Key] = self.PanTiltConfig[Key]
-        self.textEditMessages.append("Updated pan-tilt configs:")
-        self.textEditMessages.append("----------")
-        self.textEditMessages.append(yaml.dump(self.PanTiltConfigUpdated))
+        Message = "Updated pan-tilt configs:\n" + \
+                  "----------\n" + \
+                  yaml.dump(self.PanTiltConfigUpdated)
+        self.printMessage(Message)
 
     def loadCameraConfig(self):
         Filename = self.lineEditCameraConfigFilename.text()
@@ -758,9 +780,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         with open(Filename, 'r') as ConfigFile:
             self.lineEditCameraConfigFilename.setText(Filename)
             self.CamConfig = yaml.load(ConfigFile)
-            self.textEditMessages.append("Loaded {}:".format(Filename))
-            self.textEditMessages.append("----------")
-            self.textEditMessages.append(yaml.dump(self.CamConfig))
+            Message = "Loaded {}:\n".format(Filename) + \
+                      "----------\n" + \
+                      yaml.dump(self.CamConfig)
+            self.printMessage(Message)
             if "IPVAL" in self.CamConfig.keys():
                 self.lineEditIPCamAddress.setText(self.CamConfig["IPVAL"])
             if "USERVAL" in self.CamConfig.keys():
@@ -793,7 +816,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 if index >= 0:
                     self.comboBoxFocusMode.setCurrentIndex(index)
                 else:
-                    print("Error: FocusMode must be AUTO or MANUAL")
+                    self.printError("FocusMode must be AUTO or MANUAL")
                 if index == 0:  # AUTO
                     self.lineEditFocus.setText("")
             if "URL_GetVideo" in self.CamConfig.keys():
@@ -812,9 +835,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 self.CamConfigUpdated[Key] = text
             else:
                 self.CamConfigUpdated[Key] = self.CamConfig[Key]
-        self.textEditMessages.append("Updated camera configs:")
-        self.textEditMessages.append("----------")
-        self.textEditMessages.append(yaml.dump(self.CamConfigUpdated))
+        Message = "Updated camera configs:\n" + \
+                  "----------\n" + \
+                  yaml.dump(self.CamConfigUpdated)
+        self.printMessage(Message)
 
     def initCamera(self):
         self.CameraIP = self.lineEditIPCamAddress.text()
@@ -829,7 +853,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             URL_Str = self.CamConfigUpdated["URL_Login"]
             executeURL(URL_Str)
 
-        self.textEditMessages.append("Initialised camera.")
+        self.printMessage("Initialised camera.")
 
         self.ZoomPos = self.getZoom()
         Zoom = self.lineEditZoom.text()
@@ -866,11 +890,14 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.connect(self.threadPool[len(self.threadPool)-1],
                          QtCore.SIGNAL('ZoomFocusPos(QString)'),
                          self.updateZoomFocusInfo)
+            self.connect(self.threadPool[len(self.threadPool)-1],
+                         QtCore.SIGNAL('Message(QString)'),
+                         self.printMessage)
             self.threadPool[len(self.threadPool)-1].start()
 
     def stopCamera(self):
         for i in range(len(self.threadPool)):
-            print(self.threadPool[i].Name)
+            self.printMessage(self.threadPool[i].Name)
             if self.threadPool[i].Name == "CameraThread":
                 self.threadPool[i].stop()
                 self.threadPool[i].wait()
@@ -896,7 +923,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.horizontalSliderPan.setValue(int(self.PanPosDesired))
         self.horizontalSliderTilt.setValue(int(self.TiltPosDesired))
         self.initilisedPanTilt = True
-        self.textEditMessages.append("Initialised pan-tilt.")
+        self.printMessage("Initialised pan-tilt.")
 
     def startPanTilt(self):
         if not self.initilisedPanTilt:
@@ -917,7 +944,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
     def stopPanTilt(self):
         for i in range(len(self.threadPool)):
-            print(self.threadPool[i].Name)
+            self.printMessage(self.threadPool[i].Name)
             if self.threadPool[i].Name == "PanTiltThread":
                 self.threadPool[i].stop()
                 self.threadPool[i].wait()
@@ -970,7 +997,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
     def keyPressEvent(self, event):
         Key = event.key()
-#        print("Key = {}".format(Key))
+#        self.printMessage("Key = {}".format(Key))
         if Key == QtCore.Qt.Key_Escape:
             self.close()
         elif Key == QtCore.Qt.DownArrow:
@@ -1028,7 +1055,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                         dt = float(self.lineEditTiltStep.text())
                     elif y >= self.Image.shape[0]-100:
                         dt = -float(self.lineEditTiltStep.text())
-                print("Pan/tilt camera {},{} degrees".format(dp, dt))
+                self.printMessage("Pan/tilt camera {},{} degrees".format(
+                    dp, dt))
                 self.PanPosDesired = self.PanPosDesired - dp
                 self.TiltPosDesired = self.TiltPosDesired + dt
                 self.setPanTilt(self.PanPosDesired, self.TiltPosDesired)
@@ -1062,6 +1090,14 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                         self.BottomRightCorner[1]-self.TopLeftCorner[1])
                     self.setPanTilt(Pan, Tilt)
 
+    def printMessage(self, Message):
+        self.textEditMessages.append(Message)
+        self.logger.info(Message)
+
+    def printError(self, Message):
+        self.textEditMessages.append("Error: " + Message)
+        self.logger.error(Message)
+
 
 class CameraThread(QtCore.QThread):
     def __init__(self, Pano):
@@ -1076,7 +1112,8 @@ class CameraThread(QtCore.QThread):
         self.wait()
 
     def run(self):
-        print("Started {}".format(self.Name))
+        self.emit(QtCore.SIGNAL('Message(QString)'),
+                  "Started {}".format(self.Name))
         self.stopped = False
         if self.Pano.hasMJPGVideo:
             ImageSource = self.Pano.streamVideo()
@@ -1091,7 +1128,7 @@ class CameraThread(QtCore.QThread):
             FocusPos = self.Pano.getFocus()
             self.emit(QtCore.SIGNAL('ZoomFocusPos(QString)'),
                       "{},{}".format(ZoomPos, FocusPos))
-        print("Stopped CameraThread")
+        self.emit(QtCore.SIGNAL('Message(QString)'), "Stopped CameraThread")
         return
 
     def stop(self):
@@ -1111,14 +1148,15 @@ class PanTiltThread(QtCore.QThread):
         self.wait()
 
     def run(self):
-        print("Started {}".format(self.Name))
+        self.emit(QtCore.SIGNAL('Message(QString)'),
+                  "Started {}".format(self.Name))
         self.stopped = False
         while not self.stopped:
             time.sleep(0.5)  # time delay between queries
             PanPos, TiltPos = self.Pano.getPanTilt()
             self.emit(QtCore.SIGNAL('PanTiltPos(QString)'),
                       "{},{}".format(PanPos, TiltPos))
-        print("Stopped PanTiltThread")
+        self.emit(QtCore.SIGNAL('Message(QString)'), "Stopped PanTiltThread")
         return
 
     def stop(self):
@@ -1170,7 +1208,8 @@ class PanoThread(QtCore.QThread):
             if Image is not None:
                 break
             else:
-                print("Try recapturing image")
+                self.emit(QtCore.SIGNAL('Message(QString)'),
+                          "Try recapturing image")
         ScaledHeight = int(self.Pano.PanoOverViewScale*self.Pano.ImageHeight)
         ScaledWidth = int(self.Pano.PanoOverViewScale*self.Pano.ImageWidth)
         ImageResized = misc.imresize(Image,
@@ -1184,7 +1223,8 @@ class PanoThread(QtCore.QThread):
         self.emit(QtCore.SIGNAL('PanoImageSnapped()'))
 
     def run(self):
-        print("Started {}".format(self.Name))
+        self.emit(QtCore.SIGNAL('Message(QString)'),
+                  "Started {}".format(self.Name))
         self.emit(QtCore.SIGNAL('PanoThreadStarted()'))
         self.stopped = False
 
@@ -1263,8 +1303,9 @@ class PanoThread(QtCore.QThread):
                 self.emit(QtCore.SIGNAL('OnePanoDone()'))
 
             elif not IgnoreHourRange and not WithinHourRange:
-                print("Outside hour range ({} to {})".format(self.StartHour,
-                                                             self.EndHour))
+                self.emit(QtCore.SIGNAL('Message(QString)'),
+                          "Outside hour range ({} to {})".format(self.StartHour,
+                                                                 self.EndHour))
 
             if self.IsOneTime:
                 break
@@ -1275,10 +1316,12 @@ class PanoThread(QtCore.QThread):
                 if self.LoopInterval > ElapseSeconds:
                     WaitTime = self.LoopInterval - ElapseSeconds
                 else:
-                    print("Warning: it takes more time than loop interval")
+                    self.emit(QtCore.SIGNAL('Message(QString)'),
+                              "Warning: it takes more time than loop interval")
                     WaitTime = 0
-                print("It's {}.".format(End.strftime("%H:%M"))),
-                print("Wait for {} minutes before start.".format(WaitTime/60))
+                self.emit(QtCore.SIGNAL('Message(QString)'),
+                          "It's {}. Wait for {} minutes before start.".format(
+                              End.strftime("%H:%M"), WaitTime/60))
                 time.sleep(WaitTime)
 
         self.emit(QtCore.SIGNAL('PanoThreadDone()'))
