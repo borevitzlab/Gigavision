@@ -20,6 +20,7 @@ import io
 from datetime import datetime
 import csv
 import logging
+import disk_usage
 
 """
 IPCAMCONTROL_GUI.PY controls ip cameras with pan-tilt-zoom features.
@@ -1249,9 +1250,18 @@ class PanoThread(QtCore.QThread):
                           Start.strftime("%H:%M"), WaitSeconds/60))
             time.sleep(WaitSeconds)
 
+        self.PanoRootFolder = str(self.Pano.lineEditPanoRootFolder.text())
         while not self.Pano.StopPanorama:
             while self.Pano.PausePanorama:
                 time.sleep(5)
+
+            # test if there's enough
+            Usage = disk_usage.disk_usage(self.PanoRootFolder)
+            if Usage.free < 1e6:
+                self.Pano.StopPanorama = True
+                self.emit(QtCore.SIGNAL('Message(QString)'),
+                      "There's only {} bytes left. Stop".format(Usage.free))
+                break
 
             Start = datetime.now()
             self.emit(QtCore.SIGNAL('Message(QString)'),
@@ -1261,8 +1271,7 @@ class PanoThread(QtCore.QThread):
             WithinHourRange = (Start.hour >= self.StartHour and \
                                Start.hour < self.EndHour)
             if self.IsOneTime or IgnoreHourRange or WithinHourRange:
-                PanoRootFolder = str(self.Pano.lineEditPanoRootFolder.text())
-                self.Pano.PanoFolder = os.path.join(PanoRootFolder,
+                self.Pano.PanoFolder = os.path.join(self.PanoRootFolder,
                                                     Start.strftime("%Y"),
                                                     Start.strftime("%Y_%m"),
                                                     Start.strftime("%Y_%m_%d"),
@@ -1357,6 +1366,7 @@ class PanoThread(QtCore.QThread):
             self.stopped = True
 
 if __name__ == "__main__":
+    print(sys.argv)
     if len(sys.argv) == 1:
         print("Now run interactive mode")
         print("Usage:")
