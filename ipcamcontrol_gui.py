@@ -458,6 +458,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         PanoConfigDic["RemoteStoragePassword"] = str(self.lineEditStoragePassword.text())
         PanoConfigDic["RemoteFolder"] = str(self.lineEditPanoRemoteFolder.text())
         PanoConfigDic["LocalFolder"] = str(self.lineEditPanoLocalFolder.text())
+        PanoConfigDic["TimeStreamName"] = str(self.lineEditTimeStreamName.text())
         PanoConfigDic["PanoFallbackFolder"] = str(self.lineEditPanoRootFolderFallBack.text())
         PanoConfigDic["MinFreeSpace"] = int(self.lineEditMinFreeDiskSpace.text())
 
@@ -518,6 +519,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 PanoConfigDic["RemoteStorageUsername"])
             self.lineEditStoragePassword.setText(
                 PanoConfigDic["RemoteStoragePassword"])
+            self.lineEditTimeStreamName.setText(PanoConfigDic["TimeStreamName"])
             self.lineEditPanoRemoteFolder.setText(PanoConfigDic["RemoteFolder"])
             self.lineEditPanoLocalFolder.setText(PanoConfigDic["LocalFolder"])
             self.lineEditPanoRootFolderFallBack.setText(
@@ -1437,12 +1439,12 @@ class PanoThread(QtCore.QThread):
 
                 while True:
                     End = datetime.now()
-                    Quotient, Remainder = divmod((End.hour*60 + End.min),
+                    Quotient, Remainder = divmod((End.hour*60 + End.minute),
                                                  self.LoopInterval)
                     if Remainder <= self.Pano.PanoWaitMin:
                         break
                     DueTime = (Quotient+1)*self.LoopInterval
-                    WaitMin = DueTime - (End.hour*60 + End.min)
+                    WaitMin = DueTime - (End.hour*60 + End.minute)
                     self.emit(QtCore.SIGNAL('Message(QString)'),
                               "Wait for {} minutes before start.".format(
                                   WaitMin))
