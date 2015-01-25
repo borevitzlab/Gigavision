@@ -160,6 +160,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.CamConfigUpdated = None
         self.PanTiltConfigUpdated = None
         self.RunConfig = None
+        self.PanoStartMin = 60
+        self.PanoWaitMin = 15
+
 
         # create logger
         self.logger = logging.getLogger()
@@ -391,12 +394,14 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         PanoConfigDic["PanoLoopInterval"] = self.spinBoxPanoLoopInterval.value()
         PanoConfigDic["PanoStartHour"] = self.spinBoxStartHour.value()
         PanoConfigDic["PanoEndHour"] = self.spinBoxEndHour.value()
+        PanoConfigDic["PanoStartMin"] = self.PanoStartMin
+        PanoConfigDic["PanoWaitMin"] = self.PanoWaitMin
 
         with open(FileName, 'w') as YAMLFile:
             YAMLFile.write(yaml.dump(PanoConfigDic, default_flow_style=False))
             Message = "Saved {}:\n".format(FileName) + \
                       "----------\n" + \
-                      yaml.dump(PanoConfigDic)
+                      yaml.dump(PanoConfigDic, default_flow_style=False)
             self.printMessage(Message)
 
     def loadPanoConfig(self, FileName=None):
@@ -441,6 +446,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.spinBoxPanoLoopInterval.setValue(PanoConfigDic["PanoLoopInterval"])
             self.spinBoxStartHour.setValue(PanoConfigDic["PanoStartHour"])
             self.spinBoxEndHour.setValue(PanoConfigDic["PanoEndHour"])
+            self.PanoStartMin = PanoConfigDic["PanoStartMin"]
+            self.PanoWaitMin = PanoConfigDic["PanoWaitMin"]
 
     def takePanorama(self, IsOneTime=True):
         if not self.initilisedCamera:
@@ -487,6 +494,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.connect(self.threadPool[len(self.threadPool)-1],
                          QtCore.SIGNAL('OnePanoDone()'),
                          self.savePanoOverView)
+            self.connect(self.threadPool[len(self.threadPool)-1],
+                         QtCore.SIGNAL('Message(QString)'),
+                         self.printMessage)
             self.threadPool[len(self.threadPool)-1].start()
 
     def takeOnePanorama(self):
@@ -1228,10 +1238,24 @@ class PanoThread(QtCore.QThread):
         self.emit(QtCore.SIGNAL('PanoThreadStarted()'))
         self.stopped = False
 
+        # make sure panoram loop start within "StartMin" from zero minute
+        Start = datetime.now()
+        WaitSeconds = 60*(self.Pano.PanoStartMin - Start.minute) - Start.second
+        if not self.IsOneTime and \
+                WaitSeconds > 0 and WaitSeconds < self.Pano.PanoWaitMin*60:
+            self.emit(QtCore.SIGNAL('Message(QString)'),
+                      "It's {}. Wait for {} minutes before start.".format(
+                          Start.strftime("%H:%M"), WaitSeconds/60))
+            time.sleep(WaitSeconds)
+
         while not self.Pano.StopPanorama:
             while self.Pano.PausePanorama:
                 time.sleep(5)
+
             Start = datetime.now()
+            self.emit(QtCore.SIGNAL('Message(QString)'),
+                      "Take a panorama from {}".format(Start.strftime("%H:%M")))
+
             IgnoreHourRange = (self.StartHour >= self.EndHour)
             WithinHourRange = (Start.hour >= self.StartHour and \
                                Start.hour < self.EndHour)

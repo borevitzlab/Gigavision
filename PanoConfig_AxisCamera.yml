@@ -9,5 +9,7 @@ PanoGridSize: 18x42
 PanoLoopInterval: 60
 PanoRootFolder: /home/chuong/Data/a_data/Gigavision/chuong_tests
 PanoStartHour: 7
+PanoStartMin: 60
+PanoWaitMin: 15
 ScanOrder: Cols, right
 Zoom: 8000
