@@ -47,7 +47,7 @@
           </size>
          </property>
          <property name="currentIndex">
-          <number>3</number>
+          <number>4</number>
          </property>
          <property name="movable">
           <bool>true</bool>
@@ -949,7 +949,7 @@
              <x>0</x>
              <y>0</y>
              <width>441</width>
-             <height>260</height>
+             <height>293</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_6">
@@ -960,7 +960,7 @@
               </property>
              </widget>
             </item>
-            <item row="6" column="0">
+            <item row="7" column="0">
              <widget class="QLabel" name="label_31">
               <property name="text">
                <string>Pano fallback folder</string>
@@ -974,24 +974,24 @@
               </property>
              </widget>
             </item>
-            <item row="6" column="1">
+            <item row="7" column="1">
              <widget class="QLineEdit" name="lineEditPanoRootFolderFallBack"/>
             </item>
-            <item row="6" column="2">
+            <item row="7" column="2">
              <widget class="QPushButton" name="pushButtonPanoRootFolderFallBack">
               <property name="text">
                <string>Open</string>
               </property>
              </widget>
             </item>
-            <item row="7" column="0">
+            <item row="8" column="0">
              <widget class="QLabel" name="label_32">
               <property name="text">
                <string>Min free diskspace (MB)</string>
               </property>
              </widget>
             </item>
-            <item row="5" column="1">
+            <item row="6" column="1">
              <widget class="QLineEdit" name="lineEditPanoRootFolder2"/>
             </item>
             <item row="1" column="1">
@@ -1001,15 +1001,32 @@
               </property>
              </widget>
             </item>
-            <item row="5" column="0">
+            <item row="6" column="0">
              <widget class="QLabel" name="label_30">
               <property name="text">
                <string>Pano root folder</string>
               </property>
              </widget>
             </item>
-            <item row="7" column="1">
+            <item row="4" column="2">
+             <widget class="QPushButton" name="pushButtonMapRemoteFolder">
+              <property name="text">
+               <string>Map</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_37">
+              <property name="text">
+               <string>Local folder</string>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="1">
              <widget class="QLineEdit" name="lineEditMinFreeDiskSpace"/>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLineEdit" name="lineEditPanoLocalFolder"/>
             </item>
             <item row="2" column="1">
              <widget class="QLineEdit" name="lineEditStoragePassword">
@@ -1024,6 +1041,9 @@
               </property>
              </widget>
             </item>
+            <item row="3" column="1">
+             <widget class="QLineEdit" name="lineEditPanoRemoteFolder"/>
+            </item>
             <item row="3" column="0">
              <widget class="QLabel" name="label_36">
               <property name="text">
@@ -1031,7 +1051,7 @@
               </property>
              </widget>
             </item>
-            <item row="5" column="2">
+            <item row="6" column="2">
              <widget class="QPushButton" name="pushButtonPanoRootFolder2">
               <property name="text">
                <string>Open</string>
@@ -1048,25 +1068,15 @@
               </property>
              </widget>
             </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_37">
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_38">
               <property name="text">
-               <string>Local folder</string>
+               <string>Time stream name</string>
               </property>
              </widget>
             </item>
-            <item row="4" column="2">
-             <widget class="QPushButton" name="pushButtonMapRemoteFolder">
-              <property name="text">
-               <string>Map</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QLineEdit" name="lineEditPanoRemoteFolder"/>
-            </item>
-            <item row="4" column="1">
-             <widget class="QLineEdit" name="lineEditPanoLocalFolder"/>
+            <item row="5" column="1">
+             <widget class="QLineEdit" name="lineEditTimeStreamName"/>
             </item>
            </layout>
           </widget>
