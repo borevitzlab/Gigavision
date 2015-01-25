@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>797</width>
-    <height>682</height>
+    <width>959</width>
+    <height>736</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,8 +19,8 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>781</width>
-      <height>661</height>
+      <width>941</width>
+      <height>721</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
@@ -42,7 +42,7 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>360</width>
+           <width>450</width>
            <height>410</height>
           </size>
          </property>
@@ -566,7 +566,7 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>351</width>
+             <width>441</width>
              <height>338</height>
             </rect>
            </property>
@@ -939,6 +939,138 @@
            </layout>
           </widget>
          </widget>
+         <widget class="QWidget" name="tab_6">
+          <attribute name="title">
+           <string>Storage</string>
+          </attribute>
+          <widget class="QWidget" name="gridLayoutWidget_4">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>441</width>
+             <height>260</height>
+            </rect>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_6">
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_34">
+              <property name="text">
+               <string>Username</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0">
+             <widget class="QLabel" name="label_31">
+              <property name="text">
+               <string>Pano fallback folder</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_35">
+              <property name="text">
+               <string>Password</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QLineEdit" name="lineEditPanoRootFolderFallBack"/>
+            </item>
+            <item row="6" column="2">
+             <widget class="QPushButton" name="pushButtonPanoRootFolderFallBack">
+              <property name="text">
+               <string>Open</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QLabel" name="label_32">
+              <property name="text">
+               <string>Min free diskspace (MB)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QLineEdit" name="lineEditPanoRootFolder2"/>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="lineEditStorageUsername">
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_30">
+              <property name="text">
+               <string>Pano root folder</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="1">
+             <widget class="QLineEdit" name="lineEditMinFreeDiskSpace"/>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLineEdit" name="lineEditStoragePassword">
+              <property name="inputMethodHints">
+               <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText</set>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_36">
+              <property name="text">
+               <string>Remote folder</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="2">
+             <widget class="QPushButton" name="pushButtonPanoRootFolder2">
+              <property name="text">
+               <string>Open</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="lineEditStorageAddress"/>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_33">
+              <property name="text">
+               <string>Remote host name/IP</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_37">
+              <property name="text">
+               <string>Local folder</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="2">
+             <widget class="QPushButton" name="pushButtonMapRemoteFolder">
+              <property name="text">
+               <string>Map</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLineEdit" name="lineEditPanoRemoteFolder"/>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLineEdit" name="lineEditPanoLocalFolder"/>
+            </item>
+           </layout>
+          </widget>
+         </widget>
          <widget class="QWidget" name="tab_4">
           <attribute name="title">
            <string>Log</string>
@@ -946,10 +1078,10 @@
           <widget class="QTextEdit" name="textEditMessages">
            <property name="geometry">
             <rect>
-             <x>10</x>
-             <y>10</y>
-             <width>331</width>
-             <height>321</height>
+             <x>0</x>
+             <y>0</y>
+             <width>491</width>
+             <height>331</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -992,8 +1124,8 @@
            </property>
            <property name="maximumSize">
             <size>
-             <width>400</width>
-             <height>300</height>
+             <width>450</width>
+             <height>400</height>
             </size>
            </property>
            <property name="mouseTracking">

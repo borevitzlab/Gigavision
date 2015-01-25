@@ -2,14 +2,21 @@
 2ndCorner: 180,-22
 CameraConfigFile: AxisCamera.yml
 FieldOfView: 4.2570212766,2.3465625
+LocalFolder: /home/chuong/Data/a_data
+MinFreeSpace: 1000
 Overlap: 50
 PanTiltConfigFile: AxisCamera.yml
 PanoEndHour: 18
+PanoFallbackFolder: /home/pi/Data/Panorama
 PanoGridSize: 18x42
 PanoLoopInterval: 60
 PanoRootFolder: /home/chuong/Data/a_data/Gigavision/chuong_tests
 PanoStartHour: 7
 PanoStartMin: 60
 PanoWaitMin: 15
+RemoteFolder: /network/phenocam-largedatasets/a_data
+RemoteStorageAddress: percy.anu.edu.au
+RemoteStoragePassword: ''
+RemoteStorageUsername: chuong
 ScanOrder: Cols, right
 Zoom: 8000

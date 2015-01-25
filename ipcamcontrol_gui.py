@@ -21,6 +21,8 @@ from datetime import datetime
 import csv
 import logging
 import disk_usage
+import subprocess
+import glob
 
 """
 IPCAMCONTROL_GUI.PY controls ip cameras with pan-tilt-zoom features.
@@ -131,6 +133,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonRunConfigInFileName.clicked.connect(self.selectRunConfig)
         self.checkBoxUserRunConfigIn.stateChanged.connect(self.useRunConfig)
         self.pushButtonPanoRootFolder.clicked.connect(self.selectPanoRootFolder)
+        self.lineEditPanoRootFolder.textChanged.connect(
+            self.lineEditPanoRootFolder2.setText)
         self.pushButtonLoadPanoConfig.clicked.connect(
             partial(self.loadPanoConfig, None))
         self.pushButtonSavePanoConfig.clicked.connect(
@@ -139,6 +143,14 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonLoopPanorama.clicked.connect(self.loopPanorama)
         self.pushButtonPausePanorama.clicked.connect(self.pausePanorama)
         self.pushButtonStopPanorama.clicked.connect(self.stopPanorama)
+
+        # storage tab
+        self.pushButtonMapRemoteFolder.clicked.connect(self.MapRemoteFolder)
+        self.pushButtonPanoRootFolder2.clicked.connect(self.selectPanoRootFolder)
+        self.lineEditPanoRootFolder2.textChanged.connect(
+            self.lineEditPanoRootFolder.setText)
+        self.pushButtonPanoRootFolderFallBack.clicked.connect(
+            self.selectFallbackFolder)
 
         self.initilisedCamera = False
         self.initilisedPanTilt = False
@@ -364,10 +376,53 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             QtCore.QRect(0, 0, self.PanoOverView.shape[1],
                          self.PanoOverView.shape[0]))
 
+    def MapRemoteFolder(self):
+        if os.system == "Windows":
+            self.printError("This mapping needs to be done by win-sshfs")
+            return
+
+        HostName = str(self.lineEditStorageAddress.text())
+        UserName = str(self.lineEditStorageUsername.text())
+        Password = str(self.lineEditStoragePassword.text())
+        RemoteFolder = str(self.lineEditPanoRemoteFolder.text())
+        LocalFolder = str(self.lineEditPanoLocalFolder.text())
+        if len(glob.glob(os.path.join(LocalFolder, "*"))) > 0:
+            self.printMessage("Remote folder seemed to be already mapped")
+        elif len(HostName) > 0 and len(UserName) > 0 and \
+                len(RemoteFolder) > 0 and len(LocalFolder) > 0:
+            Command = ["sshfs {}@{}:{} {}".format(UserName, HostName,
+                       RemoteFolder, LocalFolder)]
+            if len(Password) > 0:
+                import pexpect
+                child = pexpect.spawn(Command[0])
+                child.expect("{}@{}'s password:".format(UserName, HostName))
+                child.sendline(Password)
+            else:
+                process = subprocess.Popen(Command, shell=True)
+                sts = os.waitpid(process.pid, 0)
+                if sts[1] != 0:
+                    self.printError("Cannot map remote folder")
+
     def selectPanoRootFolder(self):
-        Folder = QtGui.QFileDialog.getExistingDirectory(self, "Select Directory")
+        PanoFallbackFolder = str(self.lineEditPanoRootFolderFallBack.text())
+        if os.path.exists(PanoFallbackFolder):
+            self.lineEditPanoRootFolder.setText(PanoFallbackFolder)
+            self.printMessage("Use fall back folder {} for panorama".format(
+                PanoFallbackFolder))
+        else:
+            PanoRootFolder = self.lineEditPanoRootFolder.text()
+            Folder = QtGui.QFileDialog.getExistingDirectory(
+                self, "Select Directory", PanoRootFolder)
+            if len(Folder) > 0:
+                self.lineEditPanoRootFolder.setText(Folder)
+
+    def selectFallbackFolder(self):
+        PanoFallbackFolder = self.lineEditPanoRootFolderFallBack.text()
+        Folder = QtGui.QFileDialog.getExistingDirectory(self,
+                                                        "Select Directory",
+                                                        PanoFallbackFolder)
         if len(Folder) > 0:
-            self.lineEditPanoRootFolder.setText(Folder)
+            self.lineEditPanoRootFolderFallBack.setText(Folder)
 
     def savePanoConfig(self, FileName=None):
         if FileName is None:
@@ -397,6 +452,14 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         PanoConfigDic["PanoEndHour"] = self.spinBoxEndHour.value()
         PanoConfigDic["PanoStartMin"] = self.PanoStartMin
         PanoConfigDic["PanoWaitMin"] = self.PanoWaitMin
+
+        PanoConfigDic["RemoteStorageAddress"] = str(self.lineEditStorageAddress.text())
+        PanoConfigDic["RemoteStorageUsername"] = str(self.lineEditStorageUsername.text())
+        PanoConfigDic["RemoteStoragePassword"] = str(self.lineEditStoragePassword.text())
+        PanoConfigDic["RemoteFolder"] = str(self.lineEditPanoRemoteFolder.text())
+        PanoConfigDic["LocalFolder"] = str(self.lineEditPanoLocalFolder.text())
+        PanoConfigDic["PanoFallbackFolder"] = str(self.lineEditPanoRootFolderFallBack.text())
+        PanoConfigDic["MinFreeSpace"] = int(self.lineEditMinFreeDiskSpace.text())
 
         with open(FileName, 'w') as YAMLFile:
             YAMLFile.write(yaml.dump(PanoConfigDic, default_flow_style=False))
@@ -449,6 +512,18 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.spinBoxEndHour.setValue(PanoConfigDic["PanoEndHour"])
             self.PanoStartMin = PanoConfigDic["PanoStartMin"]
             self.PanoWaitMin = PanoConfigDic["PanoWaitMin"]
+            self.lineEditStorageAddress.setText(
+                PanoConfigDic["RemoteStorageAddress"])
+            self.lineEditStorageUsername.setText(
+                PanoConfigDic["RemoteStorageUsername"])
+            self.lineEditStoragePassword.setText(
+                PanoConfigDic["RemoteStoragePassword"])
+            self.lineEditPanoRemoteFolder.setText(PanoConfigDic["RemoteFolder"])
+            self.lineEditPanoLocalFolder.setText(PanoConfigDic["LocalFolder"])
+            self.lineEditPanoRootFolderFallBack.setText(
+                PanoConfigDic["PanoFallbackFolder"])
+            self.lineEditMinFreeDiskSpace.setText(
+                str(PanoConfigDic["MinFreeSpace"]))
 
     def takePanorama(self, IsOneTime=True):
         if not self.initilisedCamera:
@@ -1240,15 +1315,15 @@ class PanoThread(QtCore.QThread):
         self.emit(QtCore.SIGNAL('PanoThreadStarted()'))
         self.stopped = False
 
-        # make sure panoram loop start within "StartMin" from zero minute
-        Start = datetime.now()
-        WaitSeconds = 60*(self.Pano.PanoStartMin - Start.minute) - Start.second
-        if not self.IsOneTime and \
-                WaitSeconds > 0 and WaitSeconds < self.Pano.PanoWaitMin*60:
-            self.emit(QtCore.SIGNAL('Message(QString)'),
-                      "It's {}. Wait for {} minutes before start.".format(
-                          Start.strftime("%H:%M"), WaitSeconds/60))
-            time.sleep(WaitSeconds)
+#        # make sure panoram loop start within "StartMin" from zero minute
+#        Start = datetime.now()
+#        WaitSeconds = 60*(self.Pano.PanoStartMin - Start.minute) - Start.second
+#        if not self.IsOneTime and \
+#                WaitSeconds > 0 and WaitSeconds < self.Pano.PanoWaitMin*60:
+#            self.emit(QtCore.SIGNAL('Message(QString)'),
+#                      "It's {}. Wait for {} minutes before start.".format(
+#                          Start.strftime("%H:%M"), WaitSeconds/60))
+#            time.sleep(WaitSeconds)
 
         self.PanoRootFolder = str(self.Pano.lineEditPanoRootFolder.text())
         while not self.Pano.StopPanorama:
@@ -1257,7 +1332,7 @@ class PanoThread(QtCore.QThread):
 
             # test if there's enough
             Usage = disk_usage.disk_usage(self.PanoRootFolder)
-            if Usage.free < 1e6:
+            if Usage.free < 1e6*int(self.Pano.lineEditMinFreeDiskSpace.text()):
                 self.Pano.StopPanorama = True
                 self.emit(QtCore.SIGNAL('Message(QString)'),
                       "There's only {} bytes left. Stop".format(Usage.free))
@@ -1267,9 +1342,9 @@ class PanoThread(QtCore.QThread):
             self.emit(QtCore.SIGNAL('Message(QString)'),
                       "Take a panorama from {}".format(Start.strftime("%H:%M")))
 
-            IgnoreHourRange = (self.StartHour >= self.EndHour)
+            IgnoreHourRange = (self.StartHour > self.EndHour)
             WithinHourRange = (Start.hour >= self.StartHour and \
-                               Start.hour < self.EndHour)
+                               Start.hour <= self.EndHour)
             if self.IsOneTime or IgnoreHourRange or WithinHourRange:
                 self.Pano.PanoFolder = os.path.join(self.PanoRootFolder,
                                                     Start.strftime("%Y"),
@@ -1344,19 +1419,34 @@ class PanoThread(QtCore.QThread):
             if self.IsOneTime:
                 break
             else:
-                End = datetime.now()
-                Elapse = End - Start
-                ElapseSeconds = Elapse.days*86400 + Elapse.seconds
-                if self.LoopInterval > ElapseSeconds:
-                    WaitTime = self.LoopInterval - ElapseSeconds
-                else:
+#                End = datetime.now()
+#                Elapse = End - Start
+#                ElapseSeconds = Elapse.days*86400 + Elapse.seconds
+#                if self.LoopInterval > ElapseSeconds:
+#                    WaitTime = self.LoopInterval - ElapseSeconds
+#
+#                else:
+#                    self.emit(QtCore.SIGNAL('Message(QString)'),
+#                              "Warning: it takes more time than loop interval")
+#                    WaitTime = 0
+#                self.emit(QtCore.SIGNAL('Message(QString)'),
+#                          "It's {}. Wait for {} minutes before start.".format(
+#                              End.strftime("%H:%M"), WaitTime/60))
+#
+#                time.sleep(WaitTime)
+
+                while True:
+                    End = datetime.now()
+                    Quotient, Remainder = divmod((End.hour*60 + End.min),
+                                                 self.LoopInterval)
+                    if Remainder <= self.Pano.PanoWaitMin:
+                        break
+                    DueTime = (Quotient+1)*self.LoopInterval
+                    WaitMin = DueTime - (End.hour*60 + End.min)
                     self.emit(QtCore.SIGNAL('Message(QString)'),
-                              "Warning: it takes more time than loop interval")
-                    WaitTime = 0
-                self.emit(QtCore.SIGNAL('Message(QString)'),
-                          "It's {}. Wait for {} minutes before start.".format(
-                              End.strftime("%H:%M"), WaitTime/60))
-                time.sleep(WaitTime)
+                              "Wait for {} minutes before start.".format(
+                                  WaitMin))
+                    time.sleep(WaitMin*60)
 
         self.emit(QtCore.SIGNAL('PanoThreadDone()'))
         return
@@ -1366,7 +1456,6 @@ class PanoThread(QtCore.QThread):
             self.stopped = True
 
 if __name__ == "__main__":
-    print(sys.argv)
     if len(sys.argv) == 1:
         print("Now run interactive mode")
         print("Usage:")
@@ -1382,5 +1471,6 @@ if __name__ == "__main__":
         if sys.argv[i] == "--autorun":
             myWindow.loadPanoConfig(sys.argv[i+1])
             myWindow.calculatePanoGrid()
+            myWindow.MapRemoteFolder()
             myWindow.loopPanorama()
     app.exec_()
