@@ -1009,6 +1009,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         Key = event.key()
 #        self.printMessage("Key = {}".format(Key))
         if Key == QtCore.Qt.Key_Escape:
+            self.stopPanorama()
             self.close()
         elif Key == QtCore.Qt.DownArrow:
             self.PanTilt.panStep("down", 10)
@@ -1355,10 +1356,21 @@ class PanoThread(QtCore.QThread):
         with QtCore.QMutexLocker(self.mutex):
             self.stopped = True
 
-
-app = QtGui.QApplication(sys.argv)
-myWindow = MyWindowClass(None)
-myWindow.setWindowTitle("Panorama control using IP Pan-Tilt-Zoom camera")
-myWindow.setWindowIcon(QtGui.QIcon("PanoControl.png"))
-myWindow.show()
-app.exec_()
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        print("Now run interactive mode")
+        print("Usage:")
+        print("    python ipcamcontrol_gui.py # run interactively")
+        print("    python ipcamcontrol_gui.py --autorun PanoConfig_AxisCamera.yml # run automatically")
+        print("    python ipcamcontrol_gui.py --autorun PanoConfig_ActiCamera.yml # run automatically")
+    app = QtGui.QApplication(sys.argv)
+    myWindow = MyWindowClass(None)
+    myWindow.setWindowTitle("Panorama control using IP Pan-Tilt-Zoom camera")
+    myWindow.setWindowIcon(QtGui.QIcon("PanoControl.png"))
+    myWindow.show()
+    for i in range(len(sys.argv)):
+        if sys.argv[i] == "--autorun":
+            myWindow.loadPanoConfig(sys.argv[i+1])
+            myWindow.calculatePanoGrid()
+            myWindow.loopPanorama()
+    app.exec_()
