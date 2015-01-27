@@ -81,8 +81,8 @@ def executeURL(URL_Str, RET_Str=None):
 #        print(Vals)
         return Vals
 
-
-form_class = uic.loadUiType("controller2.ui")[0]
+CWD = os.path.dirname(os.path.realpath(__file__))
+form_class = uic.loadUiType(os.path.join(CWD, "controller2.ui"))[0]
 
 
 class MyWindowClass(QtGui.QMainWindow, form_class):
@@ -145,7 +145,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonStopPanorama.clicked.connect(self.stopPanorama)
 
         # storage tab
-        self.pushButtonMapRemoteFolder.clicked.connect(self.MapRemoteFolder)
+        self.pushButtonMapRemoteFolder.clicked.connect(self.mapRemoteFolder)
         self.pushButtonPanoRootFolder2.clicked.connect(self.selectPanoRootFolder)
         self.lineEditPanoRootFolder2.textChanged.connect(
             self.lineEditPanoRootFolder.setText)
@@ -175,7 +175,6 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.RunConfig = None
         self.PanoStartMin = 60
         self.PanoWaitMin = 15
-
 
         # create logger
         self.logger = logging.getLogger()
@@ -376,10 +375,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             QtCore.QRect(0, 0, self.PanoOverView.shape[1],
                          self.PanoOverView.shape[0]))
 
-    def MapRemoteFolder(self):
+    def mapRemoteFolder(self):
         if os.system == "Windows":
             self.printError("This mapping needs to be done by win-sshfs")
-            return
+            return False
 
         HostName = str(self.lineEditStorageAddress.text())
         UserName = str(self.lineEditStorageUsername.text())
@@ -388,33 +387,51 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         LocalFolder = str(self.lineEditPanoLocalFolder.text())
         if len(glob.glob(os.path.join(LocalFolder, "*"))) > 0:
             self.printMessage("Remote folder seemed to be already mapped")
+            return True
         elif len(HostName) > 0 and len(UserName) > 0 and \
                 len(RemoteFolder) > 0 and len(LocalFolder) > 0:
             Command = ["sshfs {}@{}:{} {}".format(UserName, HostName,
                        RemoteFolder, LocalFolder)]
             if len(Password) > 0:
-                import pexpect
-                child = pexpect.spawn(Command[0])
-                child.expect("{}@{}'s password:".format(UserName, HostName))
-                child.sendline(Password)
+                try:
+                    import pexpect
+                    child = pexpect.spawn(Command[0])
+                    child.expect("{}@{}'s password:".format(UserName, HostName))
+                    child.sendline(Password)
+                    time.sleep(5)
+                    child.expect (pexpect.EOF)
+                    return True
+                except:
+                    self.printError("Failed to map network drive")
+                    return False
             else:
                 process = subprocess.Popen(Command, shell=True)
                 sts = os.waitpid(process.pid, 0)
                 if sts[1] != 0:
                     self.printError("Cannot map remote folder")
+                    return False
+                else:
+                    return True
 
-    def selectPanoRootFolder(self):
+    def useFallbackFolder(self):
         PanoFallbackFolder = str(self.lineEditPanoRootFolderFallBack.text())
         if os.path.exists(PanoFallbackFolder):
             self.lineEditPanoRootFolder.setText(PanoFallbackFolder)
             self.printMessage("Use fall back folder {} for panorama".format(
                 PanoFallbackFolder))
+            return True
         else:
-            PanoRootFolder = self.lineEditPanoRootFolder.text()
-            Folder = QtGui.QFileDialog.getExistingDirectory(
-                self, "Select Directory", PanoRootFolder)
-            if len(Folder) > 0:
-                self.lineEditPanoRootFolder.setText(Folder)
+            return False
+
+    def selectPanoRootFolder(self):
+        PanoRootFolder = self.lineEditPanoRootFolder.text()
+        Folder = QtGui.QFileDialog.getExistingDirectory(
+            self, "Select Directory", PanoRootFolder)
+        if len(Folder) > 0:
+            self.lineEditPanoRootFolder.setText(Folder)
+            return True
+        else:
+            return False
 
     def selectFallbackFolder(self):
         PanoFallbackFolder = self.lineEditPanoRootFolderFallBack.text()
@@ -536,10 +553,16 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.calculatePanoGrid()  # make sure everything is up-to-date
         self.PanoImageNo = 0
         if not os.path.exists(str(self.lineEditPanoRootFolder.text())):
-            self.selectPanoRootFolder()
+            if self.useFallbackFolder() is False:
+                self.printMessage("Failed to use panorama fallback folder")
+                if self.selectPanoRootFolder() is False:
+                    self.printMessage("Failed to select panorama root folder")
+                    return
 
+        self.TimeStreamName = str(self.lineEditTimeStreamName.text())
         self.PausePanorama = False
         self.StopPanorama = False
+
 
         LoopInterval = 60*int(self.spinBoxPanoLoopInterval.text())
         StartHour = self.spinBoxStartHour.value()
@@ -621,11 +644,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
     def updatePanoImage(self):
         self.updateImage()
         self.updatePanoOverView()
-        Prefix = "Image"
         Now = datetime.now()
         FileName = os.path.join(self.PanoFolder,
                                 "{}_{}_00_00_{:04}.jpg".format(
-                                    Prefix,
+                                    self.TimeStreamName,
                                     Now.strftime("%Y_%m_%d_%H_%M"),
                                     self.PanoImageNo))
         misc.imsave(FileName, self.Image)
@@ -1348,13 +1370,21 @@ class PanoThread(QtCore.QThread):
             WithinHourRange = (Start.hour >= self.StartHour and \
                                Start.hour <= self.EndHour)
             if self.IsOneTime or IgnoreHourRange or WithinHourRange:
-                self.Pano.PanoFolder = os.path.join(self.PanoRootFolder,
-                                                    Start.strftime("%Y"),
-                                                    Start.strftime("%Y_%m"),
-                                                    Start.strftime("%Y_%m_%d"),
-                                                    Start.strftime("%Y_%m_%d_%H"))
-                if not os.path.exists(self.Pano.PanoFolder):
-                    os.makedirs(self.Pano.PanoFolder)
+                # create a new panorama folder with increasing index
+                NoPanoInSameHour = 1
+                while True:
+                    self.Pano.PanoFolder = os.path.join(
+                        self.PanoRootFolder, Start.strftime("%Y"),
+                        Start.strftime("%Y_%m"), Start.strftime("%Y_%m_%d"),
+                        Start.strftime("%Y_%m_%d_%H"),
+                        "{}_{}_{:02}".format(self.Pano.TimeStreamName,
+                                          Start.strftime("%Y_%m_%d_%H"),
+                                          NoPanoInSameHour))
+                    if not os.path.exists(self.Pano.PanoFolder):
+                        os.makedirs(self.Pano.PanoFolder)
+                        break
+                    else:
+                        NoPanoInSameHour += 1
 
                 self.emit(QtCore.SIGNAL('OnePanoStarted()'))
                 self.Pano.PanoImageNo = 0
@@ -1473,6 +1503,9 @@ if __name__ == "__main__":
         if sys.argv[i] == "--autorun":
             myWindow.loadPanoConfig(sys.argv[i+1])
             myWindow.calculatePanoGrid()
-            myWindow.MapRemoteFolder()
+            if myWindow.mapRemoteFolder() is False:
+                if myWindow.useFallbackFolder() is False:
+                    myWindow.printError("Cannot set pano root folder")
+                    exit
             myWindow.loopPanorama()
     app.exec_()

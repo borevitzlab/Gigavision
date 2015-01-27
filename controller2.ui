@@ -47,7 +47,7 @@
           </size>
          </property>
          <property name="currentIndex">
-          <number>4</number>
+          <number>3</number>
          </property>
          <property name="movable">
           <bool>true</bool>
@@ -1076,7 +1076,14 @@
              </widget>
             </item>
             <item row="5" column="1">
-             <widget class="QLineEdit" name="lineEditTimeStreamName"/>
+             <widget class="QLineEdit" name="lineEditTimeStreamName">
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+             </widget>
             </item>
            </layout>
           </widget>
