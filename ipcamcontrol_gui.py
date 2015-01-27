@@ -400,6 +400,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                     child.sendline(Password)
                     time.sleep(5)
                     child.expect (pexpect.EOF)
+                    self.printError("Successfully mapped network drive")
                     return True
                 except:
                     self.printError("Failed to map network drive")
