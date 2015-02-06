@@ -1,4 +1,5 @@
-IPVAL: '192.168.1.114'
+#IPVAL: '192.168.1.114'
+IPVAL: '10.132.11.32:4442'
 USERVAL: root
 PASSVAL: admin
 
@@ -33,7 +34,7 @@ Type: StepperMotors
 PanRange: [-180, 180]
 TiltRange: [-90, 19]
 ZoomRange: [1, 9999]
-ZoomVal: 8000
+ZoomVal: 9999
 URL_SetPan: USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL
 URL_SetTilt: USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?tilt=TILTVAL
 URL_SetPanTilt: USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL&tilt=TILTVAL

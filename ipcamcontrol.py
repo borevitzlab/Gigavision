@@ -910,5 +910,5 @@ if __name__ == "__main__":
     PanTil_IP = "192.168.1.101:81"
 
 #    liveViewDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
-#    PanoFoVDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
-    PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
+    PanoFoVDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
+ #   PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)

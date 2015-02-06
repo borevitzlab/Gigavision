@@ -1,0 +1,23 @@
+1stCorner: -151,7.5
+2ndCorner: 39.1324,-25
+CameraConfigFile: AxisCamera.yml
+FieldOfView: 4.2570212766,2.3465625
+LocalFolder: /home/chuong/Data/a_data
+MinFreeSpace: 1000
+Overlap: 50
+PanTiltConfigFile: AxisCamera.yml
+PanoEndHour: 19
+PanoFallbackFolder: /home/pi/Data/Panorama
+PanoGridSize: 28x89
+PanoLoopInterval: 60
+PanoRootFolder: /home/chuong/Data/a_data/Gigavision/chuong_tests
+PanoStartHour: 7
+PanoStartMin: 60
+PanoWaitMin: 15
+RemoteFolder: /network/phenocam-largedatasets/a_data
+RemoteStorageAddress: percy.anu.edu.au
+RemoteStoragePassword: ''
+RemoteStorageUsername: chuong
+ScanOrder: Cols, right
+TimeStreamName: ARB-GVHill
+Zoom: 8000
