@@ -397,7 +397,7 @@ class PanTilt(object):
     """
     Control J-Systems PTZ
 
-    For new sysem or new firmware, the system needs calibration as follows:
+    For new system or new firmware, the system needs calibration as follows:
     - Open URL of the PTZ on a web browser
     - Click on "Calibration" tab, enter username and password if necessary
     - On Calibration window, click on "Open-loop" and then "Set Mode"

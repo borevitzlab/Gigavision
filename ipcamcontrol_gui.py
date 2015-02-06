@@ -460,6 +460,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         PanoConfigDic["FieldOfView"] = str(self.lineEditFieldOfView.text())
         PanoConfigDic["Overlap"] = self.spinBoxPanoOverlap.value()
         PanoConfigDic["Zoom"] = int(self.lineEditZoom.text())
+        PanoConfigDic["Focus"] = int(self.lineEditZoom.text())
         PanoConfigDic["1stCorner"] = str(self.lineEditPanoFirstCorner.text())
         PanoConfigDic["2ndCorner"] = str(self.lineEditPanoSecondCorner.text())
         PanoConfigDic["ScanOrder"] = str(self.comboBoxPanoScanOrder.currentText())

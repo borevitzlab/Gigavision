@@ -7,7 +7,7 @@ MinFreeSpace: 1000
 Overlap: 50
 PanTiltConfigFile: AxisCamera.yml
 PanoEndHour: 18
-PanoFallbackFolder: /home/pi/Data/Panorama
+PanoFallbackFolder: /home/chuong/Data/Panorama
 PanoGridSize: 18x42
 PanoLoopInterval: 60
 PanoRootFolder: /home/chuong/Data/a_data/Gigavision/chuong_tests
@@ -17,7 +17,7 @@ PanoWaitMin: 15
 RemoteFolder: /network/phenocam-largedatasets/a_data
 RemoteStorageAddress: percy.anu.edu.au
 RemoteStoragePassword: ''
-RemoteStorageUsername: chuong
+RemoteStorageUsername: chuong2
 ScanOrder: Cols, right
 TimeStreamName: ARB-GVHill
 Zoom: 8000
