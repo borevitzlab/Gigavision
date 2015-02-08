@@ -334,8 +334,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             BottomTilt = float(Tilt0)
         self.TopLeftCorner = [LeftPan, TopTilt]
         self.BottomRightCorner = [RightPan, BottomTilt]
-        self.PanoRows = int(round((TopTilt - BottomTilt)/self.VFoV/self.Overlap))
-        self.PanoCols = int(round((RightPan - LeftPan)/self.HFoV/self.Overlap))
+        self.PanoRows = int(round((TopTilt - BottomTilt)/self.VFoV/(1.0-self.Overlap)))
+        self.PanoCols = int(round((RightPan - LeftPan)/self.HFoV/(1.0-self.Overlap)))
         self.PanoTotal = self.PanoRows*self.PanoCols
 
         # Gigapan Sticher only works with 2000 images max
@@ -701,7 +701,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 os.mkdir(DataFolder)
             self.savePanoConfig(os.path.join(DataFolder, "PanoConfig.yml"))
         except:
-            self.printError("Cannot save PanoConfig.yml")
+#            self.printError("Cannot save PanoConfig.yml")
+            pass
 
     def savePanoOverView(self):
         try:
@@ -1319,9 +1320,9 @@ class PanoThread(QtCore.QThread):
         else:
             self.Pano.setPanTilt(
                 self.Pano.TopLeftCorner[0] +
-                iCol*self.Pano.HFoV*self.Pano.Overlap,
+                iCol*self.Pano.HFoV*(1.0 - self.Pano.Overlap),
                 self.Pano.TopLeftCorner[1] -
-                jRow*self.Pano.VFoV*self.Pano.Overlap)
+                jRow*self.Pano.VFoV*(1.0 - self.Pano.Overlap))
         PanPos, TiltPos = self.Pano.getPanTilt()
 
         # extra time to settle down
