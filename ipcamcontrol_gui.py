@@ -603,6 +603,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 str(PanoConfigDic["MinFreeSpace"]))
 
             self.calculatePanoGrid()
+            self.startPanTilt()
+            self.startCamera()
             self.PanoConfigChanged = False
 
     def takePanorama(self, IsOneTime=True):
@@ -1593,7 +1595,6 @@ if __name__ == "__main__":
     for i in range(len(sys.argv)):
         if sys.argv[i] == "--autorun":
             myWindow.loadPanoConfig(sys.argv[i+1])
-            myWindow.calculatePanoGrid()
             if myWindow.mapRemoteFolder() is False:
                 if myWindow.useFallbackFolder() is False:
                     myWindow.printError("Cannot set pano root folder")
