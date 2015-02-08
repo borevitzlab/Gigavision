@@ -337,6 +337,15 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.PanoRows = int(round((TopTilt - BottomTilt)/self.VFoV/self.Overlap))
         self.PanoCols = int(round((RightPan - LeftPan)/self.HFoV/self.Overlap))
         self.PanoTotal = self.PanoRows*self.PanoCols
+
+        # Gigapan Sticher only works with 2000 images max
+        if self.PanoTotal > self.spinBoxMaxPanoNoImages.value():
+            QtGui.QMessageBox.about(
+                self, "Warning",
+                "Total number of image {} is more than {}".format(
+                    self.PanoTotal,
+                    self.spinBoxMaxPanoNoImages.value()))
+
         self.lineEditPanoGridSize.setText("{}x{}".format(
             self.PanoRows, self.PanoCols))
         if self.PanoRows >= 0 or self.PanoCols >= 0:
@@ -479,6 +488,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         PanoConfigDic["LocalFolder"] = str(self.lineEditPanoLocalFolder.text())
         PanoConfigDic["TimeStreamName"] = str(self.lineEditTimeStreamName.text())
         PanoConfigDic["PanoFallbackFolder"] = str(self.lineEditPanoRootFolderFallBack.text())
+        PanoConfigDic["MaxPanoNoImages"] = self.spinBoxMaxPanoNoImages.value()
         PanoConfigDic["MinFreeSpace"] = int(self.lineEditMinFreeDiskSpace.text())
 
         with open(FileName, 'w') as YAMLFile:
@@ -543,6 +553,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.lineEditPanoLocalFolder.setText(PanoConfigDic["LocalFolder"])
             self.lineEditPanoRootFolderFallBack.setText(
                 PanoConfigDic["PanoFallbackFolder"])
+            self.spinBoxMaxPanoNoImages.setValue(
+                PanoConfigDic["MaxPanoNoImages"])
             self.lineEditMinFreeDiskSpace.setText(
                 str(PanoConfigDic["MinFreeSpace"]))
 

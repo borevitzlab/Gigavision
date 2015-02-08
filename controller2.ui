@@ -47,7 +47,7 @@
           </size>
          </property>
          <property name="currentIndex">
-          <number>3</number>
+          <number>4</number>
          </property>
          <property name="movable">
           <bool>true</bool>
@@ -71,7 +71,7 @@
               <item row="3" column="1">
                <widget class="QLineEdit" name="lineEditPanTiltConfigFilename">
                 <property name="text">
-                 <string>JSystemsPanTilt.yml</string>
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -85,7 +85,7 @@
               <item row="1" column="1">
                <widget class="QLineEdit" name="lineEditPanTiltUsername">
                 <property name="text">
-                 <string>admin</string>
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -95,7 +95,7 @@
                  <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText</set>
                 </property>
                 <property name="text">
-                 <string>admin</string>
+                 <string/>
                 </property>
                 <property name="echoMode">
                  <enum>QLineEdit::Password</enum>
@@ -108,7 +108,7 @@
                  <set>Qt::ImhUrlCharactersOnly</set>
                 </property>
                 <property name="text">
-                 <string>192.168.1.101:81</string>
+                 <string/>
                 </property>
                 <property name="echoMode">
                  <enum>QLineEdit::Normal</enum>
@@ -219,7 +219,7 @@
                  <set>Qt::ImhUrlCharactersOnly</set>
                 </property>
                 <property name="text">
-                 <string>192.168.1.100</string>
+                 <string/>
                 </property>
                 <property name="echoMode">
                  <enum>QLineEdit::Normal</enum>
@@ -229,7 +229,7 @@
               <item row="1" column="1">
                <widget class="QLineEdit" name="lineEditIPCamUsername">
                 <property name="text">
-                 <string>Admin</string>
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -239,7 +239,7 @@
                  <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText</set>
                 </property>
                 <property name="text">
-                 <string>123456</string>
+                 <string/>
                 </property>
                 <property name="echoMode">
                  <enum>QLineEdit::Password</enum>
@@ -273,7 +273,7 @@
               <item row="3" column="1">
                <widget class="QLineEdit" name="lineEditCameraConfigFilename">
                 <property name="text">
-                 <string>ActiCamera.yml</string>
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -949,7 +949,7 @@
              <x>0</x>
              <y>0</y>
              <width>441</width>
-             <height>293</height>
+             <height>326</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_6">
@@ -984,7 +984,7 @@
               </property>
              </widget>
             </item>
-            <item row="8" column="0">
+            <item row="9" column="0">
              <widget class="QLabel" name="label_32">
               <property name="text">
                <string>Min free diskspace (MB)</string>
@@ -1022,7 +1022,7 @@
               </property>
              </widget>
             </item>
-            <item row="8" column="1">
+            <item row="9" column="1">
              <widget class="QLineEdit" name="lineEditMinFreeDiskSpace"/>
             </item>
             <item row="4" column="1">
@@ -1082,6 +1082,26 @@
                 <width>16777215</width>
                 <height>16777215</height>
                </size>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="0">
+             <widget class="QLabel" name="label_39">
+              <property name="text">
+               <string>Max no. images/run</string>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="1">
+             <widget class="QSpinBox" name="spinBoxMaxPanoNoImages">
+              <property name="maximum">
+               <number>1000000</number>
+              </property>
+              <property name="singleStep">
+               <number>100</number>
+              </property>
+              <property name="value">
+               <number>1000000</number>
               </property>
              </widget>
             </item>
