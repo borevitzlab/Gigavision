@@ -548,7 +548,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 self, "Load config", os.path.curdir, "YAML Files (*.yml)")
             if len(FileName) == 0:
                 return
-
+        self.PanoConfigFileName = FileName
         with open(FileName, 'r') as YAMLFile:
             PanoConfigDic = yaml.load(YAMLFile)
             Message = "Loaded {}:\n".format(FileName) + \
@@ -1196,9 +1196,14 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             Answer = QtGui.QMessageBox.question(
                 self, "Warning",
                 "Panoram config changed. Do you want to save changes?",
-                QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
-                QtGui.QMessageBox.Yes)
-            if Answer == QtGui.QMessageBox.Yes:
+                QtGui.QMessageBox.Ignore | QtGui.QMessageBox.Save |
+                QtGui.QMessageBox.SaveAll, QtGui.QMessageBox.Save)
+            if Answer == QtGui.QMessageBox.Save and \
+                    os.path.exists(self.PanoConfigFileName):
+                self.savePanoConfig(self.PanoConfigFileName)
+            elif Answer == QtGui.QMessageBox.SaveAll or \
+                    (Answer == QtGui.QMessageBox.Save and
+                     not os.path.exists(self.PanoConfigFileName)):
                 FileName = str(QtGui.QFileDialog.getSaveFileName(
                                self, 'Save panorama config',
                                self.lineEditRunConfigInFileName.text(),
@@ -1208,7 +1213,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
         Answer2 = QtGui.QMessageBox.question(
             self, "Warning", "Are you sure to quit?",
-            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
+            QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel,
             QtGui.QMessageBox.Yes)
         if Answer2 == QtGui.QMessageBox.Yes:
             event.accept()
