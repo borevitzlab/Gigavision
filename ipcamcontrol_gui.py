@@ -558,6 +558,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.lineEditMinFreeDiskSpace.setText(
                 str(PanoConfigDic["MinFreeSpace"]))
 
+            self.calculatePanoGrid()
+
     def takePanorama(self, IsOneTime=True):
         if not self.initilisedCamera:
             self.initCamera()
