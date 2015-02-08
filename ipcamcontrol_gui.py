@@ -75,7 +75,7 @@ def executeURL(URL_Str, RET_Str=None):
                 if Pos1 >= 0 and Pos2 >= Pos1:
                     Vals.append(Output[Pos1 + len(WordList[0]):Pos2])
             else:
-                self.printError("Unhandled case {}". format(Str))
+                MyWindowClass.printError("Unhandled case {}". format(Str))
         if len(Vals) == 1:
             return Vals[0]
 #        print(Vals)
@@ -96,6 +96,11 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonLoadPanTiltConfigFile.clicked.connect(
             self.loadPanTiltConfig)
 
+        self.lineEditPanTiltAddress.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanTiltUsername.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanTiltPassword.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanTiltConfigFilename.textChanged.connect(self.PanoConfigUpdated)
+
         # Camera tab
         self.pushButtonStartCamera.clicked.connect(self.startCamera)
         self.lineEditZoom.textChanged.connect(self.lineEditZoom2.setText)
@@ -106,6 +111,15 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonLoadCameraConfigFile.clicked.connect(
             self.loadCameraConfig)
 
+        self.lineEditIPCamAddress.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditIPCamUsername.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditIPCamPassword.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditCameraConfigFilename.textChanged.connect(self.PanoConfigUpdated)
+        self.comboBoxImageSize.currentIndexChanged.connect(self.PanoConfigUpdated)
+        self.lineEditZoom.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditFocus.textChanged.connect(self.PanoConfigUpdated)
+        self.comboBoxFocusMode.currentIndexChanged.connect(self.PanoConfigUpdated)
+
         # FoV tab
         self.horizontalSliderPan.valueChanged.connect(self.setPan)
         self.horizontalSliderTilt.valueChanged.connect(self.setTilt)
@@ -115,6 +129,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonCurrentAsViewSecondCorner.clicked.connect(
             self.setCurrentAsViewSecondCorner)
         self.pushButtonCalculateFoV.clicked.connect(self.calculateFoV)
+
+        self.lineEditFieldOfView_2.textChanged.connect(self.PanoConfigUpdated)
 
         # panorama tab
         self.lineEditZoom2.textChanged.connect(self.lineEditZoom.setText)
@@ -144,6 +160,18 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonPausePanorama.clicked.connect(self.pausePanorama)
         self.pushButtonStopPanorama.clicked.connect(self.stopPanorama)
 
+        self.lineEditFieldOfView.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditZoom2.textChanged.connect(self.PanoConfigUpdated)
+        self.spinBoxPanoOverlap.valueChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanoFirstCorner.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanoSecondCorner.textChanged.connect(self.PanoConfigUpdated)
+        self.comboBoxPanoScanOrder.currentIndexChanged.connect(self.PanoConfigUpdated)
+        self.lineEditRunConfigInFileName.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanoRootFolder.textChanged.connect(self.PanoConfigUpdated)
+        self.spinBoxPanoLoopInterval.valueChanged.connect(self.PanoConfigUpdated)
+        self.spinBoxStartHour.valueChanged.connect(self.PanoConfigUpdated)
+        self.spinBoxEndHour.valueChanged.connect(self.PanoConfigUpdated)
+
         # storage tab
         self.pushButtonMapRemoteFolder.clicked.connect(self.mapRemoteFolder)
         self.pushButtonPanoRootFolder2.clicked.connect(self.selectPanoRootFolder)
@@ -152,6 +180,18 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonPanoRootFolderFallBack.clicked.connect(
             self.selectFallbackFolder)
 
+        self.lineEditStorageAddress.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditStorageUsername.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditStoragePassword.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanoRemoteFolder.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanoLocalFolder.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditTimeStreamName.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanoRootFolder2.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanoRootFolderFallBack.textChanged.connect(self.PanoConfigUpdated)
+        self.spinBoxMaxPanoNoImages.valueChanged.connect(self.PanoConfigUpdated)
+        self.lineEditMinFreeDiskSpace.textChanged.connect(self.PanoConfigUpdated)
+
+        # initial values
         self.initilisedCamera = False
         self.initilisedPanTilt = False
         self.PanPos = 0
@@ -175,6 +215,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.RunConfig = None
         self.PanoStartMin = 60
         self.PanoWaitMin = 15
+        self.PanoConfigChanged = False
 
         # create logger
         self.logger = logging.getLogger()
@@ -185,6 +226,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             '%(asctime)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
+
+    def PanoConfigUpdated(self):
+        self.PanoConfigChanged = True
 
     def applyZoom(self):
         Zoom = int(self.lineEditZoom.text())
@@ -559,6 +603,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 str(PanoConfigDic["MinFreeSpace"]))
 
             self.calculatePanoGrid()
+            self.PanoConfigChanged = False
 
     def takePanorama(self, IsOneTime=True):
         if not self.initilisedCamera:
@@ -1124,28 +1169,51 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
     def keyPressEvent(self, event):
         Key = event.key()
-#        self.printMessage("Key = {}".format(Key))
         if Key == QtCore.Qt.Key_Escape:
             self.stopPanorama()
             self.close()
-        elif Key == QtCore.Qt.DownArrow:
-            self.PanTilt.panStep("down", 10)
-            event.accept()
-        elif Key == QtCore.Qt.UpArrow:
-            self.PanTilt.panStep("up", 10)
-            event.accept()
-        elif Key == QtCore.Qt.LeftArrow:
-            self.PanTilt.panStep("left", 10)
-            event.accept()
-        elif Key == QtCore.Qt.RightArrow:
-            self.PanTilt.panStep("right", 10)
-            event.accept()
+#        elif Key == QtCore.Qt.DownArrow:
+#            self.PanTilt.panStep("down", 10)
+#            event.accept()
+#        elif Key == QtCore.Qt.UpArrow:
+#            self.PanTilt.panStep("up", 10)
+#            event.accept()
+#        elif Key == QtCore.Qt.LeftArrow:
+#            self.PanTilt.panStep("left", 10)
+#            event.accept()
+#        elif Key == QtCore.Qt.RightArrow:
+#            self.PanTilt.panStep("right", 10)
+#            event.accept()
 #        elif Key == QtCore.Qt.Key_PageDown:
 #            self.Camera.zoomStep("out", 50)
 #            event.accept()
 #        elif Key == QtCore.Qt.Key_PageUp:
 #            self.Camera.zoomStep("in", 50)
 #            event.accept()
+
+    def closeEvent(self, event):
+        if self.PanoConfigChanged:
+            Answer = QtGui.QMessageBox.question(
+                self, "Warning",
+                "Panoram config changed. Do you want to save changes?",
+                QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
+                QtGui.QMessageBox.Yes)
+            if Answer == QtGui.QMessageBox.Yes:
+                FileName = str(QtGui.QFileDialog.getSaveFileName(
+                               self, 'Save panorama config',
+                               self.lineEditRunConfigInFileName.text(),
+                               filter='*.yml'))
+                if len(os.path.basename(FileName)) > 0:
+                    self.savePanoConfig(FileName)
+
+        Answer2 = QtGui.QMessageBox.question(
+            self, "Warning", "Are you sure to quit?",
+            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
+            QtGui.QMessageBox.Yes)
+        if Answer2 == QtGui.QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.RightButton:
@@ -1503,6 +1571,7 @@ class PanoThread(QtCore.QThread):
     def stop(self):
         with QtCore.QMutexLocker(self.mutex):
             self.stopped = True
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
