@@ -617,7 +617,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         # select root folder
         PanoMainFolder = str(self.lineEditPanoMainFolder.text())
         PanoLocalFolder = str(self.lineEditPanoLocalFolder.text())
-        PanoMainFolder.replace("$LOCAL_FOLDER", PanoLocalFolder)
+        PanoMainFolder = PanoMainFolder.replace(
+            "$LOCAL_FOLDER", PanoLocalFolder)
         PanoFallBackFolder = \
             str(self.lineEditPanoMainFolderFallBack.text())
         if os.path.exists(PanoMainFolder):
