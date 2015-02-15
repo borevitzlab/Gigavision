@@ -21,4 +21,5 @@ RemoteStoragePassword: ''
 RemoteStorageUsername: chuong
 ScanOrder: Cols, right
 CameraName: ARB-GVHill
+UseFocusAtCenter: True
 Zoom: 9999

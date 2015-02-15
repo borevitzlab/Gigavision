@@ -47,7 +47,7 @@
           </size>
          </property>
          <property name="currentIndex">
-          <number>4</number>
+          <number>3</number>
          </property>
          <property name="movable">
           <bool>true</bool>
@@ -931,6 +931,17 @@
                <widget class="QCheckBox" name="checkBoxUserRunConfigIn">
                 <property name="text">
                  <string>Use</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="1" column="2">
+             <layout class="QHBoxLayout" name="horizontalLayout_16">
+              <item>
+               <widget class="QCheckBox" name="checkBoxUseFocusAtCenter">
+                <property name="text">
+                 <string>Focus at centre</string>
                 </property>
                </widget>
               </item>

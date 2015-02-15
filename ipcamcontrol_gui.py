@@ -508,6 +508,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         PanoConfigDic["Focus"] = int(self.lineEditZoom.text())
         PanoConfigDic["1stCorner"] = str(self.lineEditPanoFirstCorner.text())
         PanoConfigDic["2ndCorner"] = str(self.lineEditPanoSecondCorner.text())
+        PanoConfigDic["UseFocusAtCenter"] = \
+            self.checkBoxUseFocusAtCenter.checkState() == QtCore.Qt.Checked
         PanoConfigDic["ScanOrder"] = str(self.comboBoxPanoScanOrder.currentText())
         PanoConfigDic["PanoGridSize"] = str(self.lineEditPanoGridSize.text())
         PanoConfigDic["PanoMainFolder"] = str(self.lineEditPanoMainFolder.text())
@@ -565,6 +567,10 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.lineEditZoom.setText(str(PanoConfigDic["Zoom"]))
             self.lineEditPanoFirstCorner.setText(PanoConfigDic["1stCorner"])
             self.lineEditPanoSecondCorner.setText(PanoConfigDic["2ndCorner"])
+            if PanoConfigDic["UseFocusAtCenter"]:
+                self.checkBoxUseFocusAtCenter.setCheckState(QtCore.Qt.Checked)
+            else:
+                self.checkBoxUseFocusAtCenter.setCheckState(QtCore.Qt.Unchecked)
             Index = self.comboBoxPanoScanOrder.findText(PanoConfigDic["ScanOrder"])
             if Index >= 0:
                 self.comboBoxPanoScanOrder.setCurrentIndex(Index)
@@ -626,6 +632,22 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                                                       PanoFallBackFolder),
                 QtGui.QMessageBox.Ok)
             return
+
+        if self.checkBoxUseFocusAtCenter.checkState() == QtCore.Qt.Checked:
+            index = self.comboBoxFocusMode.findText("AUTO")
+            if index >= 0:
+                self.comboBoxFocusMode.setCurrentIndex(index)
+            PANVAL0, TILTVAL0 = self.lineEditPanoFirstCorner.text().split(",")
+            PANVAL1, TILTVAL1 = self.lineEditPanoSecondCorner.text().split(",")
+            self.setPanTilt(0.5*(float(PANVAL0) + float(PANVAL1)),
+                            0.5*(float(TILTVAL0) + float(TILTVAL1)))
+            self.snapPhoto()
+            self.updateImage()
+            self.snapPhoto()
+            self.updateImage()
+            index = self.comboBoxFocusMode.findText("MANUAL")
+            if index >= 0:
+                self.comboBoxFocusMode.setCurrentIndex(index)
 
         self.CameraName = str(self.lineEditCameraName.text())
         self.PausePanorama = False
@@ -1542,7 +1564,15 @@ class PanoThread(QtCore.QThread):
                                     self._moveAndSnap(i, j, DelaySeconds)
                                 else:
                                     self._moveAndSnap(i, j)
+
                 self.emit(QtCore.SIGNAL('OnePanoDone()'))
+
+                # go to middle point when finish
+                if self.Pano.checkBoxUseFocusAtCenter.checkState() == QtCore.Qt.Checked:
+                    PANVAL0, TILTVAL0 = self.Pano.lineEditPanoFirstCorner.text().split(",")
+                    PANVAL1, TILTVAL1 = self.Pano.lineEditPanoSecondCorner.text().split(",")
+                    self.Pano.setPanTilt(0.5*(float(PANVAL0) + float(PANVAL1)),
+                                         0.5*(float(TILTVAL0) + float(TILTVAL1)))
 
             elif not IgnoreHourRange and not WithinHourRange:
                 self.emit(QtCore.SIGNAL('Message(QString)'),

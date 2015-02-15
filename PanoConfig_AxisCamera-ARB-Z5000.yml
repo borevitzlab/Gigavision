@@ -22,4 +22,5 @@ RemoteStorageAddress: percy.anu.edu.au
 RemoteStoragePassword: ''
 RemoteStorageUsername: chuong
 ScanOrder: Cols, right
+UseFocusAtCenter: True
 Zoom: 5000
