@@ -47,7 +47,7 @@
           </size>
          </property>
          <property name="currentIndex">
-          <number>3</number>
+          <number>4</number>
          </property>
          <property name="movable">
           <bool>true</bool>
@@ -574,7 +574,7 @@
             <item row="8" column="0">
              <widget class="QLabel" name="label_18">
               <property name="text">
-               <string>Pano root folder</string>
+               <string>Pano main folder</string>
               </property>
              </widget>
             </item>
@@ -624,7 +624,7 @@
              </widget>
             </item>
             <item row="8" column="2">
-             <widget class="QPushButton" name="pushButtonPanoRootFolder">
+             <widget class="QPushButton" name="pushButtonPanoMainFolder">
               <property name="text">
                <string>Open</string>
               </property>
@@ -736,7 +736,7 @@
              </layout>
             </item>
             <item row="8" column="1">
-             <widget class="QLineEdit" name="lineEditPanoRootFolder"/>
+             <widget class="QLineEdit" name="lineEditPanoMainFolder"/>
             </item>
             <item row="5" column="0">
              <widget class="QLabel" name="label_16">
@@ -975,10 +975,10 @@
              </widget>
             </item>
             <item row="7" column="1">
-             <widget class="QLineEdit" name="lineEditPanoRootFolderFallBack"/>
+             <widget class="QLineEdit" name="lineEditPanoMainFolderFallBack"/>
             </item>
             <item row="7" column="2">
-             <widget class="QPushButton" name="pushButtonPanoRootFolderFallBack">
+             <widget class="QPushButton" name="pushButtonPanoMainFolderFallBack">
               <property name="text">
                <string>Open</string>
               </property>
@@ -992,7 +992,7 @@
              </widget>
             </item>
             <item row="6" column="1">
-             <widget class="QLineEdit" name="lineEditPanoRootFolder2"/>
+             <widget class="QLineEdit" name="lineEditPanoMainFolder2"/>
             </item>
             <item row="1" column="1">
              <widget class="QLineEdit" name="lineEditStorageUsername">
@@ -1004,7 +1004,7 @@
             <item row="6" column="0">
              <widget class="QLabel" name="label_30">
               <property name="text">
-               <string>Pano root folder</string>
+               <string>Pano main folder</string>
               </property>
              </widget>
             </item>
@@ -1052,7 +1052,7 @@
              </widget>
             </item>
             <item row="6" column="2">
-             <widget class="QPushButton" name="pushButtonPanoRootFolder2">
+             <widget class="QPushButton" name="pushButtonPanoMainFolder2">
               <property name="text">
                <string>Open</string>
               </property>
@@ -1071,12 +1071,12 @@
             <item row="5" column="0">
              <widget class="QLabel" name="label_38">
               <property name="text">
-               <string>Time stream name</string>
+               <string>Camera name</string>
               </property>
              </widget>
             </item>
             <item row="5" column="1">
-             <widget class="QLineEdit" name="lineEditTimeStreamName">
+             <widget class="QLineEdit" name="lineEditCameraName">
               <property name="maximumSize">
                <size>
                 <width>16777215</width>

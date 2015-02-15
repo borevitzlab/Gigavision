@@ -148,9 +148,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.pushButtonCalculatePanoGrid.clicked.connect(self.calculatePanoGrid)
         self.pushButtonRunConfigInFileName.clicked.connect(self.selectRunConfig)
         self.checkBoxUserRunConfigIn.stateChanged.connect(self.useRunConfig)
-        self.pushButtonPanoRootFolder.clicked.connect(self.selectPanoRootFolder)
-        self.lineEditPanoRootFolder.textChanged.connect(
-            self.lineEditPanoRootFolder2.setText)
+        self.pushButtonPanoMainFolder.clicked.connect(self.selectPanoMainFolder)
+        self.lineEditPanoMainFolder.textChanged.connect(
+            self.lineEditPanoMainFolder2.setText)
         self.pushButtonLoadPanoConfig.clicked.connect(
             partial(self.loadPanoConfig, None))
         self.pushButtonSavePanoConfig.clicked.connect(
@@ -167,17 +167,17 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.lineEditPanoSecondCorner.textChanged.connect(self.PanoConfigUpdated)
         self.comboBoxPanoScanOrder.currentIndexChanged.connect(self.PanoConfigUpdated)
         self.lineEditRunConfigInFileName.textChanged.connect(self.PanoConfigUpdated)
-        self.lineEditPanoRootFolder.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanoMainFolder.textChanged.connect(self.PanoConfigUpdated)
         self.spinBoxPanoLoopInterval.valueChanged.connect(self.PanoConfigUpdated)
         self.spinBoxStartHour.valueChanged.connect(self.PanoConfigUpdated)
         self.spinBoxEndHour.valueChanged.connect(self.PanoConfigUpdated)
 
         # storage tab
         self.pushButtonMapRemoteFolder.clicked.connect(self.mapRemoteFolder)
-        self.pushButtonPanoRootFolder2.clicked.connect(self.selectPanoRootFolder)
-        self.lineEditPanoRootFolder2.textChanged.connect(
-            self.lineEditPanoRootFolder.setText)
-        self.pushButtonPanoRootFolderFallBack.clicked.connect(
+        self.pushButtonPanoMainFolder2.clicked.connect(self.selectPanoMainFolder)
+        self.lineEditPanoMainFolder2.textChanged.connect(
+            self.lineEditPanoMainFolder.setText)
+        self.pushButtonPanoMainFolderFallBack.clicked.connect(
             self.selectFallbackFolder)
 
         self.lineEditStorageAddress.textChanged.connect(self.PanoConfigUpdated)
@@ -186,8 +186,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.lineEditPanoRemoteFolder.textChanged.connect(self.PanoConfigUpdated)
         self.lineEditPanoLocalFolder.textChanged.connect(self.PanoConfigUpdated)
         self.lineEditCameraName.textChanged.connect(self.PanoConfigUpdated)
-        self.lineEditPanoRootFolder2.textChanged.connect(self.PanoConfigUpdated)
-        self.lineEditPanoRootFolderFallBack.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanoMainFolder2.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditPanoMainFolderFallBack.textChanged.connect(self.PanoConfigUpdated)
         self.spinBoxMaxPanoNoImages.valueChanged.connect(self.PanoConfigUpdated)
         self.lineEditMinFreeDiskSpace.textChanged.connect(self.PanoConfigUpdated)
 
@@ -467,33 +467,25 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 else:
                     return True
 
-    def useFallbackFolder(self):
-        PanoFallbackFolder = str(self.lineEditPanoRootFolderFallBack.text())
-        if os.path.exists(PanoFallbackFolder):
-            self.lineEditPanoRootFolder.setText(PanoFallbackFolder)
-            self.printMessage("Use fall back folder {} for panorama".format(
-                PanoFallbackFolder))
-            return True
-        else:
-            return False
-
-    def selectPanoRootFolder(self):
-        PanoRootFolder = self.lineEditPanoRootFolder.text()
+    def selectPanoMainFolder(self):
+        PanoMainFolder = str(self.lineEditPanoMainFolder.text())
+        PanoLocalFolder = str(self.lineEditPanoLocalFolder.text())
+        PanoMainFolder.replace("$LOCAL_FOLDER", PanoLocalFolder)
         Folder = QtGui.QFileDialog.getExistingDirectory(
-            self, "Select Directory", PanoRootFolder)
+            self, "Select Directory", PanoMainFolder)
         if len(Folder) > 0:
-            self.lineEditPanoRootFolder.setText(Folder)
+            self.lineEditPanoMainFolder.setText(Folder)
             return True
         else:
             return False
 
     def selectFallbackFolder(self):
-        PanoFallbackFolder = self.lineEditPanoRootFolderFallBack.text()
+        PanoFallbackFolder = self.lineEditPanoMainFolderFallBack.text()
         Folder = QtGui.QFileDialog.getExistingDirectory(self,
                                                         "Select Directory",
                                                         PanoFallbackFolder)
         if len(Folder) > 0:
-            self.lineEditPanoRootFolderFallBack.setText(Folder)
+            self.lineEditPanoMainFolderFallBack.setText(Folder)
 
     def savePanoConfig(self, FileName=None):
         if FileName is None:
@@ -518,7 +510,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         PanoConfigDic["2ndCorner"] = str(self.lineEditPanoSecondCorner.text())
         PanoConfigDic["ScanOrder"] = str(self.comboBoxPanoScanOrder.currentText())
         PanoConfigDic["PanoGridSize"] = str(self.lineEditPanoGridSize.text())
-        PanoConfigDic["PanoRootFolder"] = str(self.lineEditPanoRootFolder.text())
+        PanoConfigDic["PanoMainFolder"] = str(self.lineEditPanoMainFolder.text())
         PanoConfigDic["PanoLoopInterval"] = self.spinBoxPanoLoopInterval.value()
         PanoConfigDic["PanoStartHour"] = self.spinBoxStartHour.value()
         PanoConfigDic["PanoEndHour"] = self.spinBoxEndHour.value()
@@ -531,7 +523,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         PanoConfigDic["RemoteFolder"] = str(self.lineEditPanoRemoteFolder.text())
         PanoConfigDic["LocalFolder"] = str(self.lineEditPanoLocalFolder.text())
         PanoConfigDic["CameraName"] = str(self.lineEditCameraName.text())
-        PanoConfigDic["PanoFallbackFolder"] = str(self.lineEditPanoRootFolderFallBack.text())
+        PanoConfigDic["PanoFallbackFolder"] = str(self.lineEditPanoMainFolderFallBack.text())
         PanoConfigDic["MaxPanoNoImages"] = self.spinBoxMaxPanoNoImages.value()
         PanoConfigDic["MinFreeSpace"] = int(self.lineEditMinFreeDiskSpace.text())
 
@@ -580,7 +572,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 self.printError("Error when applying ScanOrder = {}".format(
                     PanoConfigDic["ScanOrder"]))
             self.lineEditPanoGridSize.setText(PanoConfigDic["PanoGridSize"])
-            self.lineEditPanoRootFolder.setText(PanoConfigDic["PanoRootFolder"])
+            self.lineEditPanoMainFolder.setText(PanoConfigDic["PanoMainFolder"])
             self.spinBoxPanoLoopInterval.setValue(PanoConfigDic["PanoLoopInterval"])
             self.spinBoxStartHour.setValue(PanoConfigDic["PanoStartHour"])
             self.spinBoxEndHour.setValue(PanoConfigDic["PanoEndHour"])
@@ -595,7 +587,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             self.lineEditCameraName.setText(PanoConfigDic["CameraName"])
             self.lineEditPanoRemoteFolder.setText(PanoConfigDic["RemoteFolder"])
             self.lineEditPanoLocalFolder.setText(PanoConfigDic["LocalFolder"])
-            self.lineEditPanoRootFolderFallBack.setText(
+            self.lineEditPanoMainFolderFallBack.setText(
                 PanoConfigDic["PanoFallbackFolder"])
             self.spinBoxMaxPanoNoImages.setValue(
                 PanoConfigDic["MaxPanoNoImages"])
@@ -615,17 +607,29 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
         self.calculatePanoGrid()  # make sure everything is up-to-date
         self.PanoImageNo = 0
-        if not os.path.exists(str(self.lineEditPanoRootFolder.text())):
-            if self.useFallbackFolder() is False:
-                self.printMessage("Failed to use panorama fallback folder")
-                if self.selectPanoRootFolder() is False:
-                    self.printMessage("Failed to select panorama root folder")
-                    return
+
+        # select root folder
+        PanoMainFolder = str(self.lineEditPanoMainFolder.text())
+        PanoLocalFolder = str(self.lineEditPanoLocalFolder.text())
+        PanoMainFolder.replace("$LOCAL_FOLDER", PanoLocalFolder)
+        PanoFallBackFolder = \
+            str(self.lineEditPanoMainFolderFallBack.text())
+        if os.path.exists(PanoMainFolder):
+            self.RootFolder = PanoMainFolder
+        elif os.path.exists(PanoFallBackFolder):
+            self.RootFolder = PanoFallBackFolder
+            self.printMessage("Use fallback folder")
+        else:
+            QtGui.QMessageBox.information(
+                self, "Warning",
+                "Failed to open:\n{}\nor:\n{}".format(PanoMainFolder,
+                                                      PanoFallBackFolder),
+                QtGui.QMessageBox.Ok)
+            return
 
         self.CameraName = str(self.lineEditCameraName.text())
         self.PausePanorama = False
         self.StopPanorama = False
-
 
         LoopIntervalMinute = int(self.spinBoxPanoLoopInterval.text())
         StartHour = self.spinBoxStartHour.value()
@@ -1441,13 +1445,15 @@ class PanoThread(QtCore.QThread):
 #                          Start.strftime("%H:%M"), WaitSeconds/60))
 #            time.sleep(WaitSeconds)
 
-        self.PanoRootFolder = str(self.Pano.lineEditPanoRootFolder.text())
+        self.emit(QtCore.SIGNAL('Message(QString)'),
+                  "Save panorma images to {} ".format(self.Pano.RootFolder))
+
         while not self.Pano.StopPanorama:
             while self.Pano.PausePanorama:
                 time.sleep(5)
 
             # test if there's enough
-            Usage = disk_usage.disk_usage(self.PanoRootFolder)
+            Usage = disk_usage.disk_usage(self.Pano.RootFolder)
             if Usage.free < 1e6*int(self.Pano.lineEditMinFreeDiskSpace.text()):
                 self.Pano.StopPanorama = True
                 self.emit(QtCore.SIGNAL('Message(QString)'),
@@ -1466,8 +1472,11 @@ class PanoThread(QtCore.QThread):
                 NoPanoInSameHour = 1
                 while True:
                     self.Pano.PanoFolder = os.path.join(
-                        self.PanoRootFolder, Start.strftime("%Y"),
-                        Start.strftime("%Y_%m"), Start.strftime("%Y_%m_%d"),
+                        self.Pano.RootFolder,
+                        self.Pano.CameraName,
+                        Start.strftime("%Y"),
+                        Start.strftime("%Y_%m"),
+                        Start.strftime("%Y_%m_%d"),
                         Start.strftime("%Y_%m_%d_%H"),
                         "{}_{}_{:02}".format(self.Pano.CameraName,
                                           Start.strftime("%Y_%m_%d_%H"),
@@ -1595,9 +1604,6 @@ if __name__ == "__main__":
     for i in range(len(sys.argv)):
         if sys.argv[i] == "--autorun":
             myWindow.loadPanoConfig(sys.argv[i+1])
-            if myWindow.mapRemoteFolder() is False:
-                if myWindow.useFallbackFolder() is False:
-                    myWindow.printError("Cannot set pano root folder")
-                    exit
+            myWindow.mapRemoteFolder()
             myWindow.loopPanorama()
     app.exec_()

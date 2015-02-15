@@ -12,7 +12,7 @@ PanoEndHour: 19
 PanoFallbackFolder: /home/pi/Data/Panorama
 PanoGridSize: 26x76
 PanoLoopInterval: 60
-PanoRootFolder: /home/chuong/Data/a_data/Gigavision/chuong_tests
+PanoMainFolder: $LOCAL_FOLDER/Gigavision/chuong_tests
 PanoStartHour: 7
 PanoStartMin: 60
 PanoWaitMin: 15
