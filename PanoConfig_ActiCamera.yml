@@ -1,8 +1,10 @@
 1stCorner: 113,9
 2ndCorner: 163,-15
 CameraConfigFile: ActiCamera.yml
+CameraName: ARB-GVHill
 FieldOfView: 10.9995,6.2503
 LocalFolder: /home/chuong/Data/a_data
+MaxPanoNoImages: 2000
 MinFreeSpace: 1000
 Overlap: 50
 PanTiltConfigFile: JSystemsPanTilt.yml
@@ -19,5 +21,4 @@ RemoteStorageAddress: percy.anu.edu.au
 RemoteStoragePassword: ''
 RemoteStorageUsername: chuong
 ScanOrder: Cols, right
-TimeStreamName: ARB-GVHill
 Zoom: 800

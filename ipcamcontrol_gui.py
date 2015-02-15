@@ -185,7 +185,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.lineEditStoragePassword.textChanged.connect(self.PanoConfigUpdated)
         self.lineEditPanoRemoteFolder.textChanged.connect(self.PanoConfigUpdated)
         self.lineEditPanoLocalFolder.textChanged.connect(self.PanoConfigUpdated)
-        self.lineEditTimeStreamName.textChanged.connect(self.PanoConfigUpdated)
+        self.lineEditCameraName.textChanged.connect(self.PanoConfigUpdated)
         self.lineEditPanoRootFolder2.textChanged.connect(self.PanoConfigUpdated)
         self.lineEditPanoRootFolderFallBack.textChanged.connect(self.PanoConfigUpdated)
         self.spinBoxMaxPanoNoImages.valueChanged.connect(self.PanoConfigUpdated)
@@ -530,7 +530,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         PanoConfigDic["RemoteStoragePassword"] = str(self.lineEditStoragePassword.text())
         PanoConfigDic["RemoteFolder"] = str(self.lineEditPanoRemoteFolder.text())
         PanoConfigDic["LocalFolder"] = str(self.lineEditPanoLocalFolder.text())
-        PanoConfigDic["TimeStreamName"] = str(self.lineEditTimeStreamName.text())
+        PanoConfigDic["CameraName"] = str(self.lineEditCameraName.text())
         PanoConfigDic["PanoFallbackFolder"] = str(self.lineEditPanoRootFolderFallBack.text())
         PanoConfigDic["MaxPanoNoImages"] = self.spinBoxMaxPanoNoImages.value()
         PanoConfigDic["MinFreeSpace"] = int(self.lineEditMinFreeDiskSpace.text())
@@ -592,7 +592,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 PanoConfigDic["RemoteStorageUsername"])
             self.lineEditStoragePassword.setText(
                 PanoConfigDic["RemoteStoragePassword"])
-            self.lineEditTimeStreamName.setText(PanoConfigDic["TimeStreamName"])
+            self.lineEditCameraName.setText(PanoConfigDic["CameraName"])
             self.lineEditPanoRemoteFolder.setText(PanoConfigDic["RemoteFolder"])
             self.lineEditPanoLocalFolder.setText(PanoConfigDic["LocalFolder"])
             self.lineEditPanoRootFolderFallBack.setText(
@@ -622,12 +622,12 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                     self.printMessage("Failed to select panorama root folder")
                     return
 
-        self.TimeStreamName = str(self.lineEditTimeStreamName.text())
+        self.CameraName = str(self.lineEditCameraName.text())
         self.PausePanorama = False
         self.StopPanorama = False
 
 
-        LoopInterval = 60*int(self.spinBoxPanoLoopInterval.text())
+        LoopIntervalMinute = int(self.spinBoxPanoLoopInterval.text())
         StartHour = self.spinBoxStartHour.value()
         EndHour = self.spinBoxEndHour.value()
 
@@ -638,7 +638,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 if not self.threadPool[i].isRunning():
                     self.threadPool[i].run()
         if not createdPanoThread:
-            self.threadPool.append(PanoThread(self, IsOneTime, LoopInterval,
+            self.threadPool.append(PanoThread(self, IsOneTime, LoopIntervalMinute,
                                               StartHour, EndHour))
             self.connect(self.threadPool[len(self.threadPool)-1],
                          QtCore.SIGNAL('PanoImageSnapped()'),
@@ -710,7 +710,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         Now = datetime.now()
         FileName = os.path.join(self.PanoFolder,
                                 "{}_{}_00_00_{:04}.jpg".format(
-                                    self.TimeStreamName,
+                                    self.CameraName,
                                     Now.strftime("%Y_%m_%d_%H_%M"),
                                     self.PanoImageNo))
         misc.imsave(FileName, self.Image)
@@ -1369,11 +1369,11 @@ class PanTiltThread(QtCore.QThread):
 
 class PanoThread(QtCore.QThread):
     def __init__(self, Pano, IsOneTime=True,
-                 LoopInterval=60, StartHour=0, EndHour=0):
+                 LoopIntervalMinute=60, StartHour=0, EndHour=0):
         QtCore.QThread.__init__(self)
         self.Pano = Pano
         self.IsOneTime = IsOneTime
-        self.LoopInterval = LoopInterval
+        self.LoopIntervalMinute = LoopIntervalMinute
         self.StartHour = StartHour
         self.EndHour = EndHour
         self.NoImages = self.Pano.PanoCols*self.Pano.PanoRows
@@ -1469,7 +1469,7 @@ class PanoThread(QtCore.QThread):
                         self.PanoRootFolder, Start.strftime("%Y"),
                         Start.strftime("%Y_%m"), Start.strftime("%Y_%m_%d"),
                         Start.strftime("%Y_%m_%d_%H"),
-                        "{}_{}_{:02}".format(self.Pano.TimeStreamName,
+                        "{}_{}_{:02}".format(self.Pano.CameraName,
                                           Start.strftime("%Y_%m_%d_%H"),
                                           NoPanoInSameHour))
                     if not os.path.exists(self.Pano.PanoFolder):
@@ -1546,8 +1546,8 @@ class PanoThread(QtCore.QThread):
 #                End = datetime.now()
 #                Elapse = End - Start
 #                ElapseSeconds = Elapse.days*86400 + Elapse.seconds
-#                if self.LoopInterval > ElapseSeconds:
-#                    WaitTime = self.LoopInterval - ElapseSeconds
+#                if self.LoopIntervalMinute*60 > ElapseSeconds:
+#                    WaitTime = self.LoopIntervalMinute - ElapseSeconds
 #
 #                else:
 #                    self.emit(QtCore.SIGNAL('Message(QString)'),
@@ -1562,10 +1562,10 @@ class PanoThread(QtCore.QThread):
                 while True:
                     End = datetime.now()
                     Quotient, Remainder = divmod((End.hour*60 + End.minute),
-                                                 self.LoopInterval)
+                                                 self.LoopIntervalMinute)
                     if Remainder <= self.Pano.PanoWaitMin:
                         break
-                    DueTime = (Quotient+1)*self.LoopInterval
+                    DueTime = (Quotient+1)*self.LoopIntervalMinute
                     WaitMin = DueTime - (End.hour*60 + End.minute)
                     self.emit(QtCore.SIGNAL('Message(QString)'),
                               "Wait for {} minutes before start.".format(
