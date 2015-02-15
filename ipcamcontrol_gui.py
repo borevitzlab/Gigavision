@@ -644,11 +644,15 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                             0.5*(float(TILTVAL0) + float(TILTVAL1)))
             self.snapPhoto()
             self.updateImage()
+            time.sleep(2)
             self.snapPhoto()
             self.updateImage()
             index = self.comboBoxFocusMode.findText("MANUAL")
             if index >= 0:
                 self.comboBoxFocusMode.setCurrentIndex(index)
+            time.sleep(2)
+            self.snapPhoto()
+            self.updateImage()
 
         self.CameraName = str(self.lineEditCameraName.text())
         self.PausePanorama = False
