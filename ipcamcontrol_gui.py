@@ -1488,13 +1488,13 @@ class PanoThread(QtCore.QThread):
                 break
 
             Start = datetime.now()
-            self.emit(QtCore.SIGNAL('Message(QString)'),
-                      "Take a panorama from {}".format(Start.strftime("%H:%M")))
-
             IgnoreHourRange = (self.StartHour > self.EndHour)
             WithinHourRange = (Start.hour >= self.StartHour and \
                                Start.hour <= self.EndHour)
             if self.IsOneTime or IgnoreHourRange or WithinHourRange:
+                self.emit(QtCore.SIGNAL('Message(QString)'),
+                          "Take a panorama from {}".format(
+                              Start.strftime("%H:%M")))
                 # create a new panorama folder with increasing index
                 NoPanoInSameHour = 1
                 while True:
@@ -1583,26 +1583,19 @@ class PanoThread(QtCore.QThread):
                 self.emit(QtCore.SIGNAL('Message(QString)'),
                           "Outside hour range ({} to {})".format(self.StartHour,
                                                                  self.EndHour))
+                # sleep until start of hour range
+                Now = datetime.now()
+                DueTime = (24 + self.StartHour)*60
+                WaitMin = DueTime - (Now.hour*60 + Now.minute)
+                Hours, Mins = divmod(WaitMin, 60)
+                self.emit(QtCore.SIGNAL('Message(QString)'),
+                          "Wait {} hours and {} minutes".format(Hours, Mins))
+                time.sleep(WaitMin*60)
 
             if self.IsOneTime:
                 break
             else:
-#                End = datetime.now()
-#                Elapse = End - Start
-#                ElapseSeconds = Elapse.days*86400 + Elapse.seconds
-#                if self.LoopIntervalMinute*60 > ElapseSeconds:
-#                    WaitTime = self.LoopIntervalMinute - ElapseSeconds
-#
-#                else:
-#                    self.emit(QtCore.SIGNAL('Message(QString)'),
-#                              "Warning: it takes more time than loop interval")
-#                    WaitTime = 0
-#                self.emit(QtCore.SIGNAL('Message(QString)'),
-#                          "It's {}. Wait for {} minutes before start.".format(
-#                              End.strftime("%H:%M"), WaitTime/60))
-#
-#                time.sleep(WaitTime)
-
+                # wait until the start of the next hour
                 while True:
                     End = datetime.now()
                     Quotient, Remainder = divmod((End.hour*60 + End.minute),
