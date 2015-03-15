@@ -118,7 +118,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.comboBoxImageSize.currentIndexChanged.connect(self.PanoConfigUpdated)
         self.lineEditZoom.textChanged.connect(self.PanoConfigUpdated)
         self.lineEditFocus.textChanged.connect(self.PanoConfigUpdated)
-        self.comboBoxFocusMode.currentIndexChanged.connect(self.PanoConfigUpdated)
+#        self.comboBoxFocusMode.currentIndexChanged.connect(self.PanoConfigUpdated)
 
         # FoV tab
         self.horizontalSliderPan.valueChanged.connect(self.setPan)
@@ -638,6 +638,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             index = self.comboBoxFocusMode.findText("AUTO")
             if index >= 0:
                 self.comboBoxFocusMode.setCurrentIndex(index)
+                self.setFocusMode()  # make sure this change applies
             PANVAL0, TILTVAL0 = self.lineEditPanoFirstCorner.text().split(",")
             PANVAL1, TILTVAL1 = self.lineEditPanoSecondCorner.text().split(",")
             self.setPanTilt(0.5*(float(PANVAL0) + float(PANVAL1)),
@@ -650,6 +651,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             index = self.comboBoxFocusMode.findText("MANUAL")
             if index >= 0:
                 self.comboBoxFocusMode.setCurrentIndex(index)
+                self.setFocusMode()  # make sure this change applies
             time.sleep(2)
             self.snapPhoto()
             self.updateImage()
