@@ -726,6 +726,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         # update current pan-tilt position
         self.horizontalSliderPan.setValue(int(self.PanPosDesired))
         self.horizontalSliderTilt.setValue(int(self.TiltPosDesired))
+        
+        # clear log message for last panorama
+        self.clearMessages()
 
     def deactivateLiveView(self):
         self.stopPanTilt()
@@ -1337,6 +1340,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
     def printError(self, Message):
         self.textEditMessages.append("Error: " + Message)
         self.logger.error(Message)
+        
+    def clearMessages(self):
+    	self.textEditMessages.clear()
 
 
 class CameraThread(QtCore.QThread):
