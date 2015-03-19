@@ -445,15 +445,18 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 len(RemoteFolder) > 0 and len(LocalFolder) > 0:
             Command = ["sshfs {}@{}:{} {}".format(UserName, HostName,
                        RemoteFolder, LocalFolder)]
+            self.printMessage('Command = ' + ' '.join(Command))
             if len(Password) > 0:
+                import pexpect
                 try:
-                    import pexpect
                     child = pexpect.spawn(Command[0])
-                    child.expect("{}@{}'s password:".format(UserName, HostName))
+                    ExpectedString = "{}@{}'s password:".format(UserName, HostName)
+                    self.printMessage('ExpectedString = ' + ExpectedString)
+                    child.expect(ExpectedString)
                     child.sendline(Password)
                     time.sleep(5)
                     child.expect (pexpect.EOF)
-                    self.printError("Successfully mapped network drive")
+                    self.printMessage("Successfully mapped network drive")
                     return True
                 except:
                     self.printError("Failed to map network drive")
@@ -465,6 +468,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                     self.printError("Cannot map remote folder")
                     return False
                 else:
+                    self.printMessage("Successfully mapped network drive")
                     return True
 
     def selectPanoMainFolder(self):
