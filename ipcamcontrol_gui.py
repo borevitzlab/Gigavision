@@ -453,8 +453,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                     ExpectedString = "{}@{}'s password:".format(UserName, HostName)
                     self.printMessage('ExpectedString = ' + ExpectedString)
                     child.expect(ExpectedString)
+                    time.sleep(0.1)
                     child.sendline(Password)
-                    time.sleep(5)
+                    time.sleep(10)
                     child.expect (pexpect.EOF)
                     self.printMessage("Successfully mapped network drive")
                     return True
