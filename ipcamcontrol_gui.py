@@ -727,9 +727,6 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.horizontalSliderPan.setValue(int(self.PanPosDesired))
         self.horizontalSliderTilt.setValue(int(self.TiltPosDesired))
         
-        # clear log message for last panorama
-        self.clearMessages()
-
     def deactivateLiveView(self):
         self.stopPanTilt()
         self.stopCamera()
@@ -773,6 +770,9 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.PanoImageNo += 1
 
     def initialisePanoOverView(self):
+        # clear log message for last panorama
+        self.clearMessages()
+
         ScaledHeight = int(self.PanoOverViewScale*self.ImageHeight)
         ScaledWidth = int(self.PanoOverViewScale*self.ImageWidth)
         self.PanoOverView = np.zeros((self.PanoOverViewHeight,
