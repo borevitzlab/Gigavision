@@ -122,10 +122,22 @@ def capture_preview():
 	except subprocess.CalledProcessError as e:
 		print str(e)
 
+def capture_preview_picam():
+	try:
+		os.system("/opt/vc/bin/raspistill --nopreview -o /dev/shm/preview_pi.jpg")
+	except Exception as e:
+		print str(e)
+
 @app.route("/preview")
 def preview():
 	preview = capture_preview()
 	return "<html><body><img src="+url_for("static", filename="shm/preview.jpg")+"> </img></body></html>"
+
+@app.route("/preview_picam")
+def preview_picam():
+	preview = get_preview_picam()
+	return "<html><body><img src="+url_for("static", filename="shm/preview_pi.jpg")+"> </img></body></html>"
+
 
 @app.route("/preview_and_capture")
 def preview_and_capture():
