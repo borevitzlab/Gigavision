@@ -216,6 +216,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.PanoStartMin = 60
         self.PanoWaitMin = 15
         self.PanoConfigChanged = False
+        self.PanoFolder = None
 
         # create logger
         self.logger = logging.getLogger()
@@ -226,6 +227,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             '%(asctime)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
+        self.LogBuffer = ''
 
     def PanoConfigUpdated(self):
         self.PanoConfigChanged = True
@@ -439,7 +441,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         RemoteFolder = str(self.lineEditPanoRemoteFolder.text())
         LocalFolder = str(self.lineEditPanoLocalFolder.text())
         if len(glob.glob(os.path.join(LocalFolder, "*"))) > 0:
-            self.printMessage("Remote folder seemed to be already mapped")
+            self.printMessage("Remote folder seems to be already mapped")
             return True
         elif len(HostName) > 0 and len(UserName) > 0 and \
                 len(RemoteFolder) > 0 and len(LocalFolder) > 0:
@@ -454,7 +456,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             except:
                 pass
             time.sleep(1)
-            
+
             MountCommand = "sshfs {}@{}:{} {}".format(UserName, HostName,
 	       		RemoteFolder, LocalFolder)
             self.printMessage('MountCommand = ' + MountCommand)
@@ -462,8 +464,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 try:
                     child = pexpect.spawn(MountCommand)
                     ExpectedString = "{}@{}'s password:".format(UserName, HostName)
-                    self.printMessage('ExpectedString = ' + ExpectedString)
                     child.expect(ExpectedString)
+                    self.printMessage('ExpectedString = ' + ExpectedString)
                     time.sleep(0.1)
                     child.sendline(Password)
                     time.sleep(10)
@@ -474,7 +476,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                     self.printError("Failed to map network drive")
                     return False
             else:
-                process = subprocess.Popen(Command, shell=True)
+                process = subprocess.Popen(MountCommand, shell=True)
                 sts = os.waitpid(process.pid, 0)
                 if sts[1] != 0:
                     self.printError("Cannot map remote folder")
@@ -738,7 +740,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         # update current pan-tilt position
         self.horizontalSliderPan.setValue(int(self.PanPosDesired))
         self.horizontalSliderTilt.setValue(int(self.TiltPosDesired))
-        
+
     def deactivateLiveView(self):
         self.stopPanTilt()
         self.stopCamera()
@@ -1348,13 +1350,45 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
     def printMessage(self, Message):
         self.textEditMessages.append(Message)
         self.logger.info(Message)
+        if self.PanoFolder is None:
+            self.LogBuffer += Message + '\n'
+        else:
+            LogFilePath = os.path.join(self.PanoFolder, "_data")
+            if not os.path.exists(LogFilePath):
+                os.makedirs(LogFilePath)
+            LogFileName = os.path.join(self.PanoFolder, "_data", 'Log.txt')
+            with open(LogFileName, 'a') as File:
+                if len(self.LogBuffer) > 0:
+                    File.write(self.LogBuffer)
+                    self.LogBuffer = ''
+                File.write(Message + '\n')
 
     def printError(self, Message):
         self.textEditMessages.append("Error: " + Message)
         self.logger.error(Message)
-        
+        if self.PanoFolder is None:
+            self.LogBuffer += Message + '\n'
+        else:
+            LogFilePath = os.path.join(self.PanoFolder, "_data")
+            if not os.path.exists(LogFilePath):
+                os.makedirs(LogFilePath)
+            LogFileName = os.path.join(self.PanoFolder, "_data", 'Log.txt')
+            with open(LogFileName, 'a') as File:
+                if len(self.LogBuffer) > 0:
+                    File.write(self.LogBuffer)
+                    self.LogBuffer = ''
+                File.write(Message + '\n')
+
     def clearMessages(self):
-    	self.textEditMessages.clear()
+        self.textEditMessages.clear()
+        try:
+            LogFileName = os.path.join(self.PanoFolder, "_data", 'Log.txt')
+            if os.path.exists(LogFileName) and \
+                    os.path.getsize(LogFileName) > 2**20:
+                # clear log file content if larger than 1MB
+                open(LogFileName, 'w').close()
+        except:
+            pass
 
 
 class CameraThread(QtCore.QThread):
