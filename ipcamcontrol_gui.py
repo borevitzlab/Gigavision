@@ -446,7 +446,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 
             import pexpect
             # make sure the folder is not mounted
-            UmountCommand = "sudo umount {}".format(LocalFolder)
+            UmountCommand = "fusermount -u {}".format(LocalFolder)
             try:
                 child = pexpect.spawn(UmountCommand)
                 child.expect(pexpect.EOF)
@@ -1656,6 +1656,7 @@ if __name__ == "__main__":
     for i in range(len(sys.argv)):
         if sys.argv[i] == "--autorun":
             myWindow.loadPanoConfig(sys.argv[i+1])
+            time.sleep(10)
             myWindow.mapRemoteFolder()
             myWindow.loopPanorama()
     app.exec_()
