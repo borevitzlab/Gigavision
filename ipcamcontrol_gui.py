@@ -443,13 +443,24 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             return True
         elif len(HostName) > 0 and len(UserName) > 0 and \
                 len(RemoteFolder) > 0 and len(LocalFolder) > 0:
-            Command = ["sshfs {}@{}:{} {}".format(UserName, HostName,
-                       RemoteFolder, LocalFolder)]
-            self.printMessage('Command = ' + ' '.join(Command))
+
+            import pexpect
+            # make sure the folder is not mounted
+            UmountCommand = "sudo umount {}".format(LocalFolder)
+            try:
+                child = pexpect.spawn(UmountCommand)
+                child.expect(pexpect.EOF)
+                print("Umount previously mounted {}".format(LocalFolder))
+            except:
+                pass
+            time.sleep(1)
+            
+            MountCommand = "sshfs {}@{}:{} {}".format(UserName, HostName,
+	       		RemoteFolder, LocalFolder)
+            self.printMessage('MountCommand = ' + MountCommand)
             if len(Password) > 0:
-                import pexpect
                 try:
-                    child = pexpect.spawn(Command[0])
+                    child = pexpect.spawn(MountCommand)
                     ExpectedString = "{}@{}'s password:".format(UserName, HostName)
                     self.printMessage('ExpectedString = ' + ExpectedString)
                     child.expect(ExpectedString)
