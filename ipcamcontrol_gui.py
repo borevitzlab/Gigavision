@@ -204,6 +204,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.TopLeftCorner = []
         self.BottomRIghtCorner = []
         self.PanoImageNo = 0
+        self.hasNewImage = False
         self.PanoTotal = 0
         self.threadPool = []
         self.hasMJPGVideo = False
@@ -461,20 +462,27 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 	       		RemoteFolder, LocalFolder)
             self.printMessage('MountCommand = ' + MountCommand)
             if len(Password) > 0:
-                try:
-                    child = pexpect.spawn(MountCommand)
-                    ExpectedString = "{}@{}'s password:".format(UserName, HostName)
-                    child.expect(ExpectedString)
-                    self.printMessage('ExpectedString = ' + ExpectedString)
-                    time.sleep(0.1)
-                    child.sendline(Password)
-                    time.sleep(10)
-                    child.expect (pexpect.EOF)
-                    self.printMessage("Successfully mapped network drive")
-                    return True
-                except:
-                    self.printError("Failed to map network drive")
-                    return False
+                # try connecting 5 times
+                NoTries = 5
+                for Try in range(NoTries):
+                    try:
+                        print('Try #{}/{} mapping network drive'.format(Try, NoTries))
+                        child = pexpect.spawn(MountCommand)
+                        ExpectedString = "{}@{}'s password:".format(UserName, HostName)
+                        child.expect(ExpectedString)
+                        self.printMessage('ExpectedString = ' + ExpectedString)
+                        time.sleep(0.1)
+                        child.sendline(Password)
+                        time.sleep(10)
+                        child.expect (pexpect.EOF)
+                        self.printMessage("Successfully mapped network drive")
+                        Success = True
+                        break
+                    except:
+                        self.printError("Failed to map network drive")
+                        Success = False
+                        time.sleep(1)
+                return Success
             else:
                 process = subprocess.Popen(MountCommand, shell=True)
                 sts = os.waitpid(process.pid, 0)
@@ -765,6 +773,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                                     Now.strftime("%Y_%m_%d_%H_%M"),
                                     self.PanoImageNo))
         misc.imsave(FileName, self.Image)
+        self.hasNewImage = False
 
         if os.path.getsize(FileName) > 1000:
             self.printMessage("Wrote image " + FileName)
@@ -1495,9 +1504,14 @@ class PanoThread(QtCore.QThread):
         if DelaySeconds != 0:
             time.sleep(DelaySeconds)
 
+        # wait until new image is saved
+        while self.Pano.hasNewImage:
+            time.sleep(0.1)
+
         while True:
             Image = self.Pano.snapPhoto().next()
             if Image is not None:
+                self.Pano.hasNewImage = True
                 break
             else:
                 self.emit(QtCore.SIGNAL('Message(QString)'),
@@ -1690,7 +1704,7 @@ if __name__ == "__main__":
     for i in range(len(sys.argv)):
         if sys.argv[i] == "--autorun":
             myWindow.loadPanoConfig(sys.argv[i+1])
-            time.sleep(10)
+            time.sleep(5)
             myWindow.mapRemoteFolder()
             myWindow.loopPanorama()
     app.exec_()
