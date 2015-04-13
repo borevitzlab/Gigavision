@@ -627,8 +627,15 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 str(PanoConfigDic["MinFreeSpace"]))
 
             self.calculatePanoGrid()
-            self.startPanTilt()
-            self.startCamera()
+            while True:
+                try:
+                    self.startPanTilt()
+                    self.startCamera()
+                    break
+                except:
+                    self.printMessage(
+                        "Failed to initialise camera/pantilt. Try again.")
+
             self.PanoConfigChanged = False
 
     def takePanorama(self, IsOneTime=True):
@@ -1595,53 +1602,85 @@ class PanoThread(QtCore.QThread):
                     for k in self.Pano.RunConfig["Index"]:
                         i = self.Pano.RunConfig["Col"][self.Pano.PanoImageNo]
                         j = self.Pano.RunConfig["Row"][self.Pano.PanoImageNo]
-                        self._moveAndSnap(i, j)
+                        try:
+                            self._moveAndSnap(i, j)
+                        except:
+                            self.emit(QtCore.SIGNAL('Message(QString)'),
+                                      "Camera or pantilt is not available. Skip")
+                            break
                 else:
                     if ScanOrder == "Cols, right":
-                        for i in range(self.Pano.PanoCols):
-                            for j in range(self.Pano.PanoRows):
-                                while self.Pano.PausePanorama:
-                                    time.sleep(5)
-                                if self.stopped or self.Pano.StopPanorama:
-                                    break
-                                if j == 0:
-                                    self._moveAndSnap(i, j, DelaySeconds)
-                                else:
-                                    self._moveAndSnap(i, j)
+                        def f1():
+                            for i in range(self.Pano.PanoCols):
+                                for j in range(self.Pano.PanoRows):
+                                    while self.Pano.PausePanorama:
+                                        time.sleep(5)
+                                    if self.stopped or self.Pano.StopPanorama:
+                                        break
+                                    try:
+                                        if j == 0:
+                                            self._moveAndSnap(i, j, DelaySeconds)
+                                        else:
+                                            self._moveAndSnap(i, j)
+                                    except:
+                                        self.emit(QtCore.SIGNAL('Message(QString)'),
+                                                  "Camera or pantilt is not available. Skip")
+                                        break
+                        f1()
                     elif ScanOrder == "Cols, left":
-                        for i in range(self.Pano.PanoCols-1, -1, -1):
-                            for j in range(self.Pano.PanoRows):
-                                while self.Pano.PausePanorama:
-                                    time.sleep(5)
-                                if self.stopped or self.Pano.StopPanorama:
-                                    break
-                                if j == 0:
-                                    self._moveAndSnap(i, j, DelaySeconds)
-                                else:
-                                    self._moveAndSnap(i, j)
+                        def f2():
+                            for i in range(self.Pano.PanoCols-1, -1, -1):
+                                for j in range(self.Pano.PanoRows):
+                                    while self.Pano.PausePanorama:
+                                        time.sleep(5)
+                                    if self.stopped or self.Pano.StopPanorama:
+                                        break
+                                    try:
+                                        if j == 0:
+                                            self._moveAndSnap(i, j, DelaySeconds)
+                                        else:
+                                            self._moveAndSnap(i, j)
+                                    except:
+                                        self.emit(QtCore.SIGNAL('Message(QString)'),
+                                                  "Camera or pantilt is not available. Skip")
+                                        return
+                        f2()
                     elif ScanOrder == "Rows, down":
-                        for j in range(self.Pano.PanoRows):
-                            for i in range(self.Pano.PanoCols):
-                                while self.Pano.PausePanorama:
-                                    time.sleep(5)
-                                if self.stopped or self.Pano.StopPanorama:
-                                    break
-                                if i == 0:
-                                    self._moveAndSnap(i, j, DelaySeconds)
-                                else:
-                                    self._moveAndSnap(i, j)
+                        def f3():
+                            for j in range(self.Pano.PanoRows):
+                                for i in range(self.Pano.PanoCols):
+                                    while self.Pano.PausePanorama:
+                                        time.sleep(5)
+                                    if self.stopped or self.Pano.StopPanorama:
+                                        break
+                                    try:
+                                        if i == 0:
+                                            self._moveAndSnap(i, j, DelaySeconds)
+                                        else:
+                                            self._moveAndSnap(i, j)
+                                    except:
+                                        self.emit(QtCore.SIGNAL('Message(QString)'),
+                                                  "Camera or pantilt is not available. Skip")
+                                        return
+                        f3()
                     else:  # ScanOrder == "Rows, up"
-                        for j in range(self.Pano.PanoRows-1, -1, -1):
-                            for i in range(self.Pano.PanoCols):
-                                while self.Pano.PausePanorama:
-                                    time.sleep(5)
-                                if self.stopped or self.Pano.StopPanorama:
-                                    break
-                                if i == 0:
-                                    self._moveAndSnap(i, j, DelaySeconds)
-                                else:
-                                    self._moveAndSnap(i, j)
-
+                        def f4():
+                            for j in range(self.Pano.PanoRows-1, -1, -1):
+                                for i in range(self.Pano.PanoCols):
+                                    while self.Pano.PausePanorama:
+                                        time.sleep(5)
+                                    if self.stopped or self.Pano.StopPanorama:
+                                        break
+                                    try:
+                                        if i == 0:
+                                            self._moveAndSnap(i, j, DelaySeconds)
+                                        else:
+                                            self._moveAndSnap(i, j)
+                                    except:
+                                        self.emit(QtCore.SIGNAL('Message(QString)'),
+                                                  "Camera or pantilt is not available. Skip")
+                                        return
+                        f4()
                 self.emit(QtCore.SIGNAL('OnePanoDone()'))
 
                 # go to middle point when finish
