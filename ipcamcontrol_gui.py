@@ -635,6 +635,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                 except:
                     self.printMessage(
                         "Failed to initialise camera/pantilt. Try again.")
+                    time.sleep(5*60) # wait 5 minute
 
             self.PanoConfigChanged = False
 
@@ -1597,6 +1598,12 @@ class PanoThread(QtCore.QThread):
                 self.Pano.PanoImageNo = 0
                 ScanOrder = str(self.Pano.comboBoxPanoScanOrder.currentText())
                 DelaySeconds = 1  # delay to reduce blurring
+
+                # make sure zoom is correct before taking panorama
+                try:
+                    self.Pano.setZoom(int(self.Pan.ZoomPos))
+                except:
+                    pass
 
                 if self.Pano.RunConfig is not None:
                     for k in self.Pano.RunConfig["Index"]:
