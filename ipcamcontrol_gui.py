@@ -724,7 +724,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
                          self.initialisePanoOverView)
             self.connect(self.threadPool[len(self.threadPool)-1],
                          QtCore.SIGNAL('OnePanoDone()'),
-                         self.savePanoOverView)
+                         self.finalisePano)
             self.connect(self.threadPool[len(self.threadPool)-1],
                          QtCore.SIGNAL('Message(QString)'),
                          self.printMessage)
@@ -774,20 +774,6 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
     def updatePanoImage(self):
         self.updateImage()
         self.updatePanoOverView()
-        Now = datetime.now()
-        FileName = os.path.join(self.PanoFolder,
-                                "{}_{}_00_00_{:04}.jpg".format(
-                                    self.CameraName,
-                                    Now.strftime("%Y_%m_%d_%H_%M"),
-                                    self.PanoImageNo))
-        misc.imsave(FileName, self.Image)
-        self.hasNewImage = False
-
-        if os.path.getsize(FileName) > 1000:
-            self.printMessage("Wrote image " + FileName)
-        else:
-            self.printError("Warning: failed to snap an image")
-
         RunConfigOutFileName = os.path.join(
             self.PanoFolder, "_data", "RunInfo.cvs")
         if not os.path.exists(RunConfigOutFileName):
@@ -824,7 +810,7 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
 #            self.printError("Cannot save PanoConfig.yml")
             pass
 
-    def savePanoOverView(self):
+    def finalisePano(self):
         try:
             # try saving PanoOverView
             DataFolder = os.path.join(self.PanoFolder, "_data")
@@ -839,6 +825,13 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
             misc.imsave(FileName, self.PanoOverView)
         except:
             self.printError("Cannot save PanoOverView image")
+
+        # go to middle of panorama view
+        if self.checkBoxUseFocusAtCenter.checkState() == QtCore.Qt.Checked:
+            PANVAL0, TILTVAL0 = self.lineEditPanoFirstCorner.text().split(",")
+            PANVAL1, TILTVAL1 = self.lineEditPanoSecondCorner.text().split(",")
+            self.setPanTilt(0.5*(float(PANVAL0) + float(PANVAL1)),
+                            0.5*(float(TILTVAL0) + float(TILTVAL1)))
 
     def setPan(self, Pan):
         self.setPanTilt(Pan, self.TiltPosDesired)
@@ -1512,9 +1505,9 @@ class PanoThread(QtCore.QThread):
         if DelaySeconds != 0:
             time.sleep(DelaySeconds)
 
-        # wait until new image is saved
-        while self.Pano.hasNewImage:
-            time.sleep(0.1)
+#        # wait until new image is saved
+#        while self.Pano.hasNewImage:
+#            time.sleep(0.1)
 
         while True:
             Image = self.Pano.snapPhoto().next()
@@ -1535,6 +1528,21 @@ class PanoThread(QtCore.QThread):
         self.emit(QtCore.SIGNAL('ColRowPanTiltPos(QString)'),
                   "{},{},{},{}".format(iCol, jRow, PanPos, TiltPos))
         self.emit(QtCore.SIGNAL('PanoImageSnapped()'))
+
+        Now = datetime.now()
+        FileName = os.path.join(self.Pano.PanoFolder,
+                                "{}_{}_00_00_{:04}.jpg".format(
+                                    self.Pano.CameraName,
+                                    Now.strftime("%Y_%m_%d_%H_%M"),
+                                    self.Pano.PanoImageNo))
+        misc.imsave(FileName, Image)
+
+        if os.path.getsize(FileName) > 1000:
+            self.emit(QtCore.SIGNAL('Message(QString)'),
+                      "Wrote image " + FileName)
+        else:
+            self.emit(QtCore.SIGNAL('Message(QString)'),
+                      "Warning: failed to snap an image")
 
     def run(self):
         self.emit(QtCore.SIGNAL('Message(QString)'),
@@ -1564,12 +1572,12 @@ class PanoThread(QtCore.QThread):
             if Usage.free < 1e6*int(self.Pano.lineEditMinFreeDiskSpace.text()):
                 self.Pano.StopPanorama = True
                 self.emit(QtCore.SIGNAL('Message(QString)'),
-                      "There's only {} bytes left. Stop".format(Usage.free))
+                          "There's only {} bytes left. Stop".format(Usage.free))
                 break
 
             Start = datetime.now()
             IgnoreHourRange = (self.StartHour > self.EndHour)
-            WithinHourRange = (Start.hour >= self.StartHour and \
+            WithinHourRange = (Start.hour >= self.StartHour and
                                Start.hour <= self.EndHour)
             if self.IsOneTime or IgnoreHourRange or WithinHourRange:
                 self.emit(QtCore.SIGNAL('Message(QString)'),
@@ -1586,8 +1594,8 @@ class PanoThread(QtCore.QThread):
                         Start.strftime("%Y_%m_%d"),
                         Start.strftime("%Y_%m_%d_%H"),
                         "{}_{}_{:02}".format(self.Pano.CameraName,
-                                          Start.strftime("%Y_%m_%d_%H"),
-                                          NoPanoInSameHour))
+                                             Start.strftime("%Y_%m_%d_%H"),
+                                             NoPanoInSameHour))
                     if not os.path.exists(self.Pano.PanoFolder):
                         os.makedirs(self.Pano.PanoFolder)
                         break
@@ -1602,7 +1610,9 @@ class PanoThread(QtCore.QThread):
                 # make sure zoom is correct before taking panorama
                 try:
                     self.Pano.setZoom(int(self.Pan.ZoomPos))
+                    time.sleep(1)
                 except:
+                    print("Unable to set zoom")
                     pass
 
                 if self.Pano.RunConfig is not None:
@@ -1613,7 +1623,7 @@ class PanoThread(QtCore.QThread):
                             self._moveAndSnap(i, j)
                         except:
                             self.emit(QtCore.SIGNAL('Message(QString)'),
-                                      "Camera or pantilt is not available. Skip")
+                                      "Camera or pantilt is not available. Skip #1.")
                             break
                 else:
                     if ScanOrder == "Cols, right":
@@ -1631,7 +1641,7 @@ class PanoThread(QtCore.QThread):
                                             self._moveAndSnap(i, j)
                                     except:
                                         self.emit(QtCore.SIGNAL('Message(QString)'),
-                                                  "Camera or pantilt is not available. Skip")
+                                                  "Camera or pantilt is not available. Skip #2.")
                                         break
                         f1()
                     elif ScanOrder == "Cols, left":
@@ -1649,7 +1659,7 @@ class PanoThread(QtCore.QThread):
                                             self._moveAndSnap(i, j)
                                     except:
                                         self.emit(QtCore.SIGNAL('Message(QString)'),
-                                                  "Camera or pantilt is not available. Skip")
+                                                  "Camera or pantilt is not available. Skip #3.")
                                         return
                         f2()
                     elif ScanOrder == "Rows, down":
@@ -1667,7 +1677,7 @@ class PanoThread(QtCore.QThread):
                                             self._moveAndSnap(i, j)
                                     except:
                                         self.emit(QtCore.SIGNAL('Message(QString)'),
-                                                  "Camera or pantilt is not available. Skip")
+                                                  "Camera or pantilt is not available. Skip #4.")
                                         return
                         f3()
                     else:  # ScanOrder == "Rows, up"
@@ -1685,17 +1695,10 @@ class PanoThread(QtCore.QThread):
                                             self._moveAndSnap(i, j)
                                     except:
                                         self.emit(QtCore.SIGNAL('Message(QString)'),
-                                                  "Camera or pantilt is not available. Skip")
+                                                  "Camera or pantilt is not available. Skip #5.")
                                         return
                         f4()
                 self.emit(QtCore.SIGNAL('OnePanoDone()'))
-
-                # go to middle point when finish
-                if self.Pano.checkBoxUseFocusAtCenter.checkState() == QtCore.Qt.Checked:
-                    PANVAL0, TILTVAL0 = self.Pano.lineEditPanoFirstCorner.text().split(",")
-                    PANVAL1, TILTVAL1 = self.Pano.lineEditPanoSecondCorner.text().split(",")
-                    self.Pano.setPanTilt(0.5*(float(PANVAL0) + float(PANVAL1)),
-                                         0.5*(float(TILTVAL0) + float(TILTVAL1)))
 
             elif not IgnoreHourRange and not WithinHourRange:
                 self.emit(QtCore.SIGNAL('Message(QString)'),
