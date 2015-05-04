@@ -1535,14 +1535,18 @@ class PanoThread(QtCore.QThread):
                                     self.Pano.CameraName,
                                     Now.strftime("%Y_%m_%d_%H_%M"),
                                     self.Pano.PanoImageNo))
-        misc.imsave(FileName, Image)
-
-        if os.path.getsize(FileName) > 1000:
+        try:
+            misc.imsave(FileName, Image)
+            if os.path.getsize(FileName) > 1000:
+                self.emit(QtCore.SIGNAL('Message(QString)'),
+                          "Wrote image " + FileName)
+            else:
+                self.emit(QtCore.SIGNAL('Message(QString)'),
+                          "Warning: failed to snap an image")
+        except:
             self.emit(QtCore.SIGNAL('Message(QString)'),
-                      "Wrote image " + FileName)
-        else:
-            self.emit(QtCore.SIGNAL('Message(QString)'),
-                      "Warning: failed to snap an image")
+                      "Failed to write image " + FileName)
+            pass
 
     def run(self):
         self.emit(QtCore.SIGNAL('Message(QString)'),
@@ -1605,12 +1609,13 @@ class PanoThread(QtCore.QThread):
                 self.emit(QtCore.SIGNAL('OnePanoStarted()'))
                 self.Pano.PanoImageNo = 0
                 ScanOrder = str(self.Pano.comboBoxPanoScanOrder.currentText())
-                DelaySeconds = 1  # delay to reduce blurring
+                DelaySeconds = 3  # delay to reduce blurring when first start
 
                 # make sure zoom is correct before taking panorama
                 try:
                     self.Pano.setZoom(int(self.Pano.ZoomPos))
-                    print("Set zoom to {}".format(int(self.Pan.ZoomPos)))
+                    self.emit(QtCore.SIGNAL('Message(QString)'),
+                              "Set zoom to {}".format(int(self.Pano.ZoomPos)))
                     time.sleep(1)
                 except:
                     print("Unable to set zoom")
