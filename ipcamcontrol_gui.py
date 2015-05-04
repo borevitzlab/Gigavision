@@ -1609,7 +1609,8 @@ class PanoThread(QtCore.QThread):
 
                 # make sure zoom is correct before taking panorama
                 try:
-                    self.Pano.setZoom(int(self.Pan.ZoomPos))
+                    self.Pano.setZoom(int(self.Pano.ZoomPos))
+                    print("Set zoom to {}".format(int(self.Pan.ZoomPos)))
                     time.sleep(1)
                 except:
                     print("Unable to set zoom")
