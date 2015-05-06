@@ -25,6 +25,9 @@ URL_Capture = 'USERVAL:PASSVAL@IPVAL/axis-cgi/bitmap/image.bmp?resolution=WIDTHV
 URL_SetPanTilt = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL&tilt=TILTVAL'
 URL_SetZoom = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?zoom=ZOOMVAL'
 URL_SetFocusMode = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?autofocus=FOCUSMODE'
+URL_GetZoom = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?query=position'
+URL_GetFocus = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?query=position'
+
 
 def captureImage():
     URL_Str = 'http://' + URL_Capture
@@ -40,7 +43,7 @@ def captureImage2File(OutputFileName):
     URL_Str = 'http://' + URL_Capture
     URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
     URL_Str = URL_Str.replace("WIDTHVAL", str(ImageSize[0])).replace("HEIGHTVAL", str(ImageSize[1]))
-    print(URL_Str)
+    print('Save ' + URL_Str + ' to ' + OutputFileName)
     urllib.urlretrieve(URL_Str, OutputFileName)
 
 
@@ -60,12 +63,27 @@ def setZoom(ZOOMVAL):
     urllib.urlopen(URL_Str)
 
 
+def getZoom():
+    URL_Str = 'http://' + URL_GetZoom
+    URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
+    print(URL_Str)
+    return urllib.urlopen(URL_Str)
+
+
 def setAutoFocusMode(FOCUSMODE='on'):
     URL_Str = 'http://' + URL_SetFocusMode
     URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
     URL_Str = URL_Str.replace("FOCUSMODE", str(FOCUSMODE))
     print(URL_Str)
     urllib.urlopen(URL_Str)
+
+
+def isCameraAvailable():
+    try:
+        getZoom()
+        return True
+    except:
+        return False
 
 
 def readRunInfo(FileName):
@@ -100,9 +118,8 @@ def getPanoFolder(RootFolder, CameraName, NoPanoInSameHour):
                              NoPanoInSameHour))
     if not os.path.exists(PanoFolder):
         os.makedirs(PanoFolder)
-    else:
-        return None
-    return PanoFolder
+        return PanoFolder
+    return None
 
 
 def getFileName(PanoFolder, CameraName, PanoImageNo, FileExtension='jpg'):
@@ -114,18 +131,19 @@ def getFileName(PanoFolder, CameraName, PanoImageNo, FileExtension='jpg'):
                                 PanoImageNo, FileExtension))
     return FileName
 
-if __name__ == '__main__':
-    RunInfoFileName = '/home/chuong/data/PanoFallback/test/RunInfo.cvs'
-    RunConfig = readRunInfo(RunInfoFileName)
 
+if __name__ == '__main__':
+    # settings information
     RootFolder = '/home/chuong/data/PanoFallback/test'
     CameraName = 'ARB-GV-HILL-1'
     StartHour = 7
-    EndHour = 19
+    EndHour = 17
     LoopIntervalMinute = 60  # take panoram every 1 hour
     PanoWaitMin = 15
+    RunInfoFileName = '/home/chuong/data/PanoFallback/test/RunInfo.cvs'
+    RunConfig = readRunInfo(RunInfoFileName)
 
-    # set zoom at the middle
+    # set zoom at the middle of field of view
     setAutoFocusMode('on')
     setZoom(RunConfig["Zoom"][0])
     i_mid = int(len(RunConfig["Index"])/2)
@@ -139,6 +157,10 @@ if __name__ == '__main__':
         WithinHourRange = (Start.hour >= StartHour and
                            Start.hour <= EndHour)
         if WithinHourRange:
+            # wait until camera is available
+            while not isCameraAvailable():
+                time.sleep(15*60)  # sleep 15 minute
+
             for h in range(10):
                 PanoFolder = getPanoFolder(RootFolder, CameraName, h)
                 if PanoFolder is not None:
