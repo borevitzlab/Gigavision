@@ -47,6 +47,12 @@ def captureImage2File(OutputFileName):
     urllib.urlretrieve(URL_Str, OutputFileName)
 
 
+def captureImage2File2(OutputFileName):
+    Image = captureImage()
+    print('Save to ' + OutputFileName)
+    misc.imsave(OutputFileName, Image)
+
+
 def setPanTilt(PANVAL, TILTVAL):
     URL_Str = 'http://' + URL_SetPanTilt
     URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
@@ -134,7 +140,8 @@ def getFileName(PanoFolder, CameraName, PanoImageNo, FileExtension='jpg'):
 
 if __name__ == '__main__':
     # settings information
-    RootFolder = '/home/chuong/data/PanoFallback/test'
+#    RootFolder = '/home/chuong/data/PanoFallback/test'
+    RootFolder = '/home/chuong/data/gigavision'
     CameraName = 'ARB-GV-HILL-1'
     StartHour = 7
     EndHour = 17
@@ -143,7 +150,7 @@ if __name__ == '__main__':
     RunInfoFileName = '/home/chuong/data/PanoFallback/test/RunInfo.cvs'
     RunConfig = readRunInfo(RunInfoFileName)
 
-    # set zoom at the middle of field of view
+    # set focus at the middle of field of view
     setAutoFocusMode('on')
     setZoom(RunConfig["Zoom"][0])
     i_mid = int(len(RunConfig["Index"])/2)
@@ -178,8 +185,10 @@ if __name__ == '__main__':
                     print('Sleep 3 secs')
                 else:
                     time.sleep(0.5)
-                ImageFileName = getFileName(PanoFolder, CameraName, i, 'bmp')
-                captureImage2File(ImageFileName)
+#                ImageFileName = getFileName(PanoFolder, CameraName, i, 'bmp')
+#                captureImage2File(ImageFileName)
+                ImageFileName = getFileName(PanoFolder, CameraName, i, 'jpg')
+                captureImage2File2(ImageFileName)
             print('Finished one panorama')
 
             # wait until next hour
