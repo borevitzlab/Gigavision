@@ -16,7 +16,9 @@ import csv
 import PIL.Image
 from scipy import misc
 import time
+import yaml
 
+# This is for Axis camera
 IPVAL = '10.132.11.32:4442'
 USERVAL = 'root'
 PASSVAL = 'admin'
@@ -26,7 +28,9 @@ URL_SetPanTilt = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL&tilt=TIL
 URL_SetZoom = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?zoom=ZOOMVAL'
 URL_SetFocusMode = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?autofocus=FOCUSMODE'
 URL_GetZoom = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?query=position'
-URL_GetFocus = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?query=position'
+RET_GetZoom = '*zoom={}*'
+URL_GetFocusMode = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?query=position'
+RET_GetFocusMode = '*autofocus={}*'
 
 
 def captureImage():
@@ -39,6 +43,7 @@ def captureImage():
     Image = np.array(PIL.Image.open(byte_array))
     return Image
 
+
 def captureImage2File(OutputFileName):
     URL_Str = 'http://' + URL_Capture
     URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
@@ -48,9 +53,18 @@ def captureImage2File(OutputFileName):
 
 
 def captureImage2File2(OutputFileName):
-    Image = captureImage()
-    print('Save to ' + OutputFileName)
-    misc.imsave(OutputFileName, Image)
+    try:
+        Image = captureImage()
+    except Exception as e:
+        print('Error {} when capturing an image: {}'.format(e.errno, e.strerror))
+        return False
+    try:
+        print('Save to ' + OutputFileName)
+        misc.imsave(OutputFileName, Image)
+        return True
+    except Exception as e:
+        print('Error #{} when saving an image: {}'.format(e.errno, e.strerror))
+        return False
 
 
 def setPanTilt(PANVAL, TILTVAL):
@@ -58,7 +72,12 @@ def setPanTilt(PANVAL, TILTVAL):
     URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
     URL_Str = URL_Str.replace("PANVAL", str(PANVAL)).replace("TILTVAL", str(TILTVAL))
     print(URL_Str)
-    urllib.urlopen(URL_Str)
+    try:
+        urllib.urlopen(URL_Str)
+        return True
+    except Exception as e:
+        print('Error #{} when setting pan/tilt: {}'.format(e.errno, e.strerror))
+        return False
 
 
 def setZoom(ZOOMVAL):
@@ -66,22 +85,35 @@ def setZoom(ZOOMVAL):
     URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
     URL_Str = URL_Str.replace("ZOOMVAL", str(ZOOMVAL))
     print(URL_Str)
-    urllib.urlopen(URL_Str)
+    try:
+        urllib.urlopen(URL_Str)
+        return True
+    except Exception as e:
+        print('Error #{} when setting zoom: {}'.format(e.errno, e.strerror))
+        return False
 
 
 def getZoom():
     URL_Str = 'http://' + URL_GetZoom
     URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
     print(URL_Str)
-    return urllib.urlopen(URL_Str)
+    stream = urllib.urlopen(URL_Str)
+    Output = stream.read(1024).strip()
+    ZOOMVAL = extractInfo(Output, RET_GetZoom)
+    return ZOOMVAL
 
 
-def setAutoFocusMode(FOCUSMODE='on'):
+def setAutoFocusMode(FOCUSMODE):
     URL_Str = 'http://' + URL_SetFocusMode
     URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
     URL_Str = URL_Str.replace("FOCUSMODE", str(FOCUSMODE))
     print(URL_Str)
-    urllib.urlopen(URL_Str)
+    try:
+        urllib.urlopen(URL_Str)
+        return True
+    except Exception as e:
+        print('Error #{} when setting autofocus mode: {}'.format(e.errno, e.strerror))
+        return False
 
 
 def isCameraAvailable():
@@ -90,6 +122,29 @@ def isCameraAvailable():
         return True
     except:
         return False
+
+
+def extractInfo(Text, RET_Str):
+        StrList = RET_Str.split("*")
+        StrList = [Str for Str in StrList if len(Str) > 0]
+        Vals = []
+        for Str in StrList:
+            WordList = Str.split("{}")
+            WordList = [Word for Word in WordList if len(Word) > 0]
+            if len(WordList) == 1:
+                Pos = Text.find(WordList[0])
+                if Pos >= 0:
+                    Val = Text[Pos + len(WordList[0]):]
+                    ValList = Val.split("\n")
+                    Vals.append(ValList[0].strip())
+            elif len(WordList) == 2:
+                Pos1 = Text.find(WordList[0])
+                Pos2 = Text.find(WordList[1], Pos1 + len(WordList[0]))
+                if Pos1 >= 0 and Pos2 >= Pos1:
+                    Vals.append(Text[Pos1 + len(WordList[0]):Pos2])
+            else:
+                print("Unhandled case {}". format(Str))
+        return Vals[0]
 
 
 def readRunInfo(FileName):
@@ -140,15 +195,18 @@ def getFileName(PanoFolder, CameraName, PanoImageNo, FileExtension='jpg'):
 
 if __name__ == '__main__':
     # settings information
-#    RootFolder = '/home/chuong/data/PanoFallback/test'
-    RootFolder = '/home/chuong/data/gigavision'
+    RootFolder = '/home/chuong/data/PanoFallback'
+#    RootFolder = '/home/chuong/data/gigavision'
     CameraName = 'ARB-GV-HILL-1'
     StartHour = 7
     EndHour = 17
     LoopIntervalMinute = 60  # take panoram every 1 hour
     PanoWaitMin = 15
     RunInfoFileName = '/home/chuong/data/PanoFallback/test/RunInfo.cvs'
+    CamConfigFile = '/home/chuong/workspace/Gigavision/AxisCamera.yml'
+
     RunConfig = readRunInfo(RunInfoFileName)
+    CamConfig = yaml.load(open(CamConfigFile, 'r'))
 
     # set focus at the middle of field of view
     setAutoFocusMode('on')
@@ -166,6 +224,7 @@ if __name__ == '__main__':
         if WithinHourRange:
             # wait until camera is available
             while not isCameraAvailable():
+                print('Camera is not available. Check again in 15 min.')
                 time.sleep(15*60)  # sleep 15 minute
 
             for h in range(10):
@@ -178,7 +237,9 @@ if __name__ == '__main__':
             setPanTilt(RunConfig["PanDeg"][0], RunConfig["TiltDeg"][0])
             time.sleep(3)
             for i in RunConfig["Index"]:
-                setPanTilt(RunConfig["PanDeg"][i], RunConfig["TiltDeg"][i])
+                if not setPanTilt(RunConfig["PanDeg"][i], RunConfig["TiltDeg"][i]):
+                    print('Failed to set pan/tilt. Skip this panorama')
+                    break
                 if i > 0 and RunConfig["Col"][i-1] != RunConfig["Col"][i]:
                     # move to next column need more time
                     time.sleep(3)
@@ -188,7 +249,9 @@ if __name__ == '__main__':
 #                ImageFileName = getFileName(PanoFolder, CameraName, i, 'bmp')
 #                captureImage2File(ImageFileName)
                 ImageFileName = getFileName(PanoFolder, CameraName, i, 'jpg')
-                captureImage2File2(ImageFileName)
+                if not captureImage2File2(ImageFileName):
+                    print('Error in capture panorama. Skip this panorama')
+                    break
             print('Finished one panorama')
 
             # wait until next hour
