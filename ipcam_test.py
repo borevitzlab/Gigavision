@@ -7,7 +7,8 @@ Created on Wed May  6 14:26:27 2015
 # Python 3.x behavior
 from __future__ import absolute_import, division, print_function
 
-import urllib
+import urllib2
+import base64
 import os
 import io
 from datetime import datetime
@@ -23,33 +24,37 @@ IPVAL = '10.132.11.32:4442'
 USERVAL = 'root'
 PASSVAL = 'admin'
 ImageSize = [1280, 720]
-URL_Capture = 'USERVAL:PASSVAL@IPVAL/axis-cgi/bitmap/image.bmp?resolution=WIDTHVALxHEIGHTVAL&compression=0'
-URL_SetPanTilt = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL&tilt=TILTVAL'
-URL_SetZoom = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?zoom=ZOOMVAL'
-URL_SetFocusMode = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?autofocus=FOCUSMODE'
-URL_GetZoom = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?query=position'
+URL_Capture = 'IPVAL/axis-cgi/bitmap/image.bmp?resolution=WIDTHVALxHEIGHTVAL&compression=0'
+URL_SetPanTilt = 'IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL&tilt=TILTVAL'
+URL_SetZoom = 'IPVAL/axis-cgi/com/ptz.cgi?zoom=ZOOMVAL'
+URL_SetFocusMode = 'IPVAL/axis-cgi/com/ptz.cgi?autofocus=FOCUSMODE'
+URL_GetZoom = 'IPVAL/axis-cgi/com/ptz.cgi?query=position'
 RET_GetZoom = '*zoom={}*'
-URL_GetFocusMode = 'USERVAL:PASSVAL@IPVAL/axis-cgi/com/ptz.cgi?query=position'
+URL_GetFocusMode = 'IPVAL/axis-cgi/com/ptz.cgi?query=position'
 RET_GetFocusMode = '*autofocus={}*'
 
 
+def callURL(URL, IPVAL, USERVAL, PASSVAL):
+    URL_Str = 'http://' + URL
+    URL_Str = URL_Str.replace("IPVAL", IPVAL)
+    print(URL_Str),
+    request = urllib2.Request(URL_Str)
+    base64string = base64.encodestring('%s:%s' % (USERVAL, PASSVAL)).replace('\n', '')
+    request.add_header("Authorization", "Basic %s" % base64string)
+    try:
+        stream = urllib2.urlopen(request, timeout=60)
+    except urllib2.URLError, e:
+        raise Exception("Time out error: %r" % e)
+    return stream.read()
+
+
 def captureImage():
-    URL_Str = 'http://' + URL_Capture
-    URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
-    URL_Str = URL_Str.replace("WIDTHVAL", str(ImageSize[0])).replace("HEIGHTVAL", str(ImageSize[1]))
-    print(URL_Str)
-    stream = urllib.urlopen(URL_Str)
-    byte_array = io.BytesIO(stream.read())
+    URL_Str = URL_Capture.replace("WIDTHVAL", str(ImageSize[0])).replace("HEIGHTVAL", str(ImageSize[1]))
+    output = callURL(URL_Str, IPVAL, USERVAL, PASSVAL)
+    byte_array = io.BytesIO(output)
+    print(' Read successfull')
     Image = np.array(PIL.Image.open(byte_array))
     return Image
-
-
-def captureImage2File(OutputFileName):
-    URL_Str = 'http://' + URL_Capture
-    URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
-    URL_Str = URL_Str.replace("WIDTHVAL", str(ImageSize[0])).replace("HEIGHTVAL", str(ImageSize[1]))
-    print('Save ' + URL_Str + ' to ' + OutputFileName)
-    urllib.urlretrieve(URL_Str, OutputFileName)
 
 
 def captureImage2File2(OutputFileName):
@@ -68,12 +73,9 @@ def captureImage2File2(OutputFileName):
 
 
 def setPanTilt(PANVAL, TILTVAL):
-    URL_Str = 'http://' + URL_SetPanTilt
-    URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
-    URL_Str = URL_Str.replace("PANVAL", str(PANVAL)).replace("TILTVAL", str(TILTVAL))
-    print(URL_Str)
+    URL_Str = URL_SetPanTilt.replace("PANVAL", str(PANVAL)).replace("TILTVAL", str(TILTVAL))
     try:
-        urllib.urlopen(URL_Str)
+        callURL(URL_Str, IPVAL, USERVAL, PASSVAL)
         return True
     except Exception as e:
         print('Error #{} when setting pan/tilt: {}'.format(e.errno, e.strerror))
@@ -81,12 +83,9 @@ def setPanTilt(PANVAL, TILTVAL):
 
 
 def setZoom(ZOOMVAL):
-    URL_Str = 'http://' + URL_SetZoom
-    URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
-    URL_Str = URL_Str.replace("ZOOMVAL", str(ZOOMVAL))
-    print(URL_Str)
+    URL_Str = URL_SetZoom.replace("ZOOMVAL", str(ZOOMVAL))
     try:
-        urllib.urlopen(URL_Str)
+        callURL(URL_Str, IPVAL, USERVAL, PASSVAL)
         return True
     except Exception as e:
         print('Error #{} when setting zoom: {}'.format(e.errno, e.strerror))
@@ -94,22 +93,16 @@ def setZoom(ZOOMVAL):
 
 
 def getZoom():
-    URL_Str = 'http://' + URL_GetZoom
-    URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
-    print(URL_Str)
-    stream = urllib.urlopen(URL_Str)
-    Output = stream.read(1024).strip()
+    Output = callURL(URL_GetZoom, IPVAL, USERVAL, PASSVAL).strip()
     ZOOMVAL = extractInfo(Output, RET_GetZoom)
     return ZOOMVAL
 
 
 def setAutoFocusMode(FOCUSMODE):
-    URL_Str = 'http://' + URL_SetFocusMode
-    URL_Str = URL_Str.replace("USERVAL", USERVAL).replace("PASSVAL", PASSVAL).replace("IPVAL", IPVAL)
-    URL_Str = URL_Str.replace("FOCUSMODE", str(FOCUSMODE))
+    URL_Str = URL_SetFocusMode.replace("FOCUSMODE", str(FOCUSMODE))
     print(URL_Str)
     try:
-        urllib.urlopen(URL_Str)
+        callURL(URL_Str, IPVAL, USERVAL, PASSVAL)
         return True
     except Exception as e:
         print('Error #{} when setting autofocus mode: {}'.format(e.errno, e.strerror))
