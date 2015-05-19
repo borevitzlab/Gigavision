@@ -158,6 +158,18 @@ def readRunInfo(FileName):
     return None
 
 
+def writeRunInfo(FileName, RunConfig):
+    with open(FileName, 'w') as File:
+        FieldNames = ["Index", "Col", "Row", "PanDeg", "TiltDeg", "Zoom",
+                      "Focus"]
+        File.writeline(','.FieldNames)
+        for i in range(len(RunConfig["Index"])):
+            row = [RunConfig[key][i] for key in FieldNames]
+            File.writeline(','.join(row))
+        return True
+    return False
+
+
 def getPanoFolder(RootFolder, CameraName, NoPanoInSameHour):
     Start = datetime.now()
     PanoFolder = os.path.join(
@@ -186,6 +198,16 @@ def getFileName(PanoFolder, CameraName, PanoImageNo, FileExtension='jpg'):
     return FileName
 
 
+def setFocusAt(PanDeg, TiltDeg):
+    # set focus at the middle of field of view
+    # this may work only with Axis camera
+    setAutoFocusMode('on')
+    setZoom(RunConfig["Zoom"][0])
+    setPanTilt(PanDeg, TiltDeg)
+    time.sleep(3)
+    captureImage()
+    setAutoFocusMode('off')
+
 if __name__ == '__main__':
     # settings information
     RootFolder = '/home/chuong/data/PanoFallback'
@@ -201,15 +223,6 @@ if __name__ == '__main__':
     RunConfig = readRunInfo(RunInfoFileName)
     CamConfig = yaml.load(open(CamConfigFile, 'r'))
 
-    # set focus at the middle of field of view
-    setAutoFocusMode('on')
-    setZoom(RunConfig["Zoom"][0])
-    i_mid = int(len(RunConfig["Index"])/2)
-    setPanTilt(RunConfig["PanDeg"][i_mid], RunConfig["TiltDeg"][i_mid])
-    time.sleep(3)
-    captureImage()
-    setAutoFocusMode('off')
-
     while True:
         Start = datetime.now()
         WithinHourRange = (Start.hour >= StartHour and
@@ -219,6 +232,10 @@ if __name__ == '__main__':
             while not isCameraAvailable():
                 print('Camera is not available. Check again in 15 min.')
                 time.sleep(15*60)  # sleep 15 minute
+
+            # set focus at the middle of field of view
+            i_mid = int(len(RunConfig["Index"])/2)
+            setFocusAt(RunConfig["PanDeg"][i_mid], RunConfig["TiltDeg"][i_mid])
 
             for h in range(10):
                 PanoFolder = getPanoFolder(RootFolder, CameraName, h)
@@ -245,6 +262,12 @@ if __name__ == '__main__':
                 if not captureImage2File2(ImageFileName):
                     print('Error in capture panorama. Skip this panorama')
                     break
+
+            # write panoram config file
+            os.makedirs(os.path.join(PanoFolder, '_data'))
+            RunConfigFile = os.path.join(PanoFolder, '_data', 'RunInfo.csv')
+            writeRunInfo(RunConfigFile, RunConfig)
+
             print('Finished one panorama')
 
             # wait until next hour
