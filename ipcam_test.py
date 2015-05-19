@@ -162,10 +162,10 @@ def writeRunInfo(FileName, RunConfig):
     with open(FileName, 'w') as File:
         FieldNames = ["Index", "Col", "Row", "PanDeg", "TiltDeg", "Zoom",
                       "Focus"]
-        File.writeline(','.FieldNames)
+        File.write(','.FieldNames)
         for i in range(len(RunConfig["Index"])):
             row = [RunConfig[key][i] for key in FieldNames]
-            File.writeline(','.join(row))
+            File.write('\n' + ','.join(row))
         return True
     return False
 
