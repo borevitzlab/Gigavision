@@ -61,7 +61,7 @@ def captureImage2File2(OutputFileName):
     try:
         Image = captureImage()
     except Exception as e:
-        print('Error {} when capturing an image: {}'.format(e.errno, e.strerror))
+        print('Error when capturing an image: {}'.format(e))
         return False
     try:
         print('Save to ' + OutputFileName)
@@ -162,9 +162,9 @@ def writeRunInfo(FileName, RunConfig):
     with open(FileName, 'w') as File:
         FieldNames = ["Index", "Col", "Row", "PanDeg", "TiltDeg", "Zoom",
                       "Focus"]
-        File.write(','.FieldNames)
+        File.write(','.join(FieldNames))
         for i in range(len(RunConfig["Index"])):
-            row = [RunConfig[key][i] for key in FieldNames]
+            row = [str(RunConfig[key][i]) for key in FieldNames]
             File.write('\n' + ','.join(row))
         return True
     return False
