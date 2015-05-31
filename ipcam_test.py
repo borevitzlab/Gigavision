@@ -68,7 +68,7 @@ def captureImage2File2(OutputFileName):
         misc.imsave(OutputFileName, Image)
         return True
     except Exception as e:
-        print('Error #{} when saving an image: {}'.format(e.errno, e.strerror))
+        print('Error when saving an image: {}'.format(e))
         return False
 
 
@@ -78,7 +78,7 @@ def setPanTilt(PANVAL, TILTVAL):
         callURL(URL_Str, IPVAL, USERVAL, PASSVAL)
         return True
     except Exception as e:
-        print('Error #{} when setting pan/tilt: {}'.format(e.errno, e.strerror))
+        print('Error when setting pan/tilt: {}'.format(e))
         return False
 
 
@@ -88,7 +88,7 @@ def setZoom(ZOOMVAL):
         callURL(URL_Str, IPVAL, USERVAL, PASSVAL)
         return True
     except Exception as e:
-        print('Error #{} when setting zoom: {}'.format(e.errno, e.strerror))
+        print('Error when setting zoom: {}'.format(e))
         return False
 
 
@@ -105,7 +105,7 @@ def setAutoFocusMode(FOCUSMODE):
         callURL(URL_Str, IPVAL, USERVAL, PASSVAL)
         return True
     except Exception as e:
-        print('Error #{} when setting autofocus mode: {}'.format(e.errno, e.strerror))
+        print('Error when setting autofocus mode: {}'.format(e))
         return False
 
 
