@@ -6,7 +6,7 @@ remote_mounted_folder=$HOME/data/gigavision/ARB-GV-HILL-1/
 log_folder=$HOME/data/gigavision/log/
 
 # copy new files
-rsync -av --progress --log-file=$log_folder/$(date +%Y%m%d)_upload.log $local_folder $remote_mounted_folder
+rsync -av --progress --log-file=$log_folder/$(date +%Y%m%d)_$HOSTNAME"_"upload.log $local_folder $remote_mounted_folder
 
 # remove local folder 7 days before
 year=$(date -d "-7 days" +%Y)
