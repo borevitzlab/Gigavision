@@ -20,10 +20,18 @@ import time
 import yaml
 
 # This is for Axis camera
-IPVAL = '10.132.11.32:4442'
-USERVAL = 'root'
-PASSVAL = 'admin'
-ImageSize = [1280, 720]
+IPVAL = ''
+USERVAL = ''
+PASSVAL = ''
+# Panorama parameters
+ImageSize = [1920, 1080]  # [1280, 720]
+Zoom = 3500
+FieldOfView = [5.6708, 3.1613] # degree
+Focus = 'manual_center'  # {'auto', 'manual', manual_center'}
+TopLeftCorner = [-15.2804, 6.7060] # degree
+BottomRightCorner = [147.0061, -23.3940] # degree
+Overlap = 40  # percentage of image overlapping
+# URL command patterns
 URL_Capture = 'IPVAL/axis-cgi/bitmap/image.bmp?resolution=WIDTHVALxHEIGHTVAL&compression=0'
 URL_SetPanTilt = 'IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL&tilt=TILTVAL'
 URL_SetZoom = 'IPVAL/axis-cgi/com/ptz.cgi?zoom=ZOOMVAL'
@@ -210,19 +218,48 @@ def setFocusAt(PanDeg, TiltDeg):
 
 if __name__ == '__main__':
     # settings information
-    RootFolder = '/home/chuong/data/PanoFallback'
-#    RootFolder = '/home/chuong/data/gigavision'
+    # TODO: makes these commandline options
+    RootFolder = '/media/TBUltrabookBackup/phenocams'
     CameraName = 'ARB-GV-HILL-1'
-    StartHour = 7
+    StartHour = 8
     EndHour = 17
     LoopIntervalMinute = 60  # take panoram every 1 hour
     PanoWaitMin = 15
-    RunInfoFileName = '/home/chuong/data/PanoFallback/test/RunInfo.cvs'
-    CamConfigFile = '/home/chuong/workspace/Gigavision/AxisCamera.yml'
+    RunInfoFileName = '/home/pi/workspace/Gigavision/RunInfo.cvs'
+    CamConfigFile = '/home/pi/workspace/Gigavision/AxisCamera_Q6115-E.yml'
 
-    RunConfig = readRunInfo(RunInfoFileName)
     CamConfig = yaml.load(open(CamConfigFile, 'r'))
-
+    IPVAL = CamConfig['IPVAL']
+    USERVAL = CamConfig['USERVAL']
+    PASSVAL = CamConfig['PASSVAL']
+    if os.path.exists(RunInfoFileName):
+        RunConfig = readRunInfo(RunInfoFileName)
+    else:
+        print('Generate RunConfig')
+        RunConfig = {'Index': [], 'Col': [], 'Row': [], 
+                     'PanDeg': [], 'TiltDeg': [],
+                     'Zoom': [], 'Focus': []}
+        [LeftPan, TopTilt] = TopLeftCorner
+        [RightPan, BottomTilt] = BottomRightCorner
+        HFoV, VFoV = FieldOfView
+        PanoRows = int(round((TopTilt - BottomTilt)/VFoV/(1.0-Overlap/100.0)))
+        PanoCols = int(round((RightPan - LeftPan)/HFoV/(1.0-Overlap/100.0)))
+        print('Row = {}, Col = {}'.format(PanoRows, PanoCols))
+        Index = 0
+        print('Index, Col', 'Row, PanDeg, TiltDeg, Zoom, Focus')
+        for iCol in range(PanoCols):
+            for jRow in range(PanoRows):
+                PanDeg  = TopLeftCorner[0] + iCol*HFoV*(1.0 - Overlap/100.0)
+                TiltDeg = TopLeftCorner[1] - jRow*VFoV*(1.0 - Overlap/100.0)
+                RunConfig['Index'].append(Index)
+                RunConfig['Col'].append(iCol)
+                RunConfig['Row'].append(jRow)
+                RunConfig['PanDeg'].append(PanDeg)
+                RunConfig['TiltDeg'].append(TiltDeg)           
+                RunConfig['Zoom'].append(Zoom)
+                RunConfig['Focus'].append(Focus)                               
+                print('{},{},{},{},{},{},{}'.format(Index, iCol, jRow, PanDeg, TiltDeg, Zoom, Focus))
+                Index += 1
     while True:
         Start = datetime.now()
         WithinHourRange = (Start.hour >= StartHour and
