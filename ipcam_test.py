@@ -27,7 +27,7 @@ PASSVAL = ''
 ImageSize = [1920, 1080]  # [1280, 720]
 Zoom = 3500
 FieldOfView = [5.6708, 3.1613] # degree
-Focus = 'manual_center'  # {'auto', 'manual', manual_center'}
+Focus = 8027
 TopLeftCorner = [-15.2804, 6.7060] # degree
 BottomRightCorner = [147.0061, -23.3940] # degree
 Overlap = 40  # percentage of image overlapping
@@ -65,7 +65,7 @@ def captureImage():
     return Image
 
 
-def captureImage2File2(OutputFileName):
+def captureImage2File(OutputFileName):
     try:
         Image = captureImage()
     except Exception as e:
@@ -212,7 +212,7 @@ def setFocusAt(PanDeg, TiltDeg):
     setAutoFocusMode('on')
     setZoom(RunConfig["Zoom"][0])
     setPanTilt(PanDeg, TiltDeg)
-    time.sleep(3)
+    time.sleep(5)
     captureImage()
     setAutoFocusMode('off')
 
@@ -271,9 +271,14 @@ if __name__ == '__main__':
                 time.sleep(15*60)  # sleep 15 minute
 
             # set focus at the middle of field of view
-            i_mid = int(len(RunConfig["Index"])/2)
-            setFocusAt(RunConfig["PanDeg"][i_mid], RunConfig["TiltDeg"][i_mid])
-
+            PanDegMin = min(RunConfig["PanDeg"])
+            PanDegMax = max(RunConfig["PanDeg"])
+            TiltDegMin = min(RunConfig["TiltDeg"])
+            TiltDegMax = max(RunConfig["TiltDeg"])
+            PanMiddle = (PanDegMin+PanDegMax)/2
+            TiltMiddle= (TiltDegMin+TiltDegMax)/2
+            setFocusAt(PanMiddle, TiltMiddle)
+            
             for h in range(10):
                 PanoFolder = getPanoFolder(RootFolder, CameraName, h)
                 if PanoFolder is not None:
@@ -296,7 +301,7 @@ if __name__ == '__main__':
 #                ImageFileName = getFileName(PanoFolder, CameraName, i, 'bmp')
 #                captureImage2File(ImageFileName)
                 ImageFileName = getFileName(PanoFolder, CameraName, i, 'jpg')
-                if not captureImage2File2(ImageFileName):
+                if not captureImage2File(ImageFileName):
                     print('Error in capture panorama. Skip this panorama')
                     break
 
