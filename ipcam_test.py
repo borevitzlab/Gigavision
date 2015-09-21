@@ -31,6 +31,7 @@ Focus = 8027
 TopLeftCorner = [-15.2804, 6.7060] # degree
 BottomRightCorner = [147.0061, -23.3940] # degree
 Overlap = 40  # percentage of image overlapping
+max_no_tries = 3  # to deal with corrupted connection
 # URL command patterns
 URL_Capture = 'IPVAL/axis-cgi/bitmap/image.bmp?resolution=WIDTHVALxHEIGHTVAL&compression=0'
 URL_SetPanTilt = 'IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL&tilt=TILTVAL'
@@ -303,19 +304,31 @@ if __name__ == '__main__':
             setPanTilt(RunConfig["PanDeg"][0], RunConfig["TiltDeg"][0])
             time.sleep(3)
             for i in RunConfig["Index"]:
-                if not setPanTilt(RunConfig["PanDeg"][i], RunConfig["TiltDeg"][i]):
-                    print('Failed to set pan/tilt. Skip this panorama')
-                    break
+                ImageFileName = getFileName(PanoFolder, CameraName, i, 'jpg')
+                j = 0
+                while j < max_no_tries:
+                    if setPanTilt(RunConfig["PanDeg"][i], RunConfig["TiltDeg"][i]):
+                        break
+                    else:
+                        j += 1
+                if j >= max_no_tries:
+                    print('Failed to set pan/tilt. Save a black image.')
+                    saveBlackImage2File(ImageFileName)
+                    continue
+
                 if i > 0 and RunConfig["Col"][i-1] != RunConfig["Col"][i]:
                     # move to next column need more time
                     time.sleep(3)
                     print('Sleep 3 secs')
                 else:
                     time.sleep(0.5)
-#                ImageFileName = getFileName(PanoFolder, CameraName, i, 'bmp')
-#                captureImage2File(ImageFileName)
-                ImageFileName = getFileName(PanoFolder, CameraName, i, 'jpg')
-                if not captureImage2File(ImageFileName):
+
+                while j < max_no_tries:
+                    if captureImage2File(ImageFileName):
+                        break;
+                    else:
+                        j += 1
+                if j >= max_no_tries:
                     print('Error in capture panorama. Save a black image.')
                     saveBlackImage2File(ImageFileName)
 
