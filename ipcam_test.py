@@ -216,6 +216,13 @@ def setFocusAt(PanDeg, TiltDeg):
     captureImage()
     setAutoFocusMode('off')
 
+def saveBlackImage2File(OutputFileName):
+    BlackImage = np.zeros([ImageSize[0], ImageSize[1], 3], dtype=np.uint8)
+    try:
+        misc.imsave(OutputFileName, BlackImage)
+    except:
+        print('Failed to save empty image')
+    
 if __name__ == '__main__':
     # settings information
     # TODO: makes these commandline options
@@ -277,7 +284,14 @@ if __name__ == '__main__':
             TiltDegMax = max(RunConfig["TiltDeg"])
             PanMiddle = (PanDegMin+PanDegMax)/2
             TiltMiddle= (TiltDegMin+TiltDegMax)/2
-            setFocusAt(PanMiddle, TiltMiddle)
+            while True:
+                try:
+                    setFocusAt(PanMiddle, TiltMiddle)
+                    break
+                except:
+                    print('Failed to focus the camera. Camera is likely down.')
+                    print('Try focusing again in 5 minutes')
+                    time.sleep(5*60)
             
             for h in range(10):
                 PanoFolder = getPanoFolder(RootFolder, CameraName, h)
@@ -302,8 +316,8 @@ if __name__ == '__main__':
 #                captureImage2File(ImageFileName)
                 ImageFileName = getFileName(PanoFolder, CameraName, i, 'jpg')
                 if not captureImage2File(ImageFileName):
-                    print('Error in capture panorama. Skip this panorama')
-                    break
+                    print('Error in capture panorama. Save a black image.')
+                    saveBlackImage2File(ImageFileName)
 
             # write panoram config file
             os.makedirs(os.path.join(PanoFolder, '_data'))
