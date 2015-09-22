@@ -218,7 +218,7 @@ def setFocusAt(PanDeg, TiltDeg):
     setAutoFocusMode('off')
 
 def saveBlackImage2File(OutputFileName):
-    BlackImage = np.zeros([ImageSize[0], ImageSize[1], 3], dtype=np.uint8)
+    BlackImage = np.zeros([ImageSize[1], ImageSize[0], 3], dtype=np.uint8)
     try:
         misc.imsave(OutputFileName, BlackImage)
     except:
@@ -278,6 +278,22 @@ if __name__ == '__main__':
                 print('Camera is not available. Check again in 15 min.')
                 time.sleep(15*60)  # sleep 15 minute
 
+            # make sure zoom is set at begining
+            while True:
+                try:
+                    setZoom(RunConfig["Zoom"][0])
+                    break
+                except:
+                    print('Sleep 1 secs to set zoom')
+                    time.sleep(1)
+            while True:
+                try:
+                    Zoom0 = getZoom()
+                    break
+                except:
+                    print('Sleep 1 secs to get zoom')
+                    time.sleep(1)
+    
             # set focus at the middle of field of view
             PanDegMin = min(RunConfig["PanDeg"])
             PanDegMax = max(RunConfig["PanDeg"])
@@ -299,25 +315,44 @@ if __name__ == '__main__':
                 if PanoFolder is not None:
                     break
 
-            # make sure zoom is set at begining
-            setZoom(RunConfig["Zoom"][0])
             setPanTilt(RunConfig["PanDeg"][0], RunConfig["TiltDeg"][0])
             time.sleep(3)
             for i in RunConfig["Index"]:
                 ImageFileName = getFileName(PanoFolder, CameraName, i, 'jpg')
+                
+                # this is to prevent zoom being changed in the middle of the run
+                while True:
+                    try:
+                        Zoom = getZoom()
+                        break
+                    except:
+                        print('Sleep 1 secs to get zoom')
+                        time.sleep(1)
+                if Zoom != Zoom0:
+                    print('Zoom is not correct. Reset to correct value')
+                    while True:
+                        try:
+                            setZoom(RunConfig["Zoom"][0])
+                            break
+                        except:
+                            print('Sleep 1 secs to set zoom')
+                            time.sleep(1)
+                    
                 j = 0
                 while j < max_no_tries:
                     if setPanTilt(RunConfig["PanDeg"][i], RunConfig["TiltDeg"][i]):
                         break
                     else:
                         j += 1
+                        time.sleep(1)
                 if j >= max_no_tries:
                     print('Failed to set pan/tilt. Save a black image.')
                     saveBlackImage2File(ImageFileName)
                     continue
-
+                
+                # check if it is moving to the next column
                 if i > 0 and RunConfig["Col"][i-1] != RunConfig["Col"][i]:
-                    # move to next column need more time
+                    # move to next column needs more time
                     time.sleep(3)
                     print('Sleep 3 secs')
                 else:
@@ -328,6 +363,7 @@ if __name__ == '__main__':
                         break;
                     else:
                         j += 1
+                        time.sleep(1)
                 if j >= max_no_tries:
                     print('Error in capture panorama. Save a black image.')
                     saveBlackImage2File(ImageFileName)
