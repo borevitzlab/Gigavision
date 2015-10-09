@@ -33,8 +33,11 @@ BottomRightCorner = [147.0061, -23.3940] # degree
 Overlap = 40  # percentage of image overlapping
 max_no_tries = 3  # to deal with corrupted connection
 # URL command patterns
-URL_Capture = 'IPVAL/axis-cgi/bitmap/image.bmp?resolution=WIDTHVALxHEIGHTVAL&compression=0'
+# Ref: https://www.ispyconnect.com/man.aspx?n=Axis
+URL_Capture_Bitmap = 'IPVAL/axis-cgi/bitmap/image.bmp?resolution=WIDTHVALxHEIGHTVAL&compression=0'
+URL_Capture_JPG = 'IPVAL/jpg/image.jpg?&resolution=WIDTHVALxHEIGHTVAL'
 URL_SetPanTilt = 'IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL&tilt=TILTVAL'
+URL_SetPanTiltZoom = 'IPVAL/axis-cgi/com/ptz.cgi?pan=PANVAL&tilt=TILTVAL&zoom=ZOOMVAL'
 URL_SetZoom = 'IPVAL/axis-cgi/com/ptz.cgi?zoom=ZOOMVAL'
 URL_SetFocusMode = 'IPVAL/axis-cgi/com/ptz.cgi?autofocus=FOCUSMODE'
 URL_GetZoom = 'IPVAL/axis-cgi/com/ptz.cgi?query=position'
@@ -57,8 +60,8 @@ def callURL(URL, IPVAL, USERVAL, PASSVAL):
     return stream.read()
 
 
-def captureImage():
-    URL_Str = URL_Capture.replace("WIDTHVAL", str(ImageSize[0])).replace("HEIGHTVAL", str(ImageSize[1]))
+def captureImageBitmap():
+    URL_Str = URL_Capture_Bitmap.replace("WIDTHVAL", str(ImageSize[0])).replace("HEIGHTVAL", str(ImageSize[1]))
     output = callURL(URL_Str, IPVAL, USERVAL, PASSVAL)
     byte_array = io.BytesIO(output)
     print(' Read successfull')
@@ -66,9 +69,27 @@ def captureImage():
     return Image
 
 
+def captureJPGImage2File(OutputFileName):
+    URL_Str = URL_Capture_JPG.replace("WIDTHVAL", str(ImageSize[0])).replace("HEIGHTVAL", str(ImageSize[1]))
+    URL_Str = 'http://' + URL_Str
+    URL_Str = URL_Str.replace("IPVAL", IPVAL)
+    JPG_File = open(OutputFileName, 'wb')
+    isSuccessfull = True
+    try:
+        JPG_Data = urllib2.urlopen(URL_Str)
+        JPG_File.write(JPG_Data.read())
+    except:
+        isSuccessfull = False
+        print('Fail to capture JPG image')
+    finally:
+        JPG_File.close()
+    print(' Read successfull')
+    return isSuccessfull
+
+
 def captureImage2File(OutputFileName):
     try:
-        Image = captureImage()
+        Image = captureImageBitmap()
     except Exception as e:
         print('Error when capturing an image: {}'.format(e))
         return False
@@ -83,6 +104,16 @@ def captureImage2File(OutputFileName):
 
 def setPanTilt(PANVAL, TILTVAL):
     URL_Str = URL_SetPanTilt.replace("PANVAL", str(PANVAL)).replace("TILTVAL", str(TILTVAL))
+    try:
+        callURL(URL_Str, IPVAL, USERVAL, PASSVAL)
+        return True
+    except Exception as e:
+        print('Error when setting pan/tilt: {}'.format(e))
+        return False
+
+
+def setPanTiltZoom(PANVAL, TILTVAL, ZOOMVAL):
+    URL_Str = URL_SetPanTiltZoom.replace("PANVAL", str(PANVAL)).replace("TILTVAL", str(TILTVAL)).replace("ZOOMVAL", str(ZOOMVAL))
     try:
         callURL(URL_Str, IPVAL, USERVAL, PASSVAL)
         return True
@@ -207,14 +238,14 @@ def getFileName(PanoFolder, CameraName, PanoImageNo, FileExtension='jpg'):
     return FileName
 
 
-def setFocusAt(PanDeg, TiltDeg):
+def setFocusAt(PanDeg, TiltDeg, Zoom):
     # set focus at the middle of field of view
     # this may work only with Axis camera
     setAutoFocusMode('on')
-    setZoom(RunConfig["Zoom"][0])
+    setZoom(Zoom)
     setPanTilt(PanDeg, TiltDeg)
     time.sleep(5)
-    captureImage()
+    captureImageBitmap()
     setAutoFocusMode('off')
 
 def saveBlackImage2File(OutputFileName):
@@ -223,18 +254,21 @@ def saveBlackImage2File(OutputFileName):
         misc.imsave(OutputFileName, BlackImage)
     except:
         print('Failed to save empty image')
-    
+
 if __name__ == '__main__':
     # settings information
     # TODO: makes these commandline options
     RootFolder = '/media/TBUltrabookBackup/phenocams'
+#    RootFolder = '/home/chuong/data/phenocams'
     CameraName = 'ARB-GV-HILL-1'
     StartHour = 8
-    EndHour = 17
+    EndHour = 18
     LoopIntervalMinute = 60  # take panoram every 1 hour
     PanoWaitMin = 15
     RunInfoFileName = '/home/pi/workspace/Gigavision/RunInfo.cvs'
     CamConfigFile = '/home/pi/workspace/Gigavision/AxisCamera_Q6115-E.yml'
+#    RunInfoFileName = '/home/chuong/workspace/Gigavision/RunInfo.cvs'
+#    CamConfigFile = '/home/chuong/workspace/Gigavision/AxisCamera_Q6115-E.yml'
 
     CamConfig = yaml.load(open(CamConfigFile, 'r'))
     IPVAL = CamConfig['IPVAL']
@@ -244,7 +278,7 @@ if __name__ == '__main__':
         RunConfig = readRunInfo(RunInfoFileName)
     else:
         print('Generate RunConfig')
-        RunConfig = {'Index': [], 'Col': [], 'Row': [], 
+        RunConfig = {'Index': [], 'Col': [], 'Row': [],
                      'PanDeg': [], 'TiltDeg': [],
                      'Zoom': [], 'Focus': []}
         [LeftPan, TopTilt] = TopLeftCorner
@@ -263,9 +297,9 @@ if __name__ == '__main__':
                 RunConfig['Col'].append(iCol)
                 RunConfig['Row'].append(jRow)
                 RunConfig['PanDeg'].append(PanDeg)
-                RunConfig['TiltDeg'].append(TiltDeg)           
+                RunConfig['TiltDeg'].append(TiltDeg)
                 RunConfig['Zoom'].append(Zoom)
-                RunConfig['Focus'].append(Focus)                               
+                RunConfig['Focus'].append(Focus)
                 print('{},{},{},{},{},{},{}'.format(Index, iCol, jRow, PanDeg, TiltDeg, Zoom, Focus))
                 Index += 1
     while True:
@@ -293,7 +327,7 @@ if __name__ == '__main__':
                 except:
                     print('Sleep 1 secs to get zoom')
                     time.sleep(1)
-    
+
             # set focus at the middle of field of view
             PanDegMin = min(RunConfig["PanDeg"])
             PanDegMax = max(RunConfig["PanDeg"])
@@ -303,53 +337,33 @@ if __name__ == '__main__':
             TiltMiddle= (TiltDegMin+TiltDegMax)/2
             while True:
                 try:
-                    setFocusAt(PanMiddle, TiltMiddle)
+                    setFocusAt(PanMiddle, TiltMiddle, RunConfig["Zoom"][0])
                     break
                 except:
                     print('Failed to focus the camera. Camera is likely down.')
                     print('Try focusing again in 5 minutes')
                     time.sleep(5*60)
-            
+
             for h in range(10):
                 PanoFolder = getPanoFolder(RootFolder, CameraName, h)
                 if PanoFolder is not None:
                     break
 
-            setPanTilt(RunConfig["PanDeg"][0], RunConfig["TiltDeg"][0])
+            setPanTiltZoom(RunConfig["PanDeg"][0], RunConfig["TiltDeg"][0],
+                           RunConfig["Zoom"][0])
             time.sleep(3)
             for i in RunConfig["Index"]:
                 ImageFileName = getFileName(PanoFolder, CameraName, i, 'jpg')
-                
-                # this is to prevent zoom being changed in the middle of the run
-                while True:
-                    try:
-                        Zoom = getZoom()
-                        break
-                    except:
-                        print('Sleep 1 secs to get zoom')
-                        time.sleep(1)
-                if Zoom != Zoom0:
-                    print('Zoom is not correct. Reset to correct value')
-                    while True:
-                        try:
-                            setZoom(RunConfig["Zoom"][0])
-                            break
-                        except:
-                            print('Sleep 1 secs to set zoom')
-                            time.sleep(1)
-                    
                 j = 0
                 while j < max_no_tries:
-                    if setPanTilt(RunConfig["PanDeg"][i], RunConfig["TiltDeg"][i]):
+                    if setPanTiltZoom(RunConfig["PanDeg"][i],
+                                      RunConfig["TiltDeg"][i],
+                                      RunConfig["Zoom"][i]):
                         break
                     else:
                         j += 1
                         time.sleep(1)
-                if j >= max_no_tries:
-                    print('Failed to set pan/tilt. Save a black image.')
-                    saveBlackImage2File(ImageFileName)
-                    continue
-                
+
                 # check if it is moving to the next column
                 if i > 0 and RunConfig["Col"][i-1] != RunConfig["Col"][i]:
                     # move to next column needs more time
@@ -359,13 +373,16 @@ if __name__ == '__main__':
                     time.sleep(0.5)
 
                 while j < max_no_tries:
-                    if captureImage2File(ImageFileName):
-                        break;
+#                    if captureImage2File(ImageFileName):  # crash reset the camera after certain number of images
+                    if captureJPGImage2File(ImageFileName):
+                        break
                     else:
                         j += 1
+                        print('Failed to capture an image. Try again.')
                         time.sleep(1)
                 if j >= max_no_tries:
-                    print('Error in capture panorama. Save a black image.')
+                    print('Fail to capture an image after {} tries.'
+                          ' Save a black image.'.format(max_no_tries))
                     saveBlackImage2File(ImageFileName)
 
             # write panoram config file
