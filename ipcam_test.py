@@ -201,7 +201,7 @@ def readRunInfo(FileName):
 def writeRunInfo(FileName, RunConfig):
     with open(FileName, 'w') as File:
         FieldNames = ["Index", "Col", "Row", "PanDeg", "TiltDeg", "Zoom",
-                      "Focus"]
+                      "Focus", "FileName"]
         File.write(','.join(FieldNames))
         for i in range(len(RunConfig["Index"])):
             row = [str(RunConfig[key][i]) for key in FieldNames]
@@ -280,7 +280,7 @@ if __name__ == '__main__':
         print('Generate RunConfig')
         RunConfig = {'Index': [], 'Col': [], 'Row': [],
                      'PanDeg': [], 'TiltDeg': [],
-                     'Zoom': [], 'Focus': []}
+                     'Zoom': [], 'Focus': [], 'FileName': []}
         [LeftPan, TopTilt] = TopLeftCorner
         [RightPan, BottomTilt] = BottomRightCorner
         HFoV, VFoV = FieldOfView
@@ -354,6 +354,7 @@ if __name__ == '__main__':
             time.sleep(3)
             for i in RunConfig["Index"]:
                 ImageFileName = getFileName(PanoFolder, CameraName, i, 'jpg')
+                RunConfig['FileName'].append(ImageFileName)
                 j = 0
                 while j < max_no_tries:
                     if setPanTiltZoom(RunConfig["PanDeg"][i],
@@ -375,6 +376,7 @@ if __name__ == '__main__':
                 while j < max_no_tries:
 #                    if captureImage2File(ImageFileName):  # crash reset the camera after certain number of images
                     if captureJPGImage2File(ImageFileName):
+                        time.sleep(1)  # add extra delay
                         break
                     else:
                         j += 1
