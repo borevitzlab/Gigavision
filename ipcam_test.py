@@ -264,7 +264,9 @@ if __name__ == '__main__':
     StartHour = 8
     EndHour = 18
     LoopIntervalMinute = 60  # take panoram every 1 hour
-    PanoWaitMin = 15
+    PanoWaitMin = 15  # minutes
+    DelayBetweenColumns = 3  # seconds
+    DelayBetweenImages = 1.5  # seconds
     RunInfoFileName = '/home/pi/workspace/Gigavision/RunInfo.cvs'
     CamConfigFile = '/home/pi/workspace/Gigavision/AxisCamera_Q6115-E.yml'
 #    RunInfoFileName = '/home/chuong/workspace/Gigavision/RunInfo.cvs'
@@ -368,15 +370,14 @@ if __name__ == '__main__':
                 # check if it is moving to the next column
                 if i > 0 and RunConfig["Col"][i-1] != RunConfig["Col"][i]:
                     # move to next column needs more time
-                    time.sleep(3)
-                    print('Sleep 3 secs')
+                    time.sleep(DelayBetweenColumns)
+                    print('Sleep {} secs between columns'.format(DelayBetweenColumns))
                 else:
-                    time.sleep(0.5)
+                    time.sleep(DelayBetweenImages)
 
                 while j < max_no_tries:
 #                    if captureImage2File(ImageFileName):  # crash reset the camera after certain number of images
                     if captureJPGImage2File(ImageFileName):
-                        time.sleep(1)  # add extra delay
                         break
                     else:
                         j += 1
