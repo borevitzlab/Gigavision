@@ -25,8 +25,15 @@ USERVAL = ''
 PASSVAL = ''
 # Panorama parameters
 ImageSize = [1920, 1080]  # [1280, 720]
-Zoom = 3500
-FieldOfView = [5.6708, 3.1613] # degree
+
+# Panaroma 48 x 16
+#Zoom = 3500
+#FieldOfView = [2.8354, 1.58065]  # [5.6708, 3.1613] # degree
+
+# Panorama 95 x 32
+Zoom = 7000
+FieldOfView = [2.8354, 1.58065]  # [5.6708, 3.1613] # degree
+
 Focus = 8027
 TopLeftCorner = [-15.2804, 6.7060] # degree
 BottomRightCorner = [147.0061, -23.3940] # degree
@@ -266,7 +273,7 @@ if __name__ == '__main__':
     LoopIntervalMinute = 60  # take panoram every 1 hour
     PanoWaitMin = 15  # minutes
     DelayBetweenColumns = 3  # seconds
-    DelayBetweenImages = 1.5  # seconds
+    DelayBetweenImages = 0.5  # seconds
     RunInfoFileName = '/home/pi/workspace/Gigavision/RunInfo.cvs'
     CamConfigFile = '/home/pi/workspace/Gigavision/AxisCamera_Q6115-E.yml'
 #    RunInfoFileName = '/home/chuong/workspace/Gigavision/RunInfo.cvs'
