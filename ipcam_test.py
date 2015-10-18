@@ -18,6 +18,8 @@ import PIL.Image
 from scipy import misc
 import time
 import yaml
+import subprocess
+import shutil
 
 # This is for Axis camera
 IPVAL = ''
@@ -196,7 +198,7 @@ def readRunInfo(FileName):
         csvread = csv.DictReader(File)
         RunConfig = {"Index": [], "Col": [], "Row": [],
                      "PanDeg": [], "TiltDeg": [],
-                     "Zoom": [], "Focus": []}
+                     "Zoom": [], "Focus": [], "FileName": []}
         for row in csvread:
             RunConfig["Index"].append(int(row["Index"]))
             RunConfig["Col"].append(int(row["Col"]))
@@ -205,6 +207,7 @@ def readRunInfo(FileName):
             RunConfig["TiltDeg"].append(float(row["TiltDeg"]))
             RunConfig["Zoom"].append(int(row["Zoom"]))
             RunConfig["Focus"].append(row["Focus"])
+            RunConfig["FileName"].append(row["FileName"])
         return RunConfig
     return None
 
@@ -266,6 +269,64 @@ def saveBlackImage2File(OutputFileName):
     except:
         print('Failed to save empty image')
 
+def createPanoramaSummary(ImageFolder, MaxWidth=4096):
+    def scale(InputFolder, OutputFolder, OutputSize, FilePattern):
+        if not os.path.exists(OutputFolder):
+            os.makedirs(OutputFolder)
+        Command = ['mogrify', '-scale',
+                   str(OutputSize), '-path', OutputFolder, FilePattern]
+        return subprocess.call(Command, cwd=InputFolder)
+    # Load running info
+    RunConfig = readRunInfo(os.path.join(ImageFolder, '_data', 'RunInfo.cvs'))
+
+    # Get total width of joined image
+#    FilePath = os.path.join(ImageFolder,
+#                            os.path.basename(RunConfig['FileName'][0]))
+    import glob
+    FileList = glob.glob(os.path.join(ImageFolder, '*.jpg'))
+    FileList.sort()
+    FilePath = FileList[0]
+
+    ImageWidth = misc.imread(FilePath).shape[1]
+    JointWidth = ImageWidth*RunConfig['Col'][-1]
+
+    OutputPercentage = '{:0.3f}%'.format(100*float(MaxWidth)/float(JointWidth))
+    ScaledFolder = os.path.join(ImageFolder, '_data', 'scale')
+    FilePattern = '*.jpg'
+    ret = scale(ImageFolder, ScaledFolder, OutputPercentage, FilePattern)
+    print(ret)
+
+    # Scaled total size
+#    ScaledFilePath = os.path.join(ScaledFolder,
+#                                  os.path.basename(RunConfig['FileName'][0]))
+    ScaledFilePath = os.path.join(ScaledFolder, os.path.basename(FileList[0]))
+    ImageSize = misc.imread(ScaledFilePath).shape
+    print(ImageSize)
+    JointSize = [ImageSize[0]*(RunConfig['Row'][-1]+1),
+                 ImageSize[1]*(RunConfig['Col'][-1]+1),
+                 ImageSize[2]]
+    # Create scaled joint image
+    if ImageSize[0]*ImageSize[1]*ImageSize[2] < 4096*4096*3:
+        JointImage = np.zeros(JointSize, dtype=np.uint8)
+    else:
+        print('Error: joint image size {} is too large'.format(ImageSize))
+        exit(-1)
+    for i in RunConfig['Index']:
+#        ScaledFilePath = os.path.join(
+#            ScaledFolder, os.path.basename(RunConfig['FileName'][i]))
+        ScaledFilePath = os.path.join(ScaledFolder,
+                                      os.path.basename(FileList[i]))
+        ScaledImage = misc.imread(ScaledFilePath)
+        iCol = RunConfig['Col'][i]
+        jRow = RunConfig['Row'][i]
+        JointImage[jRow*ImageSize[0]:(jRow+1)*ImageSize[0],
+                   iCol*ImageSize[1]:(iCol+1)*ImageSize[1], :] = ScaledImage
+    JointdFilePath = os.path.join(ImageFolder, '_data', 'JointImage.jpg')
+    misc.imsave(JointdFilePath, JointImage)
+
+    # Remove the scale folder
+    shutil.rmtree(ScaledFolder)
+
 if __name__ == '__main__':
     # settings information
     # TODO: makes these commandline options
@@ -278,7 +339,7 @@ if __name__ == '__main__':
     PanoWaitMin = 15  # minutes
     DelayBetweenColumns = 3  # seconds
     DelayBetweenImages = 0.5  # seconds
-    RunInfoFileName = '/home/pi/workspace/Gigavision/RunInfo.cvs'
+    RunInfoFileName = ''  # '/home/pi/workspace/Gigavision/RunInfo.cvs'
     CamConfigFile = '/home/pi/workspace/Gigavision/AxisCamera_Q6115-E.yml'
 #    RunInfoFileName = '/home/chuong/workspace/Gigavision/RunInfo.cvs'
 #    CamConfigFile = '/home/chuong/workspace/Gigavision/AxisCamera_Q6115-E.yml'
@@ -365,6 +426,7 @@ if __name__ == '__main__':
             setPanTiltZoom(RunConfig["PanDeg"][0], RunConfig["TiltDeg"][0],
                            RunConfig["Zoom"][0])
             time.sleep(3)
+            RunConfig['FileName'] = []
             for i in RunConfig["Index"]:
                 ImageFileName = getFileName(PanoFolder, CameraName, i, 'jpg')
                 RunConfig['FileName'].append(ImageFileName)
@@ -403,6 +465,7 @@ if __name__ == '__main__':
             os.makedirs(os.path.join(PanoFolder, '_data'))
             RunConfigFile = os.path.join(PanoFolder, '_data', 'RunInfo.csv')
             writeRunInfo(RunConfigFile, RunConfig)
+            createPanoramaSummary(PanoFolder)
 
             print('Finished one panorama')
 
