@@ -224,18 +224,29 @@ def writeRunInfo(FileName, RunConfig):
     return False
 
 
-def getPanoFolder(RootFolder, CameraName, NoPanoInSameHour):
+def getPanoFolder(RootFolder, CameraName, NoPanoInSameHour=-1):
     Start = datetime.now()
-    PanoFolder = os.path.join(
-        RootFolder,
-        CameraName,
-        Start.strftime("%Y"),
-        Start.strftime("%Y_%m"),
-        Start.strftime("%Y_%m_%d"),
-        Start.strftime("%Y_%m_%d_%H"),
-        "{}_{}_{:02}".format(CameraName,
-                             Start.strftime("%Y_%m_%d_%H"),
-                             NoPanoInSameHour))
+    if NoPanoInSameHour < 0:
+        # no hour subfolder
+        PanoFolder = os.path.join(
+            RootFolder,
+            CameraName,
+            Start.strftime("%Y"),
+            Start.strftime("%Y_%m"),
+            Start.strftime("%Y_%m_%d"),
+            Start.strftime("%Y_%m_%d_%H"))
+    else:
+        # create hour subfolders
+        PanoFolder = os.path.join(
+            RootFolder,
+            CameraName,
+            Start.strftime("%Y"),
+            Start.strftime("%Y_%m"),
+            Start.strftime("%Y_%m_%d"),
+            Start.strftime("%Y_%m_%d_%H"),
+            "{}_{}_{:02}".format(CameraName,
+                                 Start.strftime("%Y_%m_%d_%H"),
+                                 NoPanoInSameHour))
     if not os.path.exists(PanoFolder):
         os.makedirs(PanoFolder)
         return PanoFolder
@@ -339,6 +350,7 @@ if __name__ == '__main__':
     PanoWaitMin = 15  # minutes
     DelayBetweenColumns = 3  # seconds
     DelayBetweenImages = 0.5  # seconds
+    MultiRunPerHour = False  # ON/OFF hour subfolder
     RunInfoFileName = ''  # '/home/pi/workspace/Gigavision/RunInfo.cvs'
     CamConfigFile = '/home/pi/workspace/Gigavision/AxisCamera_Q6115-E.yml'
 #    RunInfoFileName = '/home/chuong/workspace/Gigavision/RunInfo.cvs'
@@ -418,10 +430,13 @@ if __name__ == '__main__':
                     print('Try focusing again in 5 minutes')
                     time.sleep(5*60)
 
-            for h in range(10):
-                PanoFolder = getPanoFolder(RootFolder, CameraName, h)
-                if PanoFolder is not None:
-                    break
+            if MultiRunPerHour:
+                for h in range(10):
+                    PanoFolder = getPanoFolder(RootFolder, CameraName, h)
+                    if PanoFolder is not None:
+                        break
+            else:
+                PanoFolder = getPanoFolder(RootFolder, CameraName)
 
             setPanTiltZoom(RunConfig["PanDeg"][0], RunConfig["TiltDeg"][0],
                            RunConfig["Zoom"][0])
