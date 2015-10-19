@@ -29,12 +29,12 @@ PASSVAL = ''
 ImageSize = [1920, 1080]  # [1280, 720]
 
 # Panaroma 48 x 16 = 768
-#Zoom = 3500 # degree
-#FieldOfView = [2.8354, 1.58065]  # degree
+Zoom = 3500 # degree
+FieldOfView = [5.6708, 3.1613]  # degree
 
-# Panorama 75 x 25 = 1875
-Zoom = 5500
-FieldOfView = [3.5865, 1.9994]  # degree
+## Panorama 75 x 25 = 1875
+#Zoom = 5500
+#FieldOfView = [3.5865, 1.9994]  # degree
 
 ## Panorama 95 x 32 = 3040
 #Zoom = 7000
