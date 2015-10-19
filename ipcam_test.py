@@ -235,6 +235,7 @@ def getPanoFolder(RootFolder, CameraName, NoPanoInSameHour=-1):
             Start.strftime("%Y_%m"),
             Start.strftime("%Y_%m_%d"),
             Start.strftime("%Y_%m_%d_%H"))
+        return PanoFolder
     else:
         # create hour subfolders
         PanoFolder = os.path.join(
@@ -247,10 +248,10 @@ def getPanoFolder(RootFolder, CameraName, NoPanoInSameHour=-1):
             "{}_{}_{:02}".format(CameraName,
                                  Start.strftime("%Y_%m_%d_%H"),
                                  NoPanoInSameHour))
-    if not os.path.exists(PanoFolder):
-        os.makedirs(PanoFolder)
-        return PanoFolder
-    return None
+        if not os.path.exists(PanoFolder):
+            os.makedirs(PanoFolder)
+            return PanoFolder
+        return None
 
 
 def getFileName(PanoFolder, CameraName, PanoImageNo, FileExtension='jpg'):
