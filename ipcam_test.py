@@ -501,8 +501,11 @@ if __name__ == '__main__':
         else:
             # sleep until start of hour range
             Now = datetime.now()
-            DueTime = (24 + StartHour)*60
+            DueTime = StartHour*60
             WaitMin = DueTime - (Now.hour*60 + Now.minute)
+            if WaitMin < 0:
+                DueTime = (24 + StartHour)*60
+                WaitMin = DueTime - (Now.hour*60 + Now.minute)   
             Hours, Mins = divmod(WaitMin, 60)
             print("Wait {} hours and {} minutes".format(Hours, Mins))
             time.sleep(WaitMin*60)
