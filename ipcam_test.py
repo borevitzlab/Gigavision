@@ -77,7 +77,7 @@ def captureImageBitmap():
     URL_Str = URL_Capture_Bitmap.replace("WIDTHVAL", str(ImageSize[0])).replace("HEIGHTVAL", str(ImageSize[1]))
     output = callURL(URL_Str, IPVAL, USERVAL, PASSVAL)
     byte_array = io.BytesIO(output)
-    print(' Read successfull')
+    print(' Capture successfully')
     Image = np.array(PIL.Image.open(byte_array))
     return Image
 
@@ -96,7 +96,7 @@ def captureJPGImage2File(OutputFileName):
         print('Fail to capture JPG image')
     finally:
         JPG_File.close()
-    print(' Read successfull')
+    print(' Wrote image successfully to ' + OutputFileName)
     return isSuccessfull
 
 
@@ -235,7 +235,9 @@ def getPanoFolder(RootFolder, CameraName, NoPanoInSameHour=-1):
             Start.strftime("%Y_%m"),
             Start.strftime("%Y_%m_%d"),
             Start.strftime("%Y_%m_%d_%H"))
-        return PanoFolder
+        if not os.path.exists(PanoFolder):
+            os.makedirs(PanoFolder)
+            return PanoFolder
     else:
         # create hour subfolders
         PanoFolder = os.path.join(
@@ -289,7 +291,7 @@ def createPanoramaSummary(ImageFolder, MaxWidth=4096):
                    str(OutputSize), '-path', OutputFolder, FilePattern]
         return subprocess.call(Command, cwd=InputFolder)
     # Load running info
-    RunConfig = readRunInfo(os.path.join(ImageFolder, '_data', 'RunInfo.cvs'))
+    RunConfig = readRunInfo(os.path.join(ImageFolder, '_data', 'RunInfo.csv'))
 
     # Get total width of joined image
 #    FilePath = os.path.join(ImageFolder,
