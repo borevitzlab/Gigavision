@@ -15,6 +15,7 @@ import time
 import re
 import shutil
 import glob
+import subprocess
 from matplotlib import pyplot as plt
 
 
@@ -127,6 +128,80 @@ def getDisplacement(Image0, Image1):
 
     return dxMedian, dyMedian
 
+
+class GPhotoCamera(object):
+    def __init__(self):
+        self.ImageSize = [5472,3648]
+        self.Image = None
+        self.capturing = False
+        self.PhotoIndex = 0
+    
+    def setImageSize(self, ImageSize):
+        pass
+
+    def getImageSize(self, ImageSize):
+        return self.ImageSize
+
+    def snapPhoto(self, ImageSize=None):
+        return None
+
+    def snapPhoto2File(self, filename, ImageSize=None):
+        cmd = ["".join(
+            ["gphoto2 ",
+             " --set-config capturetarget=sdram",
+             " --capture-image-and-download",
+             " --filename='{}".format(filename)])]
+        r = "error"
+        tries = 0
+
+        while tries < 5:
+            process = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
+            while process.returncode is None:
+                for line in process.stdout:
+                    ll = line.decode("utf-8").lower()
+                    if "new" in ll:
+                        process.communicate()
+                        self.PhotoIndex +=1
+                        return filename
+                    if "error" in ll:
+                        process.communicate()
+                        tries +=1
+        return False
+
+
+    def getValue(self, Text):
+        return None
+
+    def zoomStep(self, Direction, StepSize):
+        return None
+
+    def setZoomPosition(self, AbsPosition):
+        return None
+
+    def setFocusPosition(self, AbsPosition):
+        return None
+
+    def getZoomPosition(self):
+        return None
+
+    def getZoomRange(self):
+        return None
+
+    def refocus(self):
+        return None
+
+    def getFocusPosition(self):
+        return None
+
+    def getFocusRange(self):
+        return None
+    
+    def updateStatus(self):
+        return None
+
+    def status(self):
+        return None
+  
 
 class IPCamera(object):
     """
@@ -481,7 +556,7 @@ class Panorama(object):
     def __init__(self,
                  CameraURL, CameraUsername, CameraPassword,
                  PanTiltURL, PanTiltUsername=None, PanTiltPassword=None):
-        self.Cam = IPCamera(CameraURL, CameraUsername, CameraPassword)
+        self.Cam = GPhotoCamera()
         self.PanTil = PanTilt(PanTiltURL, PanTiltUsername, PanTiltPassword)
         self.CamZoom = None
         self.CamHFoV = None
