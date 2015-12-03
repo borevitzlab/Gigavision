@@ -640,7 +640,7 @@ class Panorama(object):
 
         return CamHFoVList, CamVFoVList
 
-    def calibrateFoV(self, ZoomPos, PanPos0=150, TiltPos0=0,
+    def calibrateFoV(self, ZoomPos, PanPos0=0, TiltPos0=0,
                      PanInc=2, TiltInc=0):
         """
         Capture images at different pan/tilt angles, then measure the pixel
@@ -653,7 +653,7 @@ class Panorama(object):
 
         # capture image with pan motion
         ImagePanList = []
-        for i in range(100):
+        for i in range(80):
             self.PanTil.setPanTiltPosition(PanPos0+PanInc*i,
                                            TiltPos0+TiltInc*i)
             # change zoom to force refocusing
@@ -888,16 +888,17 @@ def liveViewDemo(Camera_IP, Camera_User, Camera_Password,
 
 def PanoFoVDemo(Camera_IP, Camera_User, Camera_Password,
                 PanTil_IP):
-    ImageSize = [1920, 1080]
+    ImageSize = [5472  , 3648]
     Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
     Pano.setImageSize(ImageSize)
 
-    Zoom = 1000
+    Zoom = 1
     CamHFoV, CamVFoV = Pano.calibrateFoV(Zoom)
     print("CamHFoV = {}, CamVFoV = {}".format(CamHFoV, CamVFoV))
     Pano.setCameraFoV(CamHFoV, CamVFoV)
 
-    ZoomList = range(50, 1050, 100)
+    #ZoomList = range(50, 1050, 100)
+    ZoomList = [1]
     CamHFoVList, CamVFoVList = Pano.calibrateFoVList(ZoomList)
     print("CamHFoVList = {}\nCamVFoVList = {}".format(CamHFoVList, CamVFoVList))
 
@@ -914,14 +915,14 @@ def PanoFoVDemo(Camera_IP, Camera_User, Camera_Password,
 def PanoDemo(Camera_IP, Camera_User, Camera_Password,
              PanTil_IP,
              OutputFolder="/home/chuong/Data/a_data/Gigavision/chuong_tests/"):
-    ImageSize = [1920, 1080]
-    Zoom = 800  # 1050
-    ZoomList = range(50, 1100, 100)
-    CamHFoVList = [71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126,
-                   12.782, 9.217, 7.050, 5.824]
-    CamVFoVList = [39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324,
-                   7.7136, 4.787, 3.729, 2.448]
-    PanRange = [80, 200]
+    ImageSize = [5772, 3648]
+    Zoom = 1#800  # 1050
+    ZoomList = [1]#range(50, 1100, 100)
+    CamHFoVList = []#[71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126,
+                   #12.782, 9.217, 7.050, 5.824]
+    CamVFoVList = []#[39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324,
+                   #7.7136, 4.787, 3.729, 2.448]
+    PanRange = [0, 160]
     TiltRange = [-20, 20]
 
     Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
