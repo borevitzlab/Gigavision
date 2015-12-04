@@ -18,6 +18,7 @@ import glob
 import subprocess
 from matplotlib import pyplot as plt
 import Uploader
+import fnmatch
 
 def drawMatches(img1, kp1, img2, kp2, matches):
     """
@@ -127,6 +128,12 @@ def getDisplacement(Image0, Image1):
 #    cv2.waitKey()
 
     return dxMedian, dyMedian
+
+def recursive_glob(rootdir='.', pattern='*'):
+    return [os.path.join(looproot, filename)
+            for looproot, _, filenames in os.walk(rootdir)
+            for filename in filenames
+            if fnmatch.fnmatch(filename, pattern)]
 
 
 class GPhotoCamera(object):
@@ -982,7 +989,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                     shutil.rmtree(PanoFolder)
                 Pano.run(PanoFolder, RecoveryFilename=RecoveryFilename)
 
-        upload_list = glob.glob(OutputFolder+'/*.jpg')
+        upload_list = recursive_glob(OutputFolder,'*.jpg')
         if not uploader.sftpUpload(upload_list):
             uploader.sftpUpload(upload_list)
 
