@@ -143,7 +143,7 @@ class GPhotoCamera(object):
         return self.ImageSize
 
     def snapPhoto(self, ImageSize=None):
-        self.snapPhoto2File(self, "temp.jpg")
+        self.snapPhoto2File("temp.jpg")
         jpg_bytearray = np.fromfile("temp.jpg")
         os.remove("temp.jpg")
         self.Image = cv2.imdecode(jpg_bytearray, cv2.CV_LOAD_IMAGE_COLOR)
@@ -278,7 +278,7 @@ class IPCamera(object):
                                         self.ImageSize[0], self.ImageSize[1],
                                         self.PhotoIndex))
         jpg_bytearray = np.asarray(bytearray(stream.read()), dtype=np.uint8)
-        self.Image = cv2.imdecode(jpg_bytearray, cv2.CV_LOAD_IMAGE_COLOR)
+        self.Image = cv2.imdecode(jpg_bytearray, cv2.IMLOAD_COLOR)
         self.PhotoIndex += 1
         return self.Image
 
@@ -923,11 +923,11 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
     ImageSize = [5772, 3648]
     Zoom = 1#800  # 1050
     ZoomList = [1]#range(50, 1100, 100)
-    CamHFoVList = []#[71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126,
+    CamHFoVList = [71.16175080815822]#[71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126,
                    #12.782, 9.217, 7.050, 5.824]
-    CamVFoVList = []#[39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324,
+    CamVFoVList = [51.447528307554045]#[39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324,
                    #7.7136, 4.787, 3.729, 2.448]
-    PanRange = [0, 160]
+    PanRange = [10, 160]
     TiltRange = [-20, 20]
 
     Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
