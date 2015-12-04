@@ -410,13 +410,13 @@ class PanTilt(object):
     def getKeyValue(self, MessageXML, Key):
         KeyStart = "<{}>".format(Key)
         KeyEnd = "</{}>".format(Key)
-        Start = MessageXML.find(KeyStart)
+        Start = MessageXML.find(str.encode(KeyStart))
         # Sometimes KeyStart is missing
         if Start < 0:
             Start = 0
         else:
             Start = Start + len(KeyStart)
-        End = MessageXML.find(KeyEnd, Start)
+        End = MessageXML.find(str.encode(KeyEnd), Start)
         if End > Start:
             Value = MessageXML[Start:End].strip()
             try:
