@@ -143,7 +143,12 @@ class GPhotoCamera(object):
         return self.ImageSize
 
     def snapPhoto(self, ImageSize=None):
-        return None
+        self.snapPhoto2File(self, "temp.jpg")
+        jpg_bytearray = np.fromfile("temp.jpg")
+        os.remove("temp.jpg")
+        self.Image = cv2.imdecode(jpg_bytearray, cv2.CV_LOAD_IMAGE_COLOR)
+        self.PhotoIndex +=1
+        return self.Image
 
     def snapPhoto2File(self, filename, ImageSize=None):
         cmd = ["".join(
@@ -641,7 +646,7 @@ class Panorama(object):
 
         return CamHFoVList, CamVFoVList
 
-    def calibrateFoV(self, ZoomPos, PanPos0=10, TiltPos0=0,
+    def calibrateFoV(self, ZoomPos, PanPos0=80, TiltPos0=0,
                      PanInc=2, TiltInc=0):
         """
         Capture images at different pan/tilt angles, then measure the pixel
