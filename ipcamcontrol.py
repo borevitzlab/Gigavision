@@ -980,7 +980,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                 else:
                     print("Found recovery data but it's too late to recover.")
 
-        if (True):#int(Now.strftime("%M")) <= 5:
+        if int(Now.strftime("%M")) <= 5:
             # Dodgiest start and stop time ever..
             if (int(Now.strftime("%H")) >= 9 and int(Now.strftime("%H")) <= 2000):
                 print("Started recording new panorama at {}".format(PanoFolder))
