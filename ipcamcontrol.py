@@ -143,9 +143,11 @@ class GPhotoCamera(object):
         return self.ImageSize
 
     def snapPhoto(self, ImageSize=None):
-        self.snapPhoto2File("temp.jpg")
-        jpg_bytearray = np.fromfile("temp.jpg")
-        os.remove("temp.jpg")
+        if os.path.isfile("jpg.temp"):
+            os.remove("jpg.temp")
+        self.snapPhoto2File("jpg.temp")
+        jpg_bytearray = np.fromfile("jpg.temp")
+        os.remove("jpg.temp")
         self.Image = cv2.imdecode(jpg_bytearray, cv2.IMREAD_COLOR)
         self.PhotoIndex +=1
         return self.Image
@@ -923,9 +925,9 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
     ImageSize = [5772, 3648]
     Zoom = 1#800  # 1050
     ZoomList = [1]#range(50, 1100, 100)
-    CamHFoVList = [71.16175080815822]#[71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126,
+    CamHFoVList = [25.99414079728535]#[71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126,
                    #12.782, 9.217, 7.050, 5.824]
-    CamVFoVList = [51.447528307554045]#[39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324,
+    CamVFoVList = [16.882671953813396]#[39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324,
                    #7.7136, 4.787, 3.729, 2.448]
     PanRange = [100, 160]
     TiltRange = [-20, 20]
@@ -972,11 +974,13 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                     print("Found recovery data but it's too late to recover.")
 
         if int(Now.strftime("%M")) <= 5:
-            print("Started recording new panorama at {}".format(PanoFolder))
-#            Pano.test()
-            if os.path.exists(PanoFolder):
-                shutil.rmtree(PanoFolder)
-            Pano.run(PanoFolder, RecoveryFilename=RecoveryFilename)
+            # Dodgiest start and stop time ever..
+            if (int(Now.strftime("%H")) >= 9 and int(Now.strftime("%H")) <= 2000):
+                print("Started recording new panorama at {}".format(PanoFolder))
+    #            Pano.test()
+                if os.path.exists(PanoFolder):
+                    shutil.rmtree(PanoFolder)
+                Pano.run(PanoFolder, RecoveryFilename=RecoveryFilename)
 
         RemainingMinutes = 60-int(Now.strftime("%M"))
         print("It's {}.".format(Now.strftime("%H:%M"))),
