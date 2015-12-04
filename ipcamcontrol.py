@@ -982,7 +982,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                     shutil.rmtree(PanoFolder)
                 Pano.run(PanoFolder, RecoveryFilename=RecoveryFilename)
 
-        upload_list = glob.glob(OutputFolder, '*')
+        upload_list = glob.glob(OutputFolder+'/*.jpg')
         if not uploader.sftpUpload(upload_list):
             uploader.sftpUpload(upload_list)
 
