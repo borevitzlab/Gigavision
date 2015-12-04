@@ -89,7 +89,7 @@ def getDisplacement(Image0, Image1):
 
     # Create ORB detector with 1000 keypoints with a scaling pyramid factor
     # of 1.2
-    orb = cv2.ORB(1000, 1.2)
+    orb = cv2.ORB_create(1000, 1.2)
 
     # Detect keypoints
     (kp1, des1) = orb.detectAndCompute(img1, None)
@@ -146,7 +146,7 @@ class GPhotoCamera(object):
         self.snapPhoto2File("temp.jpg")
         jpg_bytearray = np.fromfile("temp.jpg")
         os.remove("temp.jpg")
-        self.Image = cv2.imdecode(jpg_bytearray, cv2.CV_LOAD_IMAGE_COLOR)
+        self.Image = cv2.imdecode(jpg_bytearray, cv2.IMREAD_COLOR)
         self.PhotoIndex +=1
         return self.Image
 
@@ -919,7 +919,7 @@ def PanoFoVDemo(Camera_IP, Camera_User, Camera_Password,
 
 def PanoDemo(Camera_IP, Camera_User, Camera_Password,
              PanTil_IP,
-             OutputFolder="/home/chuong/Data/a_data/Gigavision/chuong_tests/"):
+             OutputFolder="/home/Gigavision/tests"):
     ImageSize = [5772, 3648]
     Zoom = 1#800  # 1050
     ZoomList = [1]#range(50, 1100, 100)
@@ -927,7 +927,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                    #12.782, 9.217, 7.050, 5.824]
     CamVFoVList = [51.447528307554045]#[39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324,
                    #7.7136, 4.787, 3.729, 2.448]
-    PanRange = [10, 160]
+    PanRange = [100, 160]
     TiltRange = [-20, 20]
 
     Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
@@ -971,7 +971,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                 else:
                     print("Found recovery data but it's too late to recover.")
 
-        if int(Now.strftime("%M")) <= 5:
+        if (True):#int(Now.strftime("%M")) <= 5:
             print("Started recording new panorama at {}".format(PanoFolder))
 #            Pano.test()
             if os.path.exists(PanoFolder):
