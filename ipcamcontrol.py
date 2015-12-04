@@ -203,7 +203,7 @@ class GPhotoCamera(object):
     def getFocusRange(self):
         return None
     
-    def updateStatus(self):
+    def Status(self):
         return None
 
     def status(self):
@@ -931,14 +931,13 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                    #7.7136, 4.787, 3.729, 2.448]
     PanRange = [100, 160]
     TiltRange = [-20, 20]
-
     Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
     Pano.setImageSize(ImageSize)
     Pano.setCameraFovDist(ZoomList, CamHFoVList, CamVFoVList)
     Pano.setZoom(Zoom)
     Pano.setFoVFromZoom(Zoom)
     Pano.setPanoramaFoVRange(PanRange, TiltRange)
-    uploader = Uploader("/home/spc-eyepi/picam.ini")
+    uploader = Uploader.Uploader("/home/spc-eyepi/picam.ini")
     print("CamHFoV = {}, CamVFoV = {}".format(Pano.CamHFoV, Pano.CamVFoV))
 
     while True and os.path.exists(OutputFolder):
@@ -983,7 +982,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                     shutil.rmtree(PanoFolder)
                 Pano.run(PanoFolder, RecoveryFilename=RecoveryFilename)
 
-        upload_list = glob(OutputFolder)
+        upload_list = glob.glob(OutputFolder, '*')
         if not uploader.sftpUpload(upload_list):
             uploader.sftpUpload(upload_list)
 
