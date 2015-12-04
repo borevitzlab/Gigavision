@@ -971,7 +971,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                 else:
                     print("Found recovery data but it's too late to recover.")
 
-        if (True):#int(Now.strftime("%M")) <= 5:
+        if int(Now.strftime("%M")) <= 5:
             print("Started recording new panorama at {}".format(PanoFolder))
 #            Pano.test()
             if os.path.exists(PanoFolder):
@@ -991,5 +991,5 @@ if __name__ == "__main__":
     PanTil_IP = "192.168.1.101:81"
 
 #    liveViewDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
-    PanoFoVDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
- #   PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
+#    PanoFoVDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
+    PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
