@@ -155,7 +155,7 @@ class GPhotoCamera(object):
             ["gphoto2 ",
              " --set-config capturetarget=sdram",
              " --capture-image-and-download",
-             " --filename='{}".format(filename)])]
+             " --filename='{}'".format(filename)])]
         r = "error"
         tries = 0
 
@@ -490,7 +490,6 @@ class PanTilt(object):
             NoLoops += 1
             if NoLoops > 100:
                 break
-
         return Info
 
     def setPanPosition(self, Degree):
