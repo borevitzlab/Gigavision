@@ -645,7 +645,7 @@ class Panorama(object):
 
         return CamHFoVList, CamVFoVList
 
-    def calibrateFoV(self, ZoomPos, PanPos0=80, TiltPos0=0,
+    def calibrateFoV(self, ZoomPos, PanPos0=110, TiltPos0=0,
                      PanInc=2, TiltInc=0):
         """
         Capture images at different pan/tilt angles, then measure the pixel
@@ -658,7 +658,7 @@ class Panorama(object):
 
         # capture image with pan motion
         ImagePanList = []
-        for i in range(80):
+        for i in range(27):
             self.PanTil.setPanTiltPosition(PanPos0+PanInc*i,
                                            TiltPos0+TiltInc*i)
             # change zoom to force refocusing
