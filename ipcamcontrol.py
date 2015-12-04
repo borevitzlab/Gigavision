@@ -262,12 +262,13 @@ class IPCamera(object):
 
     def snapPhoto(self, ImageSize=None):
         if ImageSize and ImageSize in self.IMAGE_SIZES:
-            stream = urllib.urlopen(self.HTTPLogin +
+            stream = urllib.\
+                request.urlopen(self.HTTPLogin +
                                     self.Commands["snap_photo"].format(
                                         ImageSize[0], ImageSize[1],
                                         self.PhotoIndex))
         else:
-            stream = urllib.urlopen(self.HTTPLogin +
+            stream = urllib.request.urlopen(self.HTTPLogin +
                                     self.Commands["snap_photo"].format(
                                         self.ImageSize[0], self.ImageSize[1],
                                         self.PhotoIndex))
@@ -308,7 +309,7 @@ class IPCamera(object):
         assert(Direction in self.ZOOM_STEP_DIRECTIONS and
                StepSize >= self.ZOOM_STEP_RANGE[0] and
                StepSize <= self.ZOOM_STEP_RANGE[1])
-        stream = urllib.urlopen(self.HTTPLogin +
+        stream = urllib.request.urlopen(self.HTTPLogin +
                                 self.Commands["zoom_step"].format(
                                     Direction, StepSize))
         Output = stream.read(1024).strip()
@@ -317,7 +318,7 @@ class IPCamera(object):
     def setZoomPosition(self, AbsPosition):
         assert(AbsPosition >= self.ZOOM_DIRECT_RANGE[0] and
                AbsPosition <= self.ZOOM_DIRECT_RANGE[1])
-        stream = urllib.urlopen(self.HTTPLogin +
+        stream = urllib.request.urlopen(self.HTTPLogin +
                                 self.Commands["zoom_set"].format(
                                     "DIRECT", AbsPosition))
         Output = stream.read(1024).strip()
@@ -326,39 +327,39 @@ class IPCamera(object):
     def setFocusPosition(self, AbsPosition):
         assert(AbsPosition >= self.FOCUS_DIRECT_RANGE[0] and
                AbsPosition <= self.FOCUS_DIRECT_RANGE[1])
-        stream = urllib.urlopen(self.HTTPLogin +
+        stream = urllib.request.urlopen(self.HTTPLogin +
                                 self.Commands["focus_set"].format(
                                     "DIRECT", AbsPosition))
         Output = stream.read(1024).strip()
         return Output
 
     def getZoomPosition(self):
-        stream = urllib.urlopen(self.HTTPLogin +
+        stream = urllib.request.urlopen(self.HTTPLogin +
                                 self.Commands["zoom_curpos"])
         Output = stream.read(1024).strip()
         Position = self.getValue(Output)
         return Position[0]
 
     def getZoomRange(self):
-        stream = urllib.urlopen(self.HTTPLogin + self.Commands["zoom_range"])
+        stream = urllib.request.urlopen(self.HTTPLogin + self.Commands["zoom_range"])
         Outptput = stream.read(1024).strip()
         return self.getValue(Outptput)
 
     def refocus(self):
-        stream = urllib.urlopen(self.HTTPLogin +
+        stream = urllib.request.urlopen(self.HTTPLogin +
                                 self.Commands["focus_mode"].format("REFOCUS"))
         Outptput = stream.read(1024).strip()
         return self.getValue(Outptput)
 
     def getFocusPosition(self):
-        stream = urllib.urlopen(self.HTTPLogin +
+        stream = urllib.request.urlopen(self.HTTPLogin +
                                 self.Commands["focus_curpos"])
         Output = stream.read(1024).strip()
         Position = self.getValue(Output)
         return Position[0]
 
     def getFocusRange(self):
-        stream = urllib.urlopen(self.HTTPLogin + self.Commands["focus_range"])
+        stream = urllib.request.urlopen(self.HTTPLogin + self.Commands["focus_range"])
         Outptput = stream.read(1024).strip()
         Values = self.getValue(Outptput)
         # ex: Values = ["Motorized", 1029.0, 221.0]
@@ -431,7 +432,7 @@ class PanTilt(object):
         if Direction.lower() == "left":
             Dir = -1
         Url = self.Link + "/Bump.xml?PCmd={}".format(Dir*Steps)
-        stream = urllib.urlopen(Url)
+        stream = urllib.request.urlopen(Url)
         Output = stream.read(1024)
         Info = self.getKeyValue(Output, "Text")
         return Info
@@ -442,7 +443,7 @@ class PanTilt(object):
         if Direction.lower() == "down":
             Dir = -1
         Url = self.Link + "/Bump.xml?TCmd={}".format(Dir*Steps)
-        stream = urllib.urlopen(Url)
+        stream = urllib.request.urlopen(Url)
         Output = stream.read(1024)
         Info = self.getKeyValue(Output, "Text")
         return Info
@@ -450,7 +451,7 @@ class PanTilt(object):
     def setPanTiltPosition(self, PanDegree=0, TiltDegree=0):
         Url = self.Link + "/Bump.xml?GoToP={}&GoToT={}".format(
             int(PanDegree*10), int(TiltDegree*10))
-        stream = urllib.urlopen(Url)
+        stream = urllib.request.urlopen(Url)
         Output = stream.read(1024)
         Info = self.getKeyValue(Output, "Text")
         NoLoops = 0
@@ -512,7 +513,7 @@ class PanTilt(object):
             Url = self.Link + "/Calibration.xml?Action=0"
         else:
             Url = self.Link + "/Calibration.xml?Action=C"
-        stream = urllib.urlopen(Url)
+        stream = urllib.request.urlopen(Url)
         Output = stream.read(1024)
         print(Output)
         Info = self.getKeyValue(Output, "Text")
@@ -520,7 +521,7 @@ class PanTilt(object):
 
     def updateStatus(self):
         Url = self.Link + "/CP_Update.xml"
-        stream = urllib.urlopen(Url)
+        stream = urllib.request.urlopen(Url)
         Output = stream.read(1024)
 
         self.PanPos = self.getKeyValue(Output, "PanPos")  # degrees
