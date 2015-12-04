@@ -641,7 +641,7 @@ class Panorama(object):
 
         return CamHFoVList, CamVFoVList
 
-    def calibrateFoV(self, ZoomPos, PanPos0=0, TiltPos0=0,
+    def calibrateFoV(self, ZoomPos, PanPos0=10, TiltPos0=0,
                      PanInc=2, TiltInc=0):
         """
         Capture images at different pan/tilt angles, then measure the pixel
@@ -889,7 +889,7 @@ def liveViewDemo(Camera_IP, Camera_User, Camera_Password,
 
 def PanoFoVDemo(Camera_IP, Camera_User, Camera_Password,
                 PanTil_IP):
-    ImageSize = [5472  , 3648]
+    ImageSize = [5472, 3648]
     Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
     Pano.setImageSize(ImageSize)
 
