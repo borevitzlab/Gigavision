@@ -17,7 +17,7 @@ import shutil
 import glob
 import subprocess
 from matplotlib import pyplot as plt
-
+import Uploader
 
 def drawMatches(img1, kp1, img2, kp2, matches):
     """
@@ -938,6 +938,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
     Pano.setZoom(Zoom)
     Pano.setFoVFromZoom(Zoom)
     Pano.setPanoramaFoVRange(PanRange, TiltRange)
+    uploader = Uploader("/home/spc-eyepi/picam.ini")
     print("CamHFoV = {}, CamVFoV = {}".format(Pano.CamHFoV, Pano.CamVFoV))
 
     while True and os.path.exists(OutputFolder):
@@ -973,7 +974,7 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                 else:
                     print("Found recovery data but it's too late to recover.")
 
-        if int(Now.strftime("%M")) <= 5:
+        if (true):#int(Now.strftime("%M")) <= 5:
             # Dodgiest start and stop time ever..
             if (int(Now.strftime("%H")) >= 9 and int(Now.strftime("%H")) <= 2000):
                 print("Started recording new panorama at {}".format(PanoFolder))
@@ -981,6 +982,12 @@ def PanoDemo(Camera_IP, Camera_User, Camera_Password,
                 if os.path.exists(PanoFolder):
                     shutil.rmtree(PanoFolder)
                 Pano.run(PanoFolder, RecoveryFilename=RecoveryFilename)
+
+        upload_list = glob(OutputFolder)
+        if not uploader.sftpUpload(upload_list):
+            uploader.sftpUpload(upload_list)
+
+
 
         RemainingMinutes = 60-int(Now.strftime("%M"))
         print("It's {}.".format(Now.strftime("%H:%M"))),
