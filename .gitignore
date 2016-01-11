@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 
+# pycharm project files
+*.idea
+
 # C extensions
 *.so
 
