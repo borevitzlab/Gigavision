@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% set active_page = "Panorama Configuration files" %}
+{% block body %}
+    <div class="container-fluid">
+        <div id="file-upload-form">
+            <form action="/experiments" method="POST" enctype="multipart/form-data">
+
+                <input type="submit" class="btn btn-success" value="Upload" \>
+            </form>
+        </div>
+        <div id="config-file-edit-form">
+            <form>
+
+            </form>
+
+        </div>
+
+
+    </div>
+
+{% endblock %}
