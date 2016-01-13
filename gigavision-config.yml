@@ -1,0 +1,2 @@
+camera_config: acticamera.yml
+ptz_config: actiptz.yml
