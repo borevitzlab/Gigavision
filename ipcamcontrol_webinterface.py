@@ -130,11 +130,11 @@ def gotoSecondCorner(self):
     self.setPanTilt(PANVAL, TILTVAL)
 
 
-def getPanTilt(self):
-    URL = session['ptz_config']["URL_GetPanTilt"]
-    RET = session['ptz_config']["RET_GetPanTilt"]
-    Pan, Tilt = executeURL(URL, RET)
-    return Pan, Tilt
+def get_pan_tilt(self):
+    url = session['ptz_config']["URL_GetPanTilt"]
+    ret = session['ptz_config']["RET_GetPanTilt"]
+    pan, tilt = executeURL(url, ret)
+    return pan, tilt
 
 
 def set_zoom(zoom):
@@ -175,7 +175,7 @@ def set_focus_mode():
             executeURL(url)
 
 
-def getFocus(self):
+def get_focus(self):
     url = session['camera_config']["get_focus"]
     ret = session['camera_config']["ret_get_focus"]
     focus_val = executeURL(url, ret)
@@ -212,7 +212,7 @@ def stream_video(self):
             yield image
 
 
-def calculateFoV():
+def calculate_fov():
     """
     Calculates the horizontal and vertical field of view from the apps current
     lineEditViewFirstCorner
@@ -222,9 +222,10 @@ def calculateFoV():
     and the current image sizes
     :return: (horizontal FoV, vertical FoV)
     """
-    pan1, tilt1 = session['lineEditViewFirstCorner'].split(",")
-    pan2, tilt2 = session['lineEditViewSecondCorner'].split(",")
+    pan1, tilt1 = session['1st_corner']
+    pan2, tilt2 = session['2nd_corner']
     try:
+        # todo: fix this
         pan_pix1, tilt_pix1 = session['lineEditViewFirstCornerPixels'].split(",")
         pan_pix2, tilt_pix2 = session['lineEditViewSecondCornerPixels'].split(",")
         HFoV = abs(float(pan1) - float(pan2)) / \
@@ -240,18 +241,17 @@ def calculateFoV():
         session['VFoV'] = VFoV
     else:
         flash("Invalid selection of field of view ({}, {})".format(
-            HFoV, VFoV), 'error')
+                HFoV, VFoV), 'error')
     return (HFoV, VFoV)
 
 
-#  _
-# | |
-# | |__   ___ _ __ ___
-# | '_ \ / _ \ '__/ _ \
-# | | | |  __/ | |  __/
-# |_| |_|\___|_|  \___|
-
 def get_savable_pano_config():
+    """
+    returns a yml string of the session variables that are included here
+    :return:
+    """
+
+    # todo: fix hfov and vfov and condense  down to field of view for simplicity.
     pano_config_dict = {
         "camera_config_file": str,
         "ptz_config_file": str,
@@ -286,7 +286,7 @@ def get_savable_pano_config():
         try:
             pano_config_dict[x] = pano_config_dict[x](session[x])
         except Exception as e:
-            flash("Whoa something went wrong typecasting {}, is {} a correct value".format(x,session[x]),"error")
+            flash("Whoa something went wrong typecasting {}, is {} a correct value".format(x, session[x]), "error")
 
     # if not len(keys_to_copy):
     #     return "NO DATA"
@@ -296,24 +296,28 @@ def get_savable_pano_config():
 
 @app.route("/export-config")
 def export_pano_config():
-    from flask import Response,send_file
+    from flask import Response, send_file
     from io import BytesIO
     str_io = BytesIO()
-    y = bytes(get_savable_pano_config(),"utf-8")
+    y = bytes(get_savable_pano_config(), "utf-8")
     str_io.write(y)
     str_io.seek(0)
 
-    return send_file(str_io,attachment_filename="config.yml", as_attachment=True)
+    return send_file(str_io, attachment_filename="config.yml", as_attachment=True)
+
 
 @app.route("/save-config")
 def save_pano_config():
+    """
+    saves a panorama config file from the session vars.
+    :return:
+    """
     filename = None
-    filename = request.args.get('filename',None)
-    filename = request.args.get('file',None)
-
+    filename = request.args.get('filename', None)
+    filename = request.args.get('file', None)
 
     while not filename:
-        values = list(request.args.keys())+list(request.args.values())
+        values = list(request.args.keys()) + list(request.args.values())
 
         if "filename" in values:
             values.remove("filename")
@@ -330,34 +334,33 @@ def save_pano_config():
             filename = datetime.now().strftime("PanoConfig-%y_%m_%d_%H_%M ")
 
     if not filename.endswith(".yml") and not filename.endswith(".yaml"):
-        filename = filename+".yml"
+        filename = filename + ".yml"
 
     with open(filename, 'w') as yml_fh:
         yml_fh.write(get_savable_pano_config())
 
-    return "Saved as "+filename
+    return "Saved as " + filename
 
-def allowed_file(fn,types):
+
+def allowed_file(fn, types):
     """
     validates a filename of allowed types
     :param fn:
     :param types: iterable of extensions
     :return:
     """
-    if fn.split(".")[-1] in (x.replace(".","") for x in types):
+    if fn.split(".")[-1] in (x.replace(".", "") for x in types):
         return True
     return False
 
-@app.route("/load-pano-config",methods=['POST', 'GET'])
-def load_pano_config():
 
-    if request.method == "POST":
-        print(len(request.files))
-        print(list(request.files.keys()))
-        if len(request.files):
-            f = request.files['config-file']
-            if f and allowed_file(f.filename, ["yml","yaml"]):
-                print(yaml.load(f.read()))
+@app.route("/load-pano-config", methods=['POST', 'GET'])
+def load_pano_config():
+    """
+    Loads a yaml panorama config from a POSTed file.
+    :return:
+    """
+
     pano_config_dict = {
         "camera_config_file": str,
         "ptz_config_file": str,
@@ -387,141 +390,171 @@ def load_pano_config():
         "min_free_space": int
     }
 
-    template_data= {
-        "pano_config_dict":pano_config_dict
-                }
-    return render_template("pano-config.html",**template_data)
-    # self.PanoConfigFileName = FileName
-    # with open(FileName, 'r') as YAMLFile:
-    #     pano_config_dict = yaml.load(YAMLFile)
-    #     Message = "Loaded {}:\n".format(FileName) + \
-    #               "----------\n" + \
-    #               yaml.dump(pano_config_dict)
-    #     self.printMessage(Message)
-    #
-    #     if "CameraConfigFile" in pano_config_dict.keys():
-    #         self.lineEditCameraConfigFilename.setText(
-    #             pano_config_dict["CameraConfigFile"])
-    #         self.loadCameraConfig()
-    #     if "PanTiltConfigFile" in pano_config_dict.keys():
-    #         self.lineEditPanTiltConfigFilename.setText(
-    #             str(pano_config_dict["PanTiltConfigFile"]))
-    #         self.loadPanTiltConfig()
-    #     if "RunConfigInFile" in pano_config_dict.keys():
-    #         self.lineEditRunConfigInFileName.setText(
-    #             pano_config_dict["RunConfigInFile"])
-    #
-    #     self.lineEditFieldOfView.setText(pano_config_dict["FieldOfView"])
-    #     self.spinBoxPanoOverlap.setValue(pano_config_dict["Overlap"])
-    #     self.lineEditZoom.setText(str(pano_config_dict["Zoom"]))
-    #     self.lineEditPanoFirstCorner.setText(pano_config_dict["1stCorner"])
-    #     self.lineEditPanoSecondCorner.setText(pano_config_dict["2ndCorner"])
-    #     if pano_config_dict["UseFocusAtCenter"]:
-    #         self.checkBoxUseFocusAtCenter.setCheckState(QtCore.Qt.Checked)
-    #     else:
-    #         self.checkBoxUseFocusAtCenter.setCheckState(QtCore.Qt.Unchecked)
-    #     Index = self.comboBoxPanoScanOrder.findText(pano_config_dict["ScanOrder"])
-    #     if Index >= 0:
-    #         self.comboBoxPanoScanOrder.setCurrentIndex(Index)
-    #     else:
-    #         self.printError("Error when applying ScanOrder = {}".format(
-    #             pano_config_dict["ScanOrder"]))
-    #     self.lineEditPanoGridSize.setText(pano_config_dict["PanoGridSize"])
-    #     self.lineEditPanoMainFolder.setText(pano_config_dict["PanoMainFolder"])
-    #     self.spinBoxPanoLoopInterval.setValue(pano_config_dict["PanoLoopInterval"])
-    #     self.spinBoxStartHour.setValue(pano_config_dict["PanoStartHour"])
-    #     self.spinBoxEndHour.setValue(pano_config_dict["PanoEndHour"])
-    #     self.PanoStartMin = pano_config_dict["PanoStartMin"]
-    #     self.PanoWaitMin = pano_config_dict["PanoWaitMin"]
-    #     self.lineEditStorageAddress.setText(
-    #         pano_config_dict["RemoteStorageAddress"])
-    #     self.lineEditStorageUsername.setText(
-    #         pano_config_dict["RemoteStorageUsername"])
-    #     self.lineEditStoragePassword.setText(
-    #         pano_config_dict["RemoteStoragePassword"])
-    #     self.lineEditCameraName.setText(pano_config_dict["CameraName"])
-    #     self.lineEditPanoRemoteFolder.setText(pano_config_dict["RemoteFolder"])
-    #     self.lineEditPanoLocalFolder.setText(pano_config_dict["LocalFolder"])
-    #     self.lineEditPanoMainFolderFallBack.setText(
-    #         pano_config_dict["PanoFallbackFolder"])
-    #     self.spinBoxMaxPanoNoImages.setValue(
-    #         pano_config_dict["MaxPanoNoImages"])
-    #     self.lineEditMinFreeDiskSpace.setText(
-    #         str(pano_config_dict["MinFreeSpace"]))
-    #
-    #     self.calculatePanoGrid()
-    #     while True:
-    #         try:
-    #             self.startPanTilt()
-    #             self.startCamera()
-    #             break
-    #         except:
-    #             self.printMessage(
-    #                 "Failed to initialise camera/pantilt. Try again.")
-    #             time.sleep(5 * 60)  # wait 5 minute
-    #
-    #     self.PanoConfigChanged = False
-#
-#
-# def calculatePanoGrid():
-#     """
-#     calculates the panorama grid
-#     :return:
-#     """
-#     pan0, tilt0 = session['lineEditPanoFirstCorner'].split(",")
-#     pan1, tilt1 = session['lineEditPanoSecondCorner'].split(",")
-#     # HFoV, VFoV = session['lineEditFieldOfView'].split(",")
-#     # session['HFoV'] = float(HFoV)
-#     # session['VFoV'] = float(VFoV)
-#     if float(pan0) <= float(pan1):
-#         LeftPan = float(pan0)
-#         RightPan = float(pan1)
-#     else:
-#         LeftPan = float(pan1)
-#         RightPan = float(pan0)
-#     if float(tilt0) >= float(tilt1):
-#         TopTilt = float(tilt0)
-#         BottomTilt = float(tilt1)
-#     else:
-#         TopTilt = float(tilt1)
-#         BottomTilt = float(tilt0)
-#     self.TopLeftCorner = [LeftPan, TopTilt]
-#     self.BottomRightCorner = [RightPan, BottomTilt]
-#     self.PanoRows = int(round((TopTilt - BottomTilt) / session['VFoV'] / (1.0 - self.Overlap)))
-#     self.PanoCols = int(round((RightPan - LeftPan) / session['HFoV'] / (1.0 - self.Overlap)))
-#     self.PanoTotal = self.PanoRows * self.PanoCols
-#
-#     # Gigapan Sticher only works with 2000 images max
-#     if self.PanoTotal > self.spinBoxMaxPanoNoImages.value():
-#         QtGui.QMessageBox.about(
-#             self, "Warning",
-#             "Total number of image {} is more than {}".format(
-#                 self.PanoTotal,
-#                 self.spinBoxMaxPanoNoImages.value()))
-#
-#     self.lineEditPanoGridSize.setText("{}x{}".format(
-#         self.PanoRows, self.PanoCols))
-#     if self.PanoRows >= 0 or self.PanoCols >= 0:
-#         self.pushButtonTakeOnePano.setEnabled(True)
-#         self.pushButtonLoopPanorama.setEnabled(True)
-#         Scale = 2
-#         ImageWidthStr, ImageHeightStr = \
-#             self.comboBoxImageSize.currentText().split(",")
-#         self.ImageHeight = int(ImageHeightStr)
-#         self.ImageWidth = int(ImageWidthStr)
-#         while Scale > 0:
-#             ScaledHeight = int(Scale * self.ImageHeight)
-#             ScaledWidth = int(Scale * self.ImageWidth)
-#             if ScaledHeight * self.PanoRows <= 1080 and \
-#                                     ScaledWidth * self.PanoCols <= 1920:
-#                 break
-#             Scale = Scale - 0.001
-#         self.PanoOverViewScale = Scale
-#         self.PanoOverViewHeight = ScaledHeight * self.PanoRows
-#         self.PanoOverViewWidth = ScaledWidth * self.PanoCols
-#         self.initialisePanoOverView()
-#
-#         self.updatePanoOverView()
+    if request.method == "POST":
+        print(len(request.files))
+        print(list(request.files.keys()))
+        if len(request.files):
+            f = request.files['config-file']
+            if f and allowed_file(f.filename, ["yml", "yaml"]):
+                print(yaml.load(f.read()))
+
+
+    template_data = {
+        "pano_config_dict": pano_config_dict
+    }
+    return render_template("pano-config.html", **template_data)
+
+
+def calculate_pano_grid():
+    """
+    calculates the panorama grid
+    :return:
+    """
+    pan0, tilt0 = session['line_edit_pano_first_corner'].split(",")
+    pan1, tilt1 = session['line_edit_pano_second_corner'].split(",")
+    # HFoV, VFoV = session['lineEditFieldOfView'].split(",")
+    # session['HFoV'] = float(HFoV)
+    # session['VFoV'] = float(VFoV)
+    if float(pan0) <= float(pan1):
+        left_pan = float(pan0)
+        right_pan = float(pan1)
+    else:
+        left_pan = float(pan1)
+        right_pan = float(pan0)
+    if float(tilt0) >= float(tilt1):
+        top_tilt = float(tilt0)
+        bottom_tilt = float(tilt1)
+    else:
+        top_tilt = float(tilt1)
+        bottom_tilt = float(tilt0)
+    session['top_left_corner'] = [left_pan, top_tilt]
+    session['bottom_right_corner'] = [right_pan, bottom_tilt]
+    session['pano_rows'] = int(round((top_tilt - bottom_tilt) / session['VFoV'] / (1.0 - session['Overlap'])))
+    session['pano_cols'] = int(round((right_pan - left_pan) / session['HFoV'] / (1.0 - session['Overlap'])))
+    session['pano_total'] = session['PanoRows'] * session['PanoCols']
+
+    # Gigapan Sticher only works with 2000 images max
+    if session['pano_total'] > 2000:
+        flash('Total number of images {} is more than {}'.format(session['pano_total'], 2000), 'warning')
+
+    # todo: set panogridsize info values.
+
+    if session['pano_rows'] >= 0 and session['pano_cols'] >= 0:
+        # todo: enable "takeonepano" button here.
+        # todo: enable "looppanorama" button here.
+        scale = 2
+        # todo: set image size info values here
+        image_width, image_height = (session['image_width'], session['image_height'])
+        while scale > 0:
+            scaled_height = int(scale * image_height)
+            scaled_width = int(scale * image_width)
+            if scaled_height * session['PanoRows'] <= 1080 and \
+                                    scaled_width * session['PanoCols'] <= 1920:
+                break
+            scale = scale - 0.001
+        session['PanoOverViewScale'] = scale
+        session['PanoOverViewHeight'] = scaled_height * session['PanoRows']
+        session['PanoOverViewWidth'] = scaled_width * session['PanoCols']
+
+
+        # todo; return some updated infor about the state of the panorama variables in the session.
+        # initialisePanoOverView()
+        # updatePanoOverView()
+    else:
+        flash('You broke the number of panorama rows or columns (you need at least 1 of each. Please try again.')
+
+
+def take_panorama(is_one_time=True):
+    # if not initilisedCamera:
+    #     initCamera()
+    # if not initilisedPanTilt:
+    #     initPanTilt()
+
+    calculate_pano_grid()  # make sure everything is up-to-date
+    pano_image_no = 0
+
+    # select root folder
+    PanoMainFolder = str(self.lineEditPanoMainFolder.text())
+    PanoLocalFolder = str(self.lineEditPanoLocalFolder.text())
+    PanoMainFolder = PanoMainFolder.replace(
+        "$LOCAL_FOLDER", PanoLocalFolder)
+    PanoFallBackFolder = \
+        str(self.lineEditPanoMainFolderFallBack.text())
+    if os.path.exists(PanoMainFolder):
+        self.RootFolder = PanoMainFolder
+    elif os.path.exists(PanoFallBackFolder):
+        self.RootFolder = PanoFallBackFolder
+        self.printMessage("Use fallback folder")
+    else:
+        QtGui.QMessageBox.information(
+            self, "Warning",
+            "Failed to open:\n{}\nor:\n{}".format(PanoMainFolder,
+                                                  PanoFallBackFolder),
+            QtGui.QMessageBox.Ok)
+        return
+
+    if self.checkBoxUseFocusAtCenter.checkState() == QtCore.Qt.Checked:
+        index = self.comboBoxFocusMode.findText("AUTO")
+        if index >= 0:
+            self.comboBoxFocusMode.setCurrentIndex(index)
+            self.setFocusMode()  # make sure this change applies
+        PANVAL0, TILTVAL0 = self.lineEditPanoFirstCorner.text().split(",")
+        PANVAL1, TILTVAL1 = self.lineEditPanoSecondCorner.text().split(",")
+        self.setPanTilt(0.5 * (float(PANVAL0) + float(PANVAL1)),
+                        0.5 * (float(TILTVAL0) + float(TILTVAL1)))
+        self.snapPhoto()
+        self.updateImage()
+        time.sleep(2)
+        self.snapPhoto()
+        self.updateImage()
+        index = self.comboBoxFocusMode.findText("MANUAL")
+        if index >= 0:
+            self.comboBoxFocusMode.setCurrentIndex(index)
+            self.setFocusMode()  # make sure this change applies
+        time.sleep(2)
+        self.snapPhoto()
+        self.updateImage()
+
+    self.CameraName = str(self.lineEditCameraName.text())
+    self.PausePanorama = False
+    self.StopPanorama = False
+
+    LoopIntervalMinute = int(self.spinBoxPanoLoopInterval.text())
+    StartHour = self.spinBoxStartHour.value()
+    EndHour = self.spinBoxEndHour.value()
+
+    createdPanoThread = False
+    for i in range(len(self.threadPool)):
+        if self.threadPool[i].Name == "PanoThread":
+            createdPanoThread = True
+            if not self.threadPool[i].isRunning():
+                self.threadPool[i].run()
+    if not createdPanoThread:
+        self.threadPool.append(PanoThread(self, IsOneTime, LoopIntervalMinute,
+                                          StartHour, EndHour))
+        self.connect(self.threadPool[len(self.threadPool) - 1],
+                     QtCore.SIGNAL('PanoImageSnapped()'),
+                     self.updatePanoImage)
+        self.connect(self.threadPool[len(self.threadPool) - 1],
+                     QtCore.SIGNAL('ColRowPanTiltPos(QString)'),
+                     self.updateColRowPanTiltInfo)
+        self.connect(self.threadPool[len(self.threadPool) - 1],
+                     QtCore.SIGNAL('PanoThreadStarted()'),
+                     self.deactivateLiveView)
+        self.connect(self.threadPool[len(self.threadPool) - 1],
+                     QtCore.SIGNAL('PanoThreadDone()'),
+                     self.activateLiveView)
+        self.connect(self.threadPool[len(self.threadPool) - 1],
+                     QtCore.SIGNAL('OnePanoStarted()'),
+                     self.initialisePanoOverView)
+        self.connect(self.threadPool[len(self.threadPool) - 1],
+                     QtCore.SIGNAL('OnePanoDone()'),
+                     self.finalisePano)
+        self.connect(self.threadPool[len(self.threadPool) - 1],
+                     QtCore.SIGNAL('Message(QString)'),
+                     self.printMessage)
+        self.threadPool[len(self.threadPool) - 1].start()
+
 #
 #
 # def updatePanoOverView(self):
@@ -625,96 +658,7 @@ def load_pano_config():
 #         self.lineEditPanoMainFolderFallBack.setText(Folder)
 #
 #
-# def takePanorama(self, IsOneTime=True):
-#     if not self.initilisedCamera:
-#         self.initCamera()
-#     if not self.initilisedPanTilt:
-#         self.initPanTilt()
 #
-#     self.calculatePanoGrid()  # make sure everything is up-to-date
-#     self.PanoImageNo = 0
-#
-#     # select root folder
-#     PanoMainFolder = str(self.lineEditPanoMainFolder.text())
-#     PanoLocalFolder = str(self.lineEditPanoLocalFolder.text())
-#     PanoMainFolder = PanoMainFolder.replace(
-#         "$LOCAL_FOLDER", PanoLocalFolder)
-#     PanoFallBackFolder = \
-#         str(self.lineEditPanoMainFolderFallBack.text())
-#     if os.path.exists(PanoMainFolder):
-#         self.RootFolder = PanoMainFolder
-#     elif os.path.exists(PanoFallBackFolder):
-#         self.RootFolder = PanoFallBackFolder
-#         self.printMessage("Use fallback folder")
-#     else:
-#         QtGui.QMessageBox.information(
-#             self, "Warning",
-#             "Failed to open:\n{}\nor:\n{}".format(PanoMainFolder,
-#                                                   PanoFallBackFolder),
-#             QtGui.QMessageBox.Ok)
-#         return
-#
-#     if self.checkBoxUseFocusAtCenter.checkState() == QtCore.Qt.Checked:
-#         index = self.comboBoxFocusMode.findText("AUTO")
-#         if index >= 0:
-#             self.comboBoxFocusMode.setCurrentIndex(index)
-#             self.setFocusMode()  # make sure this change applies
-#         PANVAL0, TILTVAL0 = self.lineEditPanoFirstCorner.text().split(",")
-#         PANVAL1, TILTVAL1 = self.lineEditPanoSecondCorner.text().split(",")
-#         self.setPanTilt(0.5 * (float(PANVAL0) + float(PANVAL1)),
-#                         0.5 * (float(TILTVAL0) + float(TILTVAL1)))
-#         self.snapPhoto()
-#         self.updateImage()
-#         time.sleep(2)
-#         self.snapPhoto()
-#         self.updateImage()
-#         index = self.comboBoxFocusMode.findText("MANUAL")
-#         if index >= 0:
-#             self.comboBoxFocusMode.setCurrentIndex(index)
-#             self.setFocusMode()  # make sure this change applies
-#         time.sleep(2)
-#         self.snapPhoto()
-#         self.updateImage()
-#
-#     self.CameraName = str(self.lineEditCameraName.text())
-#     self.PausePanorama = False
-#     self.StopPanorama = False
-#
-#     LoopIntervalMinute = int(self.spinBoxPanoLoopInterval.text())
-#     StartHour = self.spinBoxStartHour.value()
-#     EndHour = self.spinBoxEndHour.value()
-#
-#     createdPanoThread = False
-#     for i in range(len(self.threadPool)):
-#         if self.threadPool[i].Name == "PanoThread":
-#             createdPanoThread = True
-#             if not self.threadPool[i].isRunning():
-#                 self.threadPool[i].run()
-#     if not createdPanoThread:
-#         self.threadPool.append(PanoThread(self, IsOneTime, LoopIntervalMinute,
-#                                           StartHour, EndHour))
-#         self.connect(self.threadPool[len(self.threadPool) - 1],
-#                      QtCore.SIGNAL('PanoImageSnapped()'),
-#                      self.updatePanoImage)
-#         self.connect(self.threadPool[len(self.threadPool) - 1],
-#                      QtCore.SIGNAL('ColRowPanTiltPos(QString)'),
-#                      self.updateColRowPanTiltInfo)
-#         self.connect(self.threadPool[len(self.threadPool) - 1],
-#                      QtCore.SIGNAL('PanoThreadStarted()'),
-#                      self.deactivateLiveView)
-#         self.connect(self.threadPool[len(self.threadPool) - 1],
-#                      QtCore.SIGNAL('PanoThreadDone()'),
-#                      self.activateLiveView)
-#         self.connect(self.threadPool[len(self.threadPool) - 1],
-#                      QtCore.SIGNAL('OnePanoStarted()'),
-#                      self.initialisePanoOverView)
-#         self.connect(self.threadPool[len(self.threadPool) - 1],
-#                      QtCore.SIGNAL('OnePanoDone()'),
-#                      self.finalisePano)
-#         self.connect(self.threadPool[len(self.threadPool) - 1],
-#                      QtCore.SIGNAL('Message(QString)'),
-#                      self.printMessage)
-#         self.threadPool[len(self.threadPool) - 1].start()
 #
 #
 # def takeOnePanorama(self):
