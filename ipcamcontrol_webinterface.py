@@ -474,24 +474,17 @@ def take_panorama(is_one_time=True):
     pano_image_no = 0
 
     # select root folder
-    PanoMainFolder = str(self.lineEditPanoMainFolder.text())
-    PanoLocalFolder = str(self.lineEditPanoLocalFolder.text())
-    PanoMainFolder = PanoMainFolder.replace(
-        "$LOCAL_FOLDER", PanoLocalFolder)
-    PanoFallBackFolder = \
-        str(self.lineEditPanoMainFolderFallBack.text())
-    if os.path.exists(PanoMainFolder):
-        self.RootFolder = PanoMainFolder
-    elif os.path.exists(PanoFallBackFolder):
-        self.RootFolder = PanoFallBackFolder
-        self.printMessage("Use fallback folder")
+    main_folder = session['main_folder'].format(local_folder=session['local_folder'])
+    fallback_folder = session['fallback_folder']
+    if os.path.exists(main_folder):
+        root_folder = main_folder
+        session['root_folder'] = main_folder
+    elif os.path.exists(fallback_folder):
+        root_folder = fallback_folder
+        session['root_folder'] = fallback_folder
+        flash(u'main folder doesnt exist, using fallback folder.', 'warning')
     else:
-        QtGui.QMessageBox.information(
-            self, "Warning",
-            "Failed to open:\n{}\nor:\n{}".format(PanoMainFolder,
-                                                  PanoFallBackFolder),
-            QtGui.QMessageBox.Ok)
-        return
+        flash(u'failed to open either folders, aborting.', 'error')
 
     if self.checkBoxUseFocusAtCenter.checkState() == QtCore.Qt.Checked:
         index = self.comboBoxFocusMode.findText("AUTO")
@@ -636,7 +629,7 @@ def take_panorama(is_one_time=True):
 #
 #
 # # todo: input forms for these options
-# def selectPanoMainFolder(self):
+# def select_main_folder(self):
 #     PanoMainFolder = str(self.lineEditPanoMainFolder.text())
 #     PanoLocalFolder = str(self.lineEditPanoLocalFolder.text())
 #     PanoMainFolder.replace("$LOCAL_FOLDER", PanoLocalFolder)
@@ -1489,14 +1482,14 @@ def take_panorama(is_one_time=True):
 #         #            time.sleep(WaitSeconds)
 #
 #         self.emit(QtCore.SIGNAL('Message(QString)'),
-#                   "Save panorma images to {} ".format(self.Pano.RootFolder))
+#                   "Save panorma images to {} ".format(self.Pano.root_folder))
 #
 #         while not self.Pano.StopPanorama:
 #             while self.Pano.PausePanorama:
 #                 time.sleep(5)
 #
 #             # test if there's enough
-#             Usage = disk_usage.disk_usage(self.Pano.RootFolder)
+#             Usage = disk_usage.disk_usage(self.Pano.root_folder)
 #             if Usage.free < 1e6 * int(self.Pano.lineEditMinFreeDiskSpace.text()):
 #                 self.Pano.StopPanorama = True
 #                 self.emit(QtCore.SIGNAL('Message(QString)'),
@@ -1515,7 +1508,7 @@ def take_panorama(is_one_time=True):
 #                 NoPanoInSameHour = 1
 #                 while True:
 #                     self.Pano.PanoFolder = os.path.join(
-#                         self.Pano.RootFolder,
+#                         self.Pano.root_folder,
 #                         self.Pano.CameraName,
 #                         Start.strftime("%Y"),
 #                         Start.strftime("%Y_%m"),
