@@ -1,3 +1,5 @@
+{% set message_map = {"error": "danger","warning":"warning","success":"success", "":"success", None:"success","message":"success"} -%}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,14 +14,64 @@
     <!-- Optional theme -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"
           integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+    <style>
+        @media screen and (min-width: 0px) and (max-width: 359px) {
+            #small-brand { display: block; }
+          #full-brand { display: none; }
+        }
+        @media screen and (min-width: 360px) and (max-width: 767px) {
+            #small-brand { display: none; }
+          #full-brand { display: block; }
+        }
+        @media screen and (min-width: 768px) and (max-width: 1220px) {
+          #small-brand { display: block; }
+          #full-brand { display: none; }
+        }
 
+        @media screen and (min-width: 1221px){
+          #small-brand { display: none; }
+          #full-brand { display: block; }
+        }
+    </style>
     {% block head %}
     {% endblock %}
 </head>
 <body>
+<nav class="navbar navbar-inverse navbar-fixed-top" style="position: relative;" role="navigation">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" id="full-brand" href="/">Gigavision</a>
+        <a class="navbar-brand" id="small-brand" href="/">GV</a>
+    </div>
+    <ul class="nav navbar-nav collapse navbar-collapse" id="navbar">
+        {% for href, id, caption in navigation_bar %}
+            <li {% if id == active_page %} class="active"{% endif %}><a
+                    href="{{ href|e }}">{{ caption }}</a></li>
+        {% endfor %}
+    </ul>
+</nav>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+            <ul class="flashes center-block">
+                {% for category,message in messages %}
+                <li><span class="center-block text-center alert alert-{{ message_map[category] }}">{{ message }}</span></li>
+                {% endfor %}
+            </ul>
+
+    {% endif %}
+{% endwith %}
+<br>
+
 {% block body %}
 {% endblock %}
 
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
         integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
