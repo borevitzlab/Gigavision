@@ -7,7 +7,7 @@
                 <label for="pano-sel">Pano:</label>
                 <select class="form-control" id="pano-sel" name="pano-sel" onchange="this.form.submit()">
                     {% for option in pcfg %}
-                        <option>{{ option }}</option>
+                        <option {% if option==session['pano_config_fn'] %}selected{% endif %}>{{ option }}</option>
                     {% endfor %}
                 </select>
             </form>
@@ -17,7 +17,7 @@
                 <label for="camera-sel">Camera:</label>
                 <select class="form-control" id="camera-sel" name="camera-sel" onchange="this.form.submit()">
                     {% for option in ccfg %}
-                        <option>{{ option }}</option>
+                        <option {% if option==session['camera_config_fn'] %}selected{% endif %}>{{ option }}</option>
                     {% endfor %}
                 </select>
             </form>
@@ -27,7 +27,7 @@
                 <label for="ptz-sel">PTZ:</label>
                 <select class="form-control" id="ptz-sel" name="ptz-sel" onchange="this.form.submit()">
                     {% for option in ptzcfg %}
-                        <option>{{ option }}</option>
+                        <option {% if option==session['ptz_config_fn'] %}selected{% endif %}>{{ option }}</option>
                     {% endfor %}
                 </select>
             </form>

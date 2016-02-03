@@ -29,9 +29,20 @@ def initialise_session():
     if not "pano_config" in session.keys():
         session['pano_config'] = {}
 
+    if not "pano_config_fn" in session.keys():
+        session['pano_config_fn'] = None
+
+    if not "camera_config_fn" in session.keys():
+        session['camera_config_fn'] = None
+
+    if not "ptz_config_fn" in session.keys():
+        session['ptz_config_fn'] = None
+
+
     def remove_submit(d):
         if "submit" in d.keys():
             del d["submit"]
+
     remove_submit(session['ptz_config'])
     remove_submit(session['pano_config'])
     remove_submit(session['camera_config'])
@@ -127,13 +138,16 @@ def apply_zoom():
 
 def convert_config(config_in):
     if type(config_in) == str:
-        with open(config_in,'r') as f:
+        with open(config_in, 'r') as f:
             config_in = yaml.load(f.read())
+
+    if "ip" in config_in.keys() or "first_corner" in config_in.keys():
+        return config_in
 
     def to_numlist(inp):
         if type(inp) == list:
             return inp
-        inp = inp.replace("}","").replace("{","")
+        inp = inp.replace("}", "").replace("{", "")
         if "x" in inp:
             return inp.split("x")
         if "," in inp:
@@ -141,27 +155,27 @@ def convert_config(config_in):
         return [inp]
 
     translate = {
-        "IPVAL":"ip",
-        "USERVAL":"username",
-        "PASSVAL":"password",
-        "ImageSizeList":"image_size_list",
-        "ZoomRange":"zoom_range",
-        "Zoom_HorFoVList":"zoom_horizontal_fov_list",
-        "Zoom_VirFoVList":"zoom_vertical_fov_list",
-        "ZoomListOut":"zoom_list_out",
-        "ZoomVal":"zoom_val",
-        "FocusVal":"focus_val",
-        "FocusMode":"focus_mode",
-        "URL_SetImageSize":"URL_set_image_size",
-        "URL_SetZoom":"URL_set_zoom",
-        "URL_SetFocus":"URL_set_focus",
-        "URL_SetFocusAuto":"URL_set_focus_auto",
-        "URL_SetFocusManual":"URL_set_focus_manual",
-        "URL_GetImage":"URL_get_image",
-        "URL_GetImageSize":"URL_get_image_size",
-        "URL_GetVideo":"URL_GetVideo",
-        "URL_GetZoom":"URL_get_zoom",
-        "URL_GetFocus":"URL_get_focus",
+        "IPVAL": "ip",
+        "USERVAL": "username",
+        "PASSVAL": "password",
+        "ImageSizeList": "image_size_list",
+        "ZoomRange": "zoom_range",
+        "Zoom_HorFoVList": "zoom_horizontal_fov_list",
+        "Zoom_VirFoVList": "zoom_vertical_fov_list",
+        "ZoomListOut": "zoom_list_out",
+        "ZoomVal": "zoom_val",
+        "FocusVal": "focus_val",
+        "FocusMode": "focus_mode",
+        "URL_SetImageSize": "URL_set_image_size",
+        "URL_SetZoom": "URL_set_zoom",
+        "URL_SetFocus": "URL_set_focus",
+        "URL_SetFocusAuto": "URL_set_focus_auto",
+        "URL_SetFocusManual": "URL_set_focus_manual",
+        "URL_GetImage": "URL_get_image",
+        "URL_GetImageSize": "URL_get_image_size",
+        "URL_GetVideo": "URL_GetVideo",
+        "URL_GetZoom": "URL_get_zoom",
+        "URL_GetFocus": "URL_get_focus",
         "RET_GetImage": "RET_get_image",
         "RET_SetImageSize": "RET_set_image_size",
         "RET_SetZoom": "RET_set_zoom",
@@ -225,33 +239,30 @@ def convert_config(config_in):
     }
 
     fixstring_map = {
-        "USERVAL":"{user}",
-        "PASSVAL":"{pass}",
-        "IPVAL":"{ip}",
-        "ZOOMVAL":"{zoom}",
-        "FOCUSVAL":"{focus}",
-        "WIDTHVAL":"{width}",
-        "HEIGHTVAL":"{height}",
-        "PANVAL":"{pan}",
-        "TILTVAL":"{tilt}",
-        "ZOOM_POSITION":"{zoom_position}",
-        "FOCUS_POSITION":"{focus_position}"
+        "USERVAL": "{user}",
+        "PASSVAL": "{pass}",
+        "IPVAL": "{ip}",
+        "ZOOMVAL": "{zoom}",
+        "FOCUSVAL": "{focus}",
+        "WIDTHVAL": "{width}",
+        "HEIGHTVAL": "{height}",
+        "PANVAL": "{pan}",
+        "TILTVAL": "{tilt}",
+        "ZOOM_POSITION": "{zoom_position}",
+        "FOCUS_POSITION": "{focus_position}"
     }
 
-
     dict_config = {}
-    for k,v in config_in.items():
+    for k, v in config_in.items():
         if k in translate.keys():
-            dict_config[k] = v
-    for k,v in dict_config.items():
+            dict_config[translate[k]] = v
+    for k, v in dict_config.items():
         if k in needslist:
             dict_config[k] = to_numlist(dict_config[k])
         if k in needsformatstring:
-            for match, replacement in fixstring_map:
+            for match, replacement in fixstring_map.items():
                 dict_config[k] = dict_config[k].replace(match, replacement)
     return dict_config
-
-
 
 
 def sort_validate_configs(configs_filepaths):
@@ -422,6 +433,7 @@ def clearsesh():
     session.clear()
     return ""
 
+
 def get_filename(p):
     filename = None
     filename = request.args.get('filename', None)
@@ -455,9 +467,9 @@ def get_filename(p):
         filename = filename + ".yml"
     return filename
 
+
 @app.route("/download-<any('pano','camera','ptz'):p>")
 def export_pano_config(p):
-
     from flask import send_file
     from io import BytesIO
     str_io = BytesIO()
@@ -465,6 +477,7 @@ def export_pano_config(p):
     str_io.write(y)
     str_io.seek(0)
     return send_file(str_io, attachment_filename=get_filename(p), as_attachment=True)
+
 
 @app.route("/save-<any('pano','camera','ptz'):p>")
 def save_pano_config(p):
@@ -506,7 +519,7 @@ class CSVListField(Field):
 
     def _value(self):
         if self.data:
-            return "["+u', '.join([str(x) for x in self.data])+"]"
+            return "[" + u', '.join([str(x) for x in self.data]) + "]"
         else:
             return u''
 
@@ -515,7 +528,7 @@ class CSVListField(Field):
             numbracks = valuelist[0].count("]") + valuelist[0].count("[")
             if numbracks > 2 or numbracks == 1:
                 raise ValueError(self.gettext("Not a comma separated list."))
-            self.data = [x.strip() for x in valuelist[0].replace("[","").replace("]","").split(',')]
+            self.data = [x.strip() for x in valuelist[0].replace("[", "").replace("]", "").split(',')]
         else:
             self.data = []
         try:
@@ -530,7 +543,9 @@ class CSVListField(Field):
                 self.data = None
                 raise ValueError(self.gettext('One or more values is not a number'))
 
+
 from pprint import pformat
+
 
 class CSVListOfListsField(Field):
     """
@@ -542,14 +557,14 @@ class CSVListOfListsField(Field):
 
     def _value(self):
         if self.data:
-            return pformat(self.data, width=90,indent=2)
+            return pformat(self.data, width=90, indent=2)
         else:
             return u''
 
     def process_formdata(self, valuelist):
         if len(valuelist):
-            strs = valuelist[0].replace('[','').split('],')
-            self.data = [map(float, s.replace(']','').split(',')).strip() for s in strs]
+            strs = valuelist[0].replace('[', '').split('],')
+            self.data = [map(float, s.replace(']', '').split(',')).strip() for s in strs]
             # self.data = [x.strip() for x in valuelist[0].split(',')]
         else:
             self.data = []
@@ -584,6 +599,7 @@ class MustContain(object):
         for check in self.req_list:
             if check not in str(field.data):
                 raise ValidationError(self.message % check)
+
 
 class IPAddressWithPort(validators.IPAddress):
     """
@@ -639,8 +655,9 @@ class PanoConfigForm(Form):
     zoom = FloatField("Zoom", default=800.0)
     first_corner = CSVListField('First Corner', default=[113, 9])
     second_corner = CSVListField('Second Corner', default=[163, -15])
-    pano_grid_size = CSVListField("Panorama grid shape", default=[8,9])
-    pano_loop_interval = IntegerField("Panorama loop interval (m)", default=60,validators=[validators.number_range(max=1440, min=2),validators.optional()])
+    pano_grid_size = CSVListField("Panorama grid shape", default=[8, 9])
+    pano_loop_interval = IntegerField("Panorama loop interval (m)", default=60,
+                                      validators=[validators.number_range(max=1440, min=2), validators.optional()])
     pano_start_hour = IntegerField("Start hour",
                                    validators=[validators.number_range(max=23, min=0), validators.optional()])
     pano_end_hour = IntegerField("Start hour",
@@ -652,7 +669,8 @@ class PanoConfigForm(Form):
     local_folder = StringField("Local Folder", default='/home/chuong/Data/a_data')
     pano_fallback_folder = StringField("Fallback folder", default='home/pi/Data/Panorama')
     pano_main_folder = StringField("Main Folder", default='/home/chuong/Data/a_data/Gigavision/chuong_tests')
-    min_free_space = IntegerField("Minimum free space to keep", default=1000,validators=[validators.number_range(max=16000, min=256),validators.optional()])
+    min_free_space = IntegerField("Minimum free space to keep", default=1000,
+                                  validators=[validators.number_range(max=16000, min=256), validators.optional()])
     remote_folder = StringField("Remote Folder", default='/network/phenocam-largedatases/a_data')
     remote_storage_address = StringField("Remote storage address", default='percy.anu.edu.au')
     remote_storage_username = StringField("Remote storage username")
@@ -661,6 +679,7 @@ class PanoConfigForm(Form):
     scan_order = StringField('Scan order (see scan-orders for options)', default="Cols, right")
     use_focus_at_center = BooleanField('Use focus at center?', default=True)
     submit = SubmitField()
+
 
 class PTZConfigForm(Form):
     ip = StringField("IP Address", default="192.168.1.101:81", validators=[IPAddressWithPort(), validators.optional()])
@@ -671,40 +690,59 @@ class PTZConfigForm(Form):
     tilt_range = CSVListField("Tilt Range", default=[-90, 30])
     pan_tilt_scale = FloatField("Pan/Tilt scaling", default=10.0)
     URL_set_pan_tilt = StringField("URL_set_pan_tilt", default="{ip}/Bump.xml?GoToP={pan}&GoToT={tilt}",
-                                   validators=[MustContain("{ip}", "{pan}",'{tilt}'),validators.optional()])
+                                   validators=[MustContain("{ip}", "{pan}", '{tilt}'), validators.optional()])
     URL_get_pan_tilt = StringField("URL_get_pan_tilt", default="{ip}/CP_Update.xml",
-                                   validators=[MustContain("{ip}"),validators.optional()])
+                                   validators=[MustContain("{ip}"), validators.optional()])
     RET_get_pan_tilt = StringField("RET_get_pan_tilt", default="*<PanPos>{}</PanPos>*<TiltPos>{}</TiltPos>*")
     submit = SubmitField()
+
 
 class CameraConfigForm(Form):
     ip = StringField("IP Address", default="192.168.1.101:81", validators=[IPAddressWithPort(), validators.optional()])
     username = StringField("Username", default="admin")
     password = PasswordField("Password", default="admin")
-    image_size_list = CSVListOfListsField("Image Size list", default=[[1920,1080],[1280,720],[640,480]])
+    image_size_list = CSVListOfListsField("Image Size list", default=[[1920, 1080], [1280, 720], [640, 480]])
     zoom_range = CSVListField("Zoom Range", default=[30, 1000])
-    zoom_val = IntegerField("Zoom Value", default=800,validators=[validators.number_range(max=20000, min=1),validators.optional()])
-    zoom_horizontal_fov_list = CSVListOfListsField('', default=[[50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000],[71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126, 12.782, 9.217, 7.050, 5.824]])
-    zoom_vertical_fov_list = CSVListOfListsField('', default=[[50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000],[39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324, 7.7136, 4.787, 3.729, 2.448]])
+    zoom_val = IntegerField("Zoom Value", default=800,
+                            validators=[validators.number_range(max=20000, min=1), validators.optional()])
+    zoom_horizontal_fov_list = CSVListOfListsField('', default=[[50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000],
+                                                                [71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126,
+                                                                 12.782, 9.217, 7.050, 5.824]])
+    zoom_vertical_fov_list = CSVListOfListsField('', default=[[50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000],
+                                                              [39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324,
+                                                               7.7136, 4.787, 3.729, 2.448]])
     zoom_list_out = CSVListField('Zoom list out', default=[80, 336, 592, 848, 1104, 1360, 1616, 1872, 2128, 2384, 2520])
-    URL_set_image_size = StringField("URL_set_image_size", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&VIDEO_RESOLUTION=N{width}x{height}",
-                                   validators=[MustContain('{ip}', '{user}', '{password}', '{width}', '{height}'),validators.optional()])
-    URL_set_zoom = StringField("URL_set_zoom", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&ZOOM=DIRECT,{zoom}",
-                                   validators=[MustContain('{ip}', '{user}','{password}','{zoom}'),validators.optional()])
-    URL_set_focus = StringField("URL_set_focus", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=DIRECT,{focus}",
-                                   validators=[MustContain('{ip}', '{user}','{password}','{focus}'),validators.optional()])
-    URL_set_focus_auto = StringField("URL_set_focus_auto", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=AUTO",
-                                   validators=[MustContain('{ip}', '{user}','{password}'),validators.optional()])
-    URL_set_focus_manual = StringField("URL_set_focus_manual", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=MANUAL",
-                                   validators=[MustContain('{ip}', '{user}','{password}'),validators.optional()])
+    URL_set_image_size = StringField("URL_set_image_size",
+                                     default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&VIDEO_RESOLUTION=N{width}x{height}",
+                                     validators=[MustContain('{ip}', '{user}', '{password}', '{width}', '{height}'),
+                                                 validators.optional()])
+    URL_set_zoom = StringField("URL_set_zoom",
+                               default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&ZOOM=DIRECT,{zoom}",
+                               validators=[MustContain('{ip}', '{user}', '{password}', '{zoom}'),
+                                           validators.optional()])
+    URL_set_focus = StringField("URL_set_focus",
+                                default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=DIRECT,{focus}",
+                                validators=[MustContain('{ip}', '{user}', '{password}', '{focus}'),
+                                            validators.optional()])
+    URL_set_focus_auto = StringField("URL_set_focus_auto",
+                                     default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=AUTO",
+                                     validators=[MustContain('{ip}', '{user}', '{password}'), validators.optional()])
+    URL_set_focus_manual = StringField("URL_set_focus_manual",
+                                       default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=MANUAL",
+                                       validators=[MustContain('{ip}', '{user}', '{password}'), validators.optional()])
     URL_get_image = StringField("URL_get_image", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&SNAPSHOT",
-                                   validators=[MustContain('{ip}', '{user}','{password}'),validators.optional()])
-    URL_get_image_size = StringField("URL_get_image_size", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&VIDEO_RESOLUTION",
-                                   validators=[MustContain('{ip}', '{user}','{password}'),validators.optional()])
-    URL_get_zoom = StringField("URL_get_zoom", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&{zoom_position}",
-                                   validators=[MustContain('{ip}', '{user}','{password}',"{zoom_position}"),validators.optional()])
-    URL_get_focus = StringField("URL_get_focus", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&{focus_position}",
-                                   validators=[MustContain('{ip}', '{user}','{password}',"{focus_position}"),validators.optional()])
+                                validators=[MustContain('{ip}', '{user}', '{password}'), validators.optional()])
+    URL_get_image_size = StringField("URL_get_image_size",
+                                     default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&VIDEO_RESOLUTION",
+                                     validators=[MustContain('{ip}', '{user}', '{password}'), validators.optional()])
+    URL_get_zoom = StringField("URL_get_zoom",
+                               default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&{zoom_position}",
+                               validators=[MustContain('{ip}', '{user}', '{password}', "{zoom_position}"),
+                                           validators.optional()])
+    URL_get_focus = StringField("URL_get_focus",
+                                default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&{focus_position}",
+                                validators=[MustContain('{ip}', '{user}', '{password}', "{focus_position}"),
+                                            validators.optional()])
     RET_set_image_size = StringField("RET_set_image_size", default='OK: VIDEO_RESOLUTION=''N{}x{}''')
     RET_set_zoom = StringField("RET_set_zoom", default='OK: OK: ZOOM=''DIRECT,{}''')
     RET_set_focus = StringField("RET_set_focus", default='OK: FOCUS=''DIRECT,{}''')
@@ -713,7 +751,9 @@ class CameraConfigForm(Form):
     RET_get_focus = StringField("RET_get_focus", default='FOCUS_POSITION=''{}''')
     submit = SubmitField()
 
+
 from pprint import pprint as print
+
 
 @app.route("/export")
 def export_view():
@@ -746,8 +786,8 @@ def config():
         "second_corner": str,
         "use_focus_at_center": bool,
         "scan_order": str,
-        "min_free_space":int,
-        "pano_loop_interval":int,
+        "min_free_space": int,
+        "pano_loop_interval": int,
         "pano_grid_size": str,
         "pano_main_folder": str,
         "pano_loop_interval": int,
@@ -775,7 +815,7 @@ def config():
         "zoom_vertical_fov_list": list,
         "zoom_list_out": list,
         "zoom_val": int,
-        "zoom_range":list,
+        "zoom_range": list,
         "URL_set_image_size": str,
         "URL_set_zoom": str,
         "URL_set_focus": str,
@@ -806,36 +846,44 @@ def config():
         "RET_get_pan_tilt": str
     }
 
-    def load_config_file(session_key,filename):
-        yml = None
-        if not os.path.isfile(filename):
-            flash(u'No file.', 'error')
-            return None
-        try:
-            with open(filename,'r') as f:
-                yml = yaml.load(f.read())
-        except Exception as e:
-            flash(u'Couldnt read yaml file: {}'.format(str(e)))
-            return None
+    def load_config_file(session_key, filename, yml=None):
+        if not yml:
+            if not os.path.isfile(filename):
+                flash(u'No file.', 'error')
+                return None
+            try:
+                with open(filename, 'r') as f:
+                    yml = yaml.load(f.read())
+            except Exception as e:
+                flash(u'Couldnt read yaml file: {}'.format(str(e)))
+                return None
+            session[session_key+"_fn"] = filename if filename is not None else None
 
+        flashes = []
         if session_key == "camera_config":
-            for k,v in yml.items():
+            for k, v in yml.items():
                 if k not in cam_config_dict.keys():
-                    flash(u'{} is not valid or not a configuration option'.format(k),'warning')
+                    flashes.append(u'{}'.format(k))
                 else:
                     session[session_key][k] = v
         elif session_key == "ptz_config":
-            for k,v in yml.items():
+            for k, v in yml.items():
                 if k not in ptz_config_dict.keys():
-                    flash(u'{} is not valid or not a configuration option'.format(k),'warning')
+                    flashes.append(u'{}'.format(k))
                 else:
                     session[session_key][k] = v
         elif session_key == "pano_config":
-            for k,v in yml.items():
+            for k, v in yml.items():
                 if k not in pano_config_dict.keys():
-                    flash(u'{} is not valid or not a configuration option'.format(k),'warning')
+                    flashes.append(u'{}'.format(k))
                 else:
                     session[session_key][k] = v
+        if len(flashes):
+            flash(u", ".join(flashes) + " are not valid or arent configuration options for a {}".format(
+                session_key.replace("_", " ")), "warning")
+        else:
+            flash(u'Valid config!')
+
     files = glob("*.yml")
     files.extend(glob("*.yaml"))
     pcfg, ccfg, ptzcfg = sort_validate_configs(files)
@@ -848,24 +896,26 @@ def config():
     if request.method == "POST":
         for k in request.form.keys():
             if k.split("-")[-1] == 'sel':
-                a = {'camera-sel':"camera_config",'ptz-sel':"ptz_config",'pano-sel':"pano_config"}
-                load_config_file(a[k],request.form[k])
+                a = {'camera-sel': "camera_config", 'ptz-sel': "ptz_config", 'pano-sel': "pano_config"}
+                load_config_file(a[k], request.form[k])
 
         if len(request.files):
             if "pano-config-file" in request.files.keys():
                 f = request.files['pano-config-file']
                 if f and allowed_file(f.filename, ["yml", "yaml"]):
-                    print(yaml.load(f.read()))
+                    load_config_file("pano_config", "", yml=convert_config(yaml.load(f.read())))
 
             if "ptz-config-file" in request.files.keys():
                 f = request.files['ptz-config-file']
+
                 if f and allowed_file(f.filename, ["yml", "yaml"]):
-                    print(yaml.load(f.read()))
+                    load_config_file("ptz_config", "", yml=convert_config(yaml.load(f.read())))
 
             if "cam-config-file" in request.files.keys():
                 f = request.files['cam-config-file']
+
                 if f and allowed_file(f.filename, ["yml", "yaml"]):
-                    print(yaml.load(f.read()))
+                    load_config_file("camera_config", "", yml=convert_config(yaml.load(f.read())))
         if panoform.validate() and panoform.submit.data:
             for k in [x for x in vars(panoform) if not x.startswith("_") and not x == "meta"]:
                 session['pano_config'][k] = panoform[k].data
@@ -903,7 +953,7 @@ def config():
     template_data = {
         "panoform": panoform,
         "ptzform": ptzform,
-        'camform':camform,
+        'camform': camform,
         "pano_config_dict": pano_config_dict,
         "cam_config_dict": cam_config_dict,
         "ptz_config_dict": ptz_config_dict,

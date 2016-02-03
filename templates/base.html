@@ -124,16 +124,19 @@
         {% endfor %}
     </ul>
 </nav>
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-            <ul class="flashes center-block">
-                {% for category,message in messages %}
-                <li><span class="center-block text-center alert alert-{{ message_map[category] }}">{{ message }}</span></li>
-                {% endfor %}
-            </ul>
 
-    {% endif %}
-{% endwith %}
+<div class="row">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes center-block col-md-4" style="float: none; list-style: none;">
+                    {% for category,message in messages %}
+                        <li><span class="center-block text-center alert alert-{{ message_map[category] }}">{{ message }}</span></li>
+                    {% endfor %}
+                </ul>
+
+            {% endif %}
+        {% endwith %}
+</div>
 <br>
 
 {% block body %}
