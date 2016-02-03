@@ -125,6 +125,135 @@ def apply_zoom():
 #     self.lineEditViewSecondCorner.setText("{},{}".format(self.PanPos,
 #                                                          self.TiltPos))
 
+def convert_config(config_in):
+    if type(config_in) == str:
+        with open(config_in,'r') as f:
+            config_in = yaml.load(f.read())
+
+    def to_numlist(inp):
+        if type(inp) == list:
+            return inp
+        inp = inp.replace("}","").replace("{","")
+        if "x" in inp:
+            return inp.split("x")
+        if "," in inp:
+            return inp.split(",")
+        return [inp]
+
+    translate = {
+        "IPVAL":"ip",
+        "USERVAL":"username",
+        "PASSVAL":"password",
+        "ImageSizeList":"image_size_list",
+        "ZoomRange":"zoom_range",
+        "Zoom_HorFoVList":"zoom_horizontal_fov_list",
+        "Zoom_VirFoVList":"zoom_vertical_fov_list",
+        "ZoomListOut":"zoom_list_out",
+        "ZoomVal":"zoom_val",
+        "FocusVal":"focus_val",
+        "FocusMode":"focus_mode",
+        "URL_SetImageSize":"URL_set_image_size",
+        "URL_SetZoom":"URL_set_zoom",
+        "URL_SetFocus":"URL_set_focus",
+        "URL_SetFocusAuto":"URL_set_focus_auto",
+        "URL_SetFocusManual":"URL_set_focus_manual",
+        "URL_GetImage":"URL_get_image",
+        "URL_GetImageSize":"URL_get_image_size",
+        "URL_GetVideo":"URL_GetVideo",
+        "URL_GetZoom":"URL_get_zoom",
+        "URL_GetFocus":"URL_get_focus",
+        "RET_GetImage": "RET_get_image",
+        "RET_SetImageSize": "RET_set_image_size",
+        "RET_SetZoom": "RET_set_zoom",
+        "RET_SetFocus": "RET_set_focus",
+        "RET_GetImageSize": "RET_get_image_size",
+        "RET_GetZoom": "RET_get_zoom",
+        "RET_GetFocus": "RET_get_focus",
+        "1stCorner": "first_corner",
+        "2ndCorner": "second_corner",
+        "CameraConfigFile": "camera_config_file",
+        "PanTiltConfigFile": "ptz_config_file",
+        "CameraName": "camera_name",
+        "FieldOfView": "field_of_view",
+        "LocalFolder": "local_folder",
+        "MaxPanoNoImages": "max_no_pano_images",
+        "MinFreeSpace": "min_free_space",
+        "Overlap": "overlap",
+        "PanoEndHour": "pano_end_hour",
+        "PanoFallbackFolder": "pano_fallback_folder",
+        "PanoGridSize": "pano_grid_size",
+        "PanoLoopInterval": "pano_loop_interval",
+        "PanoMainFolder": "pano_main_folder",
+        "PanoStartHour": "pano_start_hour",
+        "PanoStartMin": "pano_start_min",
+        "PanoWaitMin": "pano_wait_min",
+        "RemoteFolder": "remote_folder",
+        "RemoteStorageAddress": "remote_storage_address",
+        "RemoteStoragePassword": "remote_storage_password",
+        "RemoteStorageUsername": "remote_storage_username",
+        "ScanOrder": "scan_order",
+        "UseFocusAtCenter": "use_focus_at_center",
+        "Zoom": "zoom",
+        "Type": "type",
+        "PanRange": "pan_range",
+        "TiltRange": "tilt_range",
+        "PanTiltScale": "pan_tilt_scale",
+        "URL_SetPanTilt": "URL_set_pan_tilt",
+        "URL_GetPanTilt": "URL_get_pan_tilt",
+        "RET_GetPanTilt": "RET_get_pan_tilt"
+    }
+
+    needslist = {
+        "first_corner",
+        "second_corner",
+        "pano_grid_size",
+        "pano_grid_size"
+    }
+    needsformatstring = {
+        "URL_set_image_size",
+        "URL_set_zoom",
+        "URL_set_focus",
+        "URL_set_focus_auto",
+        "URL_set_focus_manual",
+        "URL_get_image",
+        "URL_get_image_size",
+        "URL_GetVideo",
+        "URL_get_zoom",
+        "URL_get_focus",
+        "URL_set_pan_tilt",
+        "URL_get_pan_tilt"
+    }
+
+    fixstring_map = {
+        "USERVAL":"{user}",
+        "PASSVAL":"{pass}",
+        "IPVAL":"{ip}",
+        "ZOOMVAL":"{zoom}",
+        "FOCUSVAL":"{focus}",
+        "WIDTHVAL":"{width}",
+        "HEIGHTVAL":"{height}",
+        "PANVAL":"{pan}",
+        "TILTVAL":"{tilt}",
+        "ZOOM_POSITION":"{zoom_position}",
+        "FOCUS_POSITION":"{focus_position}"
+    }
+
+
+    dict_config = {}
+    for k,v in config_in.items():
+        if k in translate.keys():
+            dict_config[k] = v
+    for k,v in dict_config.items():
+        if k in needslist:
+            dict_config[k] = to_numlist(dict_config[k])
+        if k in needsformatstring:
+            for match, replacement in fixstring_map:
+                dict_config[k] = dict_config[k].replace(match, replacement)
+    return dict_config
+
+
+
+
 def sort_validate_configs(configs_filepaths):
     panorama_configs = []
     camera_configs = []
@@ -165,21 +294,21 @@ def gotoSecondCorner(self):
 
 
 def get_pan_tilt(self):
-    url = session['ptz_config']["URL_GetPanTilt"]
-    ret = session['ptz_config']["RET_GetPanTilt"]
+    url = session['ptz_config']["URL_get_pan_tilt"]
+    ret = session['ptz_config']["RET_get_pan_tilt"]
     pan, tilt = executeURL(url, ret)
     return pan, tilt
 
 
 def set_zoom(zoom):
-    url = session['camera_config']["set_zoom"].format(zoom_val=zoom)
+    url = session['camera_config']["URL_set_zoom"].format(zoom=zoom)
     executeURL(url)
     return zoom
 
 
 def get_zoom():
-    url = session['camera_config']["get_zoom"]
-    ret = session['camera_config']["ret_get_zoom"]
+    url = session['camera_config']["URL_get_zoom"]
+    ret = session['camera_config']["RET_get_zoom"]
     zoom_val = executeURL(url, ret)
     zoom_scale = 1
     if "zoom_scale" in session['camera_config'].keys():
@@ -189,7 +318,7 @@ def get_zoom():
 
 
 def set_focus(focus):
-    URL = session['camera_config']["set_focus"].format(focus_val=focus)
+    URL = session['camera_config']["URL_set_focus"].format(focus=focus)
     executeURL(URL)
     return int(focus)
 
@@ -288,30 +417,12 @@ def get_savable_pano_config():
     return
 
 
-@app.route("/download-<any('pano','camera','ptz'):p>-config")
-def export_pano_config(p):
-    from flask import send_file
-    from io import BytesIO
-    str_io = BytesIO()
-    y = bytes(yaml.dump(session[p + '_config'], default_flow_style=False), "utf-8")
-    str_io.write(y)
-    str_io.seek(0)
-    return send_file(str_io, attachment_filename="panoconfig.yml", as_attachment=True)
-
-
 @app.route("/clear-session")
 def clearsesh():
     session.clear()
     return ""
 
-
-@app.route("/save-<any('pano','camera','ptz'):p>")
-def save_pano_config(p):
-    """
-    saves a panorama config file to the local disk from the session vars.
-    :return:
-    """
-
+def get_filename(p):
     filename = None
     filename = request.args.get('filename', None)
     filename = request.args.get('file', None)
@@ -342,6 +453,27 @@ def save_pano_config(p):
             filename = datetime.now().strftime(p + "-%y_%m_%d_%H_%M ")
     if not filename.endswith(".yml") and not filename.endswith(".yaml"):
         filename = filename + ".yml"
+    return filename
+
+@app.route("/download-<any('pano','camera','ptz'):p>")
+def export_pano_config(p):
+
+    from flask import send_file
+    from io import BytesIO
+    str_io = BytesIO()
+    y = bytes(yaml.dump(session[p + '_config'], default_flow_style=False), "utf-8")
+    str_io.write(y)
+    str_io.seek(0)
+    return send_file(str_io, attachment_filename=get_filename(p), as_attachment=True)
+
+@app.route("/save-<any('pano','camera','ptz'):p>")
+def save_pano_config(p):
+    """
+    saves a panorama config file to the local disk from the session vars.
+    :return:
+    """
+
+    filename = get_filename(p)
 
     with open(filename, 'w') as yml_fh:
         yml_fh.write(yaml.dump(session[p + '_config'], default_flow_style=False))
@@ -364,7 +496,7 @@ def allowed_file(fn, types):
 from wtforms import *
 
 
-class CommaSeparatedNumbersField(Field):
+class CSVListField(Field):
     """
     Comma separated numbers field.
     Fails if any of the comma separated values are not comma separated.
@@ -374,13 +506,16 @@ class CommaSeparatedNumbersField(Field):
 
     def _value(self):
         if self.data:
-            return u', '.join([str(x) for x in self.data])
+            return "["+u', '.join([str(x) for x in self.data])+"]"
         else:
             return u''
 
     def process_formdata(self, valuelist):
         if valuelist:
-            self.data = [x.strip() for x in valuelist[0].split(',')]
+            numbracks = valuelist[0].count("]") + valuelist[0].count("[")
+            if numbracks > 2 or numbracks == 1:
+                raise ValueError(self.gettext("Not a comma separated list."))
+            self.data = [x.strip() for x in valuelist[0].replace("[","").replace("]","").split(',')]
         else:
             self.data = []
         try:
@@ -395,6 +530,60 @@ class CommaSeparatedNumbersField(Field):
                 self.data = None
                 raise ValueError(self.gettext('One or more values is not a number'))
 
+from pprint import pformat
+
+class CSVListOfListsField(Field):
+    """
+    Comma separated numbers field.
+    Fails if any of the comma separated values are not comma separated.
+    Should return a list
+    """
+    widget = widgets.TextArea()
+
+    def _value(self):
+        if self.data:
+            return pformat(self.data, width=90,indent=2)
+        else:
+            return u''
+
+    def process_formdata(self, valuelist):
+        if len(valuelist):
+            strs = valuelist[0].replace('[','').split('],')
+            self.data = [map(float, s.replace(']','').split(',')).strip() for s in strs]
+            # self.data = [x.strip() for x in valuelist[0].split(',')]
+        else:
+            self.data = []
+        try:
+            iterator = iter(self.data)
+        except TypeError:
+            raise ValueError(self.gettext("Not a comma separated list."))
+        else:
+            try:
+                for v in self.data:
+                    v = float(v)
+            except ValueError:
+                self.data = None
+                raise ValueError(self.gettext('One or more values is not a number'))
+
+
+class MustContain(object):
+    def __init__(self, *args, message=None):
+
+        for x in args:
+            try:
+                a = str(x)
+            except:
+                raise ValueError('Only stringifiable objects may be checked')
+        self.req_list = [str(x) for x in args]
+
+        if not message:
+            message = u'Field must contain %s'
+        self.message = message
+
+    def __call__(self, form, field):
+        for check in self.req_list:
+            if check not in str(field.data):
+                raise ValidationError(self.message % check)
 
 class IPAddressWithPort(validators.IPAddress):
     """
@@ -448,9 +637,9 @@ class PanoConfigForm(Form):
     field_of_view = StringField("Field of View", default="10.9995,6.2503")
     overlap = FloatField("Overlap %", default=50.0)
     zoom = FloatField("Zoom", default=800.0)
-    first_corner = CommaSeparatedNumbersField('First Corner', default=[113, 9])
-    second_corner = CommaSeparatedNumbersField('Second Corner', default=[163, -15])
-    pano_grid_size = CommaSeparatedNumbersField("Panorama grid shape", default=[8,9])
+    first_corner = CSVListField('First Corner', default=[113, 9])
+    second_corner = CSVListField('Second Corner', default=[163, -15])
+    pano_grid_size = CSVListField("Panorama grid shape", default=[8,9])
     pano_loop_interval = IntegerField("Panorama loop interval (m)", default=60,validators=[validators.number_range(max=1440, min=2),validators.optional()])
     pano_start_hour = IntegerField("Start hour",
                                    validators=[validators.number_range(max=23, min=0), validators.optional()])
@@ -478,23 +667,50 @@ class PTZConfigForm(Form):
     username = StringField("Username", default="admin")
     password = PasswordField("Password", default="admin")
     type = StringField("Type", default="ServoMotors")
-    pan_range = CommaSeparatedNumbersField("Pan Range", default=[-2, 358])
-    tilt_range = CommaSeparatedNumbersField("Tilt Range", default=[-90, 30])
-    URL_set_pan_tilt = StringField("URL pan tilt setter", default="{ip}/Bump.xml?GoToP={pan}&GoToT={tilt}")
-    URL_get_pan_tilt = StringField("URL pan tilt getter", default="{ip}/CP_Update.xml")
-    RET_get_pan_tilt = StringField("Get Pan tilt parse string", default="*<PanPos>{}</PanPos>*<TiltPos>{}</TiltPos>*")
+    pan_range = CSVListField("Pan Range", default=[-2, 358])
+    tilt_range = CSVListField("Tilt Range", default=[-90, 30])
+    pan_tilt_scale = FloatField("Pan/Tilt scaling", default=10.0)
+    URL_set_pan_tilt = StringField("URL_set_pan_tilt", default="{ip}/Bump.xml?GoToP={pan}&GoToT={tilt}",
+                                   validators=[MustContain("{ip}", "{pan}",'{tilt}'),validators.optional()])
+    URL_get_pan_tilt = StringField("URL_get_pan_tilt", default="{ip}/CP_Update.xml",
+                                   validators=[MustContain("{ip}"),validators.optional()])
+    RET_get_pan_tilt = StringField("RET_get_pan_tilt", default="*<PanPos>{}</PanPos>*<TiltPos>{}</TiltPos>*")
     submit = SubmitField()
 
 class CameraConfigForm(Form):
     ip = StringField("IP Address", default="192.168.1.101:81", validators=[IPAddressWithPort(), validators.optional()])
     username = StringField("Username", default="admin")
     password = PasswordField("Password", default="admin")
-    image_size_list = CommaSeparatedNumbersField("Image Size list", default=[1920,1080,1280,720,640,480])
-    zoom_range = CommaSeparatedNumbersField("Zoom Range", default=[30, 1000])
-    # tilt_range = CommaSeparatedNumbersField("Tilt Range", default=[-90, 30])
-    # URL_set_pan_tilt = StringField("URL pan tilt setter", default="{ip}/Bump.xml?GoToP={pan}&GoToT={tilt}")
-    # URL_get_pan_tilt = StringField("URL pan tilt getter", default="{ip}/CP_Update.xml")
-    # RET_get_pan_tilt = StringField("Get Pan tilt parse string", default="*<PanPos>{}</PanPos>*<TiltPos>{}</TiltPos>*")
+    image_size_list = CSVListOfListsField("Image Size list", default=[[1920,1080],[1280,720],[640,480]])
+    zoom_range = CSVListField("Zoom Range", default=[30, 1000])
+    zoom_val = IntegerField("Zoom Value", default=800,validators=[validators.number_range(max=20000, min=1),validators.optional()])
+    zoom_horizontal_fov_list = CSVListOfListsField('', default=[[50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000],[71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126, 12.782, 9.217, 7.050, 5.824]])
+    zoom_vertical_fov_list = CSVListOfListsField('', default=[[50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000],[39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324, 7.7136, 4.787, 3.729, 2.448]])
+    zoom_list_out = CSVListField('Zoom list out', default=[80, 336, 592, 848, 1104, 1360, 1616, 1872, 2128, 2384, 2520])
+    URL_set_image_size = StringField("URL_set_image_size", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&VIDEO_RESOLUTION=N{width}x{height}",
+                                   validators=[MustContain('{ip}', '{user}', '{password}', '{width}', '{height}'),validators.optional()])
+    URL_set_zoom = StringField("URL_set_zoom", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&ZOOM=DIRECT,{zoom}",
+                                   validators=[MustContain('{ip}', '{user}','{password}','{zoom}'),validators.optional()])
+    URL_set_focus = StringField("URL_set_focus", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=DIRECT,{focus}",
+                                   validators=[MustContain('{ip}', '{user}','{password}','{focus}'),validators.optional()])
+    URL_set_focus_auto = StringField("URL_set_focus_auto", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=AUTO",
+                                   validators=[MustContain('{ip}', '{user}','{password}'),validators.optional()])
+    URL_set_focus_manual = StringField("URL_set_focus_manual", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=MANUAL",
+                                   validators=[MustContain('{ip}', '{user}','{password}'),validators.optional()])
+    URL_get_image = StringField("URL_get_image", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&SNAPSHOT",
+                                   validators=[MustContain('{ip}', '{user}','{password}'),validators.optional()])
+    URL_get_image_size = StringField("URL_get_image_size", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&VIDEO_RESOLUTION",
+                                   validators=[MustContain('{ip}', '{user}','{password}'),validators.optional()])
+    URL_get_zoom = StringField("URL_get_zoom", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&{zoom_position}",
+                                   validators=[MustContain('{ip}', '{user}','{password}',"{zoom_position}"),validators.optional()])
+    URL_get_focus = StringField("URL_get_focus", default="{ip}/cgi-bin/encoder?USER={user}&PWD={password}&{focus_position}",
+                                   validators=[MustContain('{ip}', '{user}','{password}',"{focus_position}"),validators.optional()])
+    RET_set_image_size = StringField("RET_set_image_size", default='OK: VIDEO_RESOLUTION=''N{}x{}''')
+    RET_set_zoom = StringField("RET_set_zoom", default='OK: OK: ZOOM=''DIRECT,{}''')
+    RET_set_focus = StringField("RET_set_focus", default='OK: FOCUS=''DIRECT,{}''')
+    RET_get_image_size = StringField("RET_get_image_size", default='VIDEO_RESOLUTION=''N{}x{}''')
+    RET_get_zoom = StringField("RET_get_zoom", default='ZOOM_POSITION=''{}''')
+    RET_get_focus = StringField("RET_get_focus", default='FOCUS_POSITION=''{}''')
     submit = SubmitField()
 
 from pprint import pprint as print
@@ -509,7 +725,7 @@ def export_view():
         "ccfg": ccfg,
         "ptzcfg": ptzcfg
     }
-    return render_template("export.html",**template_data)
+    return render_template("export.html", **template_data)
 
 
 @app.route("/", methods=['POST', 'GET'])
@@ -559,6 +775,7 @@ def config():
         "zoom_vertical_fov_list": list,
         "zoom_list_out": list,
         "zoom_val": int,
+        "zoom_range":list,
         "URL_set_image_size": str,
         "URL_set_zoom": str,
         "URL_set_focus": str,
@@ -680,7 +897,8 @@ def config():
             try:
                 camform[k].data = v
             except Exception as e:
-                print(u'Exception repopulating form: {}'.format(str(e)))
+                pass
+                # print(u'Exception repopulating form: {}'.format(str(e)))
 
     template_data = {
         "panoform": panoform,
