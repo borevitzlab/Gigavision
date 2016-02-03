@@ -1,0 +1,13 @@
+ip: '192.168.1.101:81'
+username: admin
+password: admin
+
+type: ServoMotors
+pan_range: [-2, 358]
+tilt_range: [-90, 30]
+pan_tilt_scale: 10.0
+
+URL_set_pan_tilt: "{ip}/Bump.xml?GoToP={pan}&GoToT={tilt}"
+URL_get_pan_tilt: "{ip}/CP_Update.xml"
+
+RET_get_pan_tilt: '*<PanPos>{}</PanPos>*<TiltPos>{}</TiltPos>*'

@@ -1,0 +1,40 @@
+ip: '192.168.1.100'
+username: Admin
+password: '123456'
+
+image_size_list:
+- [1920, 1080]
+- [1280, 720]
+- [640, 480]
+zoom_range: [30, 1000]
+zoom_horizontal_fov_list:  # In degrees
+ - [50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000]
+ - [71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126, 12.782, 9.217, 7.050, 5.824]
+zoom_vertical_fov_list: # In degrees
+ - [50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000]
+ - [39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324, 7.7136, 4.787, 3.729, 2.448]
+zoom_list_out: [80, 336, 592, 848, 1104, 1360, 1616, 1872, 2128, 2384, 2520]
+zoom_val: 800
+#focus_val: 935
+#focus_mode: MANUAL
+URL_set_image_size: "{ip}/cgi-bin/encoder?USER={user}&PWD={password}&VIDEO_RESOLUTION=N{width}x{height}"
+URL_set_zoom: "{ip}/cgi-bin/encoder?USER={user}&PWD={password}&ZOOM=DIRECT,{zoom}"
+URL_set_focus: "{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=DIRECT,{focus}"
+URL_set_focus_auto: "{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=AUTO"
+URL_set_focus_manual: "{ip}/cgi-bin/encoder?USER={user}&PWD={password}&FOCUS=MANUAL"
+URL_get_image: "{ip}/cgi-bin/encoder?USER={user}&PWD={password}&SNAPSHOT"
+URL_get_image_size: "{ip}/cgi-bin/encoder?USER={user}&PWD={password}&VIDEO_RESOLUTION"
+#URL_GetVideo: {ip/cgi-bin/encoder?USER={user&PWD={password&GET_STREAM&VIDEO_FPS_NUM=2
+URL_get_zoom: "{ip}/cgi-bin/encoder?USER={user}&PWD={password}&{zoom_position}"
+URL_get_focus: "{ip}/cgi-bin/encoder?USER={user}&PWD={password}&{focus_position}"
+RET_get_image: RAW_JPG ## need to parse binary JPG data like:
+                      # stream = urllib.urlopen(URL_GetImage)
+                      # byte_array = io.BytesIO(stream.read())
+                      # Image = np.array(PIL.Image.open(byte_array))
+RET_set_image_size: 'OK: VIDEO_RESOLUTION=''N{}x{}'''
+RET_set_zoom: 'OK: OK: ZOOM=''DIRECT,{}'''
+RET_set_focus: 'OK: FOCUS=''DIRECT,{}'''
+RET_get_image_size: 'VIDEO_RESOLUTION=''N{}x{}'''
+RET_get_zoom: 'ZOOM_POSITION=''{}'''
+RET_get_focus: 'FOCUS_POSITION=''{}'''
+

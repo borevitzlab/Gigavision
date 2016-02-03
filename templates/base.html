@@ -1,5 +1,52 @@
 {% set message_map = {"error": "danger","warning":"warning","success":"success", "":"success", None:"success","message":"success"} -%}
 
+
+{% macro render_field(field) -%}
+    {% if field.type == 'CSRFTokenField' %}
+        {{ field }}
+
+        {% if field.errors %}
+            <div class="warning">You have submitted an invalid CSRF token</div>
+        {% endif %}
+    {% elif field.type == 'HiddenField' %}
+        {{ field }}
+        {# any other special case you may need #}
+
+    {% elif field.type in ['SelectField', 'BooleanField'] %}
+        <div class="form-group">
+            <div class="input-group">
+                <div class="input-group-addon">
+                    <label class="control-label" for="{{ field.label.field_id }}">{{ field.label }}</label>
+                </div>
+                <div class="input-group-addon">
+                    {{ field(class_="form-control") }}
+                </div>
+            </div>
+            {% if field.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {% for err in field.errors %}
+                        <p>{{ err|e }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="form-group">
+        {% if field.label.text|length > 0 %}
+            <label for="{{ field.label.field_id }}" class="control-label">{{ field.label.text }}</label>
+            {% endif %}
+            {{ field(class_="form-control", placeholder=field.description) }}
+            {% if field.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {% for err in field.errors %}
+                        <p>{{ err|e }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+{%- endmacro %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,8 +59,10 @@
           integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 
     <!-- Optional theme -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"
-          integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+{#    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"#}
+{#          integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">#}
+
+        <link rel="stylesheet" href="https://bootswatch.com/cyborg/bootstrap.min.css" crossorigin="anonymous">
     <style>
         @media screen and (min-width: 0px) and (max-width: 359px) {
             #small-brand { display: block; }
@@ -31,6 +80,25 @@
         @media screen and (min-width: 1221px){
           #small-brand { display: none; }
           #full-brand { display: block; }
+        }
+        .btn-file {
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-file input[type=file] {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 100%;
+            min-height: 100%;
+            font-size: 100px;
+            text-align: right;
+            filter: alpha(opacity=0);
+            opacity: 0;
+            outline: none;
+            background: white;
+            cursor: inherit;
+            display: block;
         }
     </style>
     {% block head %}
@@ -50,7 +118,7 @@
         <a class="navbar-brand" id="small-brand" href="/">GV</a>
     </div>
     <ul class="nav navbar-nav collapse navbar-collapse" id="navbar">
-        {% for href, id, caption in navigation_bar %}
+        {% for href, id, caption in [('/export','export','Export')] %}
             <li {% if id == active_page %} class="active"{% endif %}><a
                     href="{{ href|e }}">{{ caption }}</a></li>
         {% endfor %}
@@ -76,5 +144,19 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
         integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
         crossorigin="anonymous"></script>
+<script type="text/javascript">
+    $(document).on('change', '.btn-file :file', function() {
+        var input = $(this),
+            numFiles = input.get(0).files ? input.get(0).files.length : 1,
+            label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
+        input.trigger('fileselect', [numFiles, label]);
+    });
+    $(document).ready( function() {
+        $('.btn-file :file').on('fileselect', function(event, numFiles, label) {
+            console.log($(this).parent());
+            $(this).parent().parent().find("button").removeClass("btn-default").addClass("btn-success");
+        });
+    });
+</script>
 </body>
 </html>

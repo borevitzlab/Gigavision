@@ -4,10 +4,8 @@ Created on Mon Nov 24 18:22:54 2014
 
 @author: chuong, gareth
 """
-import glob
 import io
 import os
-import subprocess
 import time
 from datetime import datetime
 from urllib import request as urllib_request
@@ -15,9 +13,7 @@ from urllib import request as urllib_request
 import numpy as np
 import scipy.misc as misc
 import yaml
-from flask import Flask, flash, session, request, render_template
-
-import disk_usage
+from flask import Flask, flash, session, request, render_template, redirect
 
 app = Flask(__name__)
 app.debug = True
@@ -29,7 +25,16 @@ def initialise_session():
     if not "camera_config" in session.keys():
         session['camera_config'] = {}
     if not "ptz_config" in session.keys():
-        session['camera_config'] = {}
+        session['ptz_config'] = {}
+    if not "pano_config" in session.keys():
+        session['pano_config'] = {}
+
+    def remove_submit(d):
+        if "submit" in d.keys():
+            del d["submit"]
+    remove_submit(session['ptz_config'])
+    remove_submit(session['pano_config'])
+    remove_submit(session['camera_config'])
 
 
 def executeURL(url, return_string=None):
@@ -119,6 +124,35 @@ def apply_zoom():
 # def setCurrentAsViewSecondCorner(self):
 #     self.lineEditViewSecondCorner.setText("{},{}".format(self.PanPos,
 #                                                          self.TiltPos))
+
+def sort_validate_configs(configs_filepaths):
+    panorama_configs = []
+    camera_configs = []
+    ptz_configs = []
+    failed = []
+    for config in configs_filepaths:
+        try:
+            with open(config, 'r') as f:
+                d = yaml.load(f)
+                if "URL_get_image" in d.keys() or "URL_GetImage" in d.keys():
+                    camera_configs.append(config)
+                elif "camera_name" in d.keys() or "CameraName" in d.keys():
+                    panorama_configs.append(config)
+                elif "URL_set_pan_tilt" in d.keys() or "URL_SetPanTilt":
+                    ptz_configs.append(config)
+                else:
+                    failed.append(config)
+        except Exception as e:
+            flash(u'Exception {}'.format(str(e)), "error")
+
+    if len(failed):
+        flash(u'configs that didnt fit into any category: {}'.format(", ".join(failed)), 'warning')
+
+    return panorama_configs, camera_configs, ptz_configs
+
+
+from glob import glob
+
 
 def gotoFirstCorner(self):
     PANVAL, TILTVAL = self.lineEditPanoFirstCorner.text().split(",")
@@ -241,7 +275,7 @@ def calculate_fov():
         session['VFoV'] = VFoV
     else:
         flash("Invalid selection of field of view ({}, {})".format(
-                HFoV, VFoV), 'error')
+            HFoV, VFoV), 'error')
     return (HFoV, VFoV)
 
 
@@ -250,96 +284,69 @@ def get_savable_pano_config():
     returns a yml string of the session variables that are included here
     :return:
     """
-
-    # todo: fix hfov and vfov and condense  down to field of view for simplicity.
-    pano_config_dict = {
-        "camera_config_file": str,
-        "ptz_config_file": str,
-        "field_of_view": str,
-        "overlap": float,
-        "zoom": int,
-        "focus": int,
-        "1st_corner": str,
-        "2nd_corner": str,
-        "use_focus_at_center": bool,
-        "scan_order": str,
-        "pano_grid_size": str,
-        "pano_main_folder": str,
-        "pano_loop_interval": int,
-        "pano_start_hour": int,
-        "pano_end_hour": int,
-        "pano_start_min": int,
-        "pano_wait_min": int,
-        "remote_storage_address": str,
-        "remote_storage_username": str,
-        "remote_storage_password": str,
-        "remote_folder": str,
-        "local_folder": str,
-        "camera_name": str,
-        "pano_fallback_folder": str,
-        "max_pano_no_images": int,
-        "min_free_space": int
-    }
-    keys_to_copy = set(session.keys()) & set(pano_config_dict.keys())
-
-    for x in keys_to_copy:
-        try:
-            pano_config_dict[x] = pano_config_dict[x](session[x])
-        except Exception as e:
-            flash("Whoa something went wrong typecasting {}, is {} a correct value".format(x, session[x]), "error")
-
-    # if not len(keys_to_copy):
-    #     return "NO DATA"
-
-    return yaml.dump(pano_config_dict, default_flow_style=False)
+    keys_to_copy = set(session.keys())
+    return
 
 
-@app.route("/export-config")
-def export_pano_config():
-    from flask import Response, send_file
+@app.route("/download-<any('pano','camera','ptz'):p>-config")
+def export_pano_config(p):
+    from flask import send_file
     from io import BytesIO
     str_io = BytesIO()
-    y = bytes(get_savable_pano_config(), "utf-8")
+    y = bytes(yaml.dump(session[p + '_config'], default_flow_style=False), "utf-8")
     str_io.write(y)
     str_io.seek(0)
+    return send_file(str_io, attachment_filename="panoconfig.yml", as_attachment=True)
 
-    return send_file(str_io, attachment_filename="config.yml", as_attachment=True)
+
+@app.route("/clear-session")
+def clearsesh():
+    session.clear()
+    return ""
 
 
-@app.route("/save-config")
-def save_pano_config():
+@app.route("/save-<any('pano','camera','ptz'):p>")
+def save_pano_config(p):
     """
-    saves a panorama config file from the session vars.
+    saves a panorama config file to the local disk from the session vars.
     :return:
     """
+
     filename = None
     filename = request.args.get('filename', None)
     filename = request.args.get('file', None)
 
     while not filename:
         values = list(request.args.keys()) + list(request.args.values())
-
         if "filename" in values:
             values.remove("filename")
         if "file" in values:
             values.remove("file")
-
         if len(values):
             filename = str(values[0])
             break
-
-        if "camera_name" in session.keys():
-            filename = str(session['camera_name'])
+        if p == "pano":
+            if "camera_name" in session['pano_config'].keys():
+                filename = str(session['pano_config']['camera_name'])
+            else:
+                filename = datetime.now().strftime("pano-%y_%m_%d_%H_%M ")
         else:
-            filename = datetime.now().strftime("PanoConfig-%y_%m_%d_%H_%M ")
-
+            filename = datetime.now().strftime(p + "-%y_%m_%d_%H_%M ")
+    if filename == "":
+        if p == "pano":
+            if "camera_name" in session['pano_config'].keys():
+                filename = str(session['pano_config']['camera_name'])
+            else:
+                filename = datetime.now().strftime("pano-%y_%m_%d_%H_%M ")
+        else:
+            filename = datetime.now().strftime(p + "-%y_%m_%d_%H_%M ")
     if not filename.endswith(".yml") and not filename.endswith(".yaml"):
         filename = filename + ".yml"
 
     with open(filename, 'w') as yml_fh:
-        yml_fh.write(get_savable_pano_config())
+        yml_fh.write(yaml.dump(session[p + '_config'], default_flow_style=False))
 
-    return "Saved as " + filename
+    return redirect("/export")
 
 
 def allowed_file(fn, types):
@@ -354,13 +361,164 @@ def allowed_file(fn, types):
     return False
 
 
-@app.route("/load-pano-config", methods=['POST', 'GET'])
-def load_pano_config():
+from wtforms import *
+
+
+class CommaSeparatedNumbersField(Field):
     """
-    Loads a yaml panorama config from a POSTed file.
-    :return:
+    Comma separated numbers field.
+    Fails if any of the comma separated values are not comma separated.
+    Should return a list
+    """
+    widget = widgets.TextInput()
+
+    def _value(self):
+        if self.data:
+            return u', '.join([str(x) for x in self.data])
+        else:
+            return u''
+
+    def process_formdata(self, valuelist):
+        if valuelist:
+            self.data = [x.strip() for x in valuelist[0].split(',')]
+        else:
+            self.data = []
+        try:
+            iterator = iter(self.data)
+        except TypeError:
+            raise ValueError(self.gettext("Not a comma separated list."))
+        else:
+            try:
+                for v in self.data:
+                    v = float(v)
+            except ValueError:
+                self.data = None
+                raise ValueError(self.gettext('One or more values is not a number'))
+
+
+class IPAddressWithPort(validators.IPAddress):
+    """
+    Validates an IP address. with a port
+    only works with ipv4
+    :param message:
+        Error message to raise in case of a validation error.
     """
 
+    def __init__(self, message=None):
+        self.message = message
+
+    def __call__(self, form, field):
+        value = field.data
+        valid = False
+        if value:
+            valid = self.check_ipv4(value)
+
+        if not valid:
+            message = self.message
+            if message is None:
+                message = field.gettext('Invalid IP address or port.')
+            raise ValidationError(message)
+
+    @classmethod
+    def check_ipv4(cls, value):
+        if value.count(":") > 1:
+            return False
+        if ":" in value:
+            value, port = value.split(":")
+            try:
+                port = int(port)
+            except:
+                return False
+            # ban some ports, and any outside of the max.
+            if not 1 <= port <= 65535 or port in [21, 20, 53, 68, 123]:
+                return False
+
+        parts = value.split('.')
+
+        if len(parts) == 4 and all(x.isdigit() for x in parts):
+            numbers = list(int(x) for x in parts)
+            return all(num >= 0 and num < 256 for num in numbers)
+        return False
+
+
+class PanoConfigForm(Form):
+    camera_name = StringField("Pano/Camera name")
+    camera_config_file = StringField('Camera config filename')
+    ptz_config_file = StringField("PTZ config filename")
+    field_of_view = StringField("Field of View", default="10.9995,6.2503")
+    overlap = FloatField("Overlap %", default=50.0)
+    zoom = FloatField("Zoom", default=800.0)
+    first_corner = CommaSeparatedNumbersField('First Corner', default=[113, 9])
+    second_corner = CommaSeparatedNumbersField('Second Corner', default=[163, -15])
+    pano_grid_size = CommaSeparatedNumbersField("Panorama grid shape", default=[8,9])
+    pano_loop_interval = IntegerField("Panorama loop interval (m)", default=60,validators=[validators.number_range(max=1440, min=2),validators.optional()])
+    pano_start_hour = IntegerField("Start hour",
+                                   validators=[validators.number_range(max=23, min=0), validators.optional()])
+    pano_end_hour = IntegerField("Start hour",
+                                 validators=[validators.number_range(max=23, min=1), validators.optional()])
+    pano_start_min = IntegerField("Start minutes",
+                                  validators=[validators.number_range(max=59, min=0), validators.optional()])
+    pano_wait_min = IntegerField("Wait minutes",
+                                 validators=[validators.number_range(max=3600, min=0), validators.optional()])
+    local_folder = StringField("Local Folder", default='/home/chuong/Data/a_data')
+    pano_fallback_folder = StringField("Fallback folder", default='home/pi/Data/Panorama')
+    pano_main_folder = StringField("Main Folder", default='/home/chuong/Data/a_data/Gigavision/chuong_tests')
+    min_free_space = IntegerField("Minimum free space to keep", default=1000,validators=[validators.number_range(max=16000, min=256),validators.optional()])
+    remote_folder = StringField("Remote Folder", default='/network/phenocam-largedatases/a_data')
+    remote_storage_address = StringField("Remote storage address", default='percy.anu.edu.au')
+    remote_storage_username = StringField("Remote storage username")
+    remote_storage_password = PasswordField("Remote storage password")
+    max_no_pano_images = IntegerField("Max number of pano images", default=2000)
+    scan_order = StringField('Scan order (see scan-orders for options)', default="Cols, right")
+    use_focus_at_center = BooleanField('Use focus at center?', default=True)
+    submit = SubmitField()
+
+class PTZConfigForm(Form):
+    ip = StringField("IP Address", default="192.168.1.101:81", validators=[IPAddressWithPort(), validators.optional()])
+    username = StringField("Username", default="admin")
+    password = PasswordField("Password", default="admin")
+    type = StringField("Type", default="ServoMotors")
+    pan_range = CommaSeparatedNumbersField("Pan Range", default=[-2, 358])
+    tilt_range = CommaSeparatedNumbersField("Tilt Range", default=[-90, 30])
+    URL_set_pan_tilt = StringField("URL pan tilt setter", default="{ip}/Bump.xml?GoToP={pan}&GoToT={tilt}")
+    URL_get_pan_tilt = StringField("URL pan tilt getter", default="{ip}/CP_Update.xml")
+    RET_get_pan_tilt = StringField("Get Pan tilt parse string", default="*<PanPos>{}</PanPos>*<TiltPos>{}</TiltPos>*")
+    submit = SubmitField()
+
+class CameraConfigForm(Form):
+    ip = StringField("IP Address", default="192.168.1.101:81", validators=[IPAddressWithPort(), validators.optional()])
+    username = StringField("Username", default="admin")
+    password = PasswordField("Password", default="admin")
+    image_size_list = CommaSeparatedNumbersField("Image Size list", default=[1920,1080,1280,720,640,480])
+    zoom_range = CommaSeparatedNumbersField("Zoom Range", default=[30, 1000])
+    # tilt_range = CommaSeparatedNumbersField("Tilt Range", default=[-90, 30])
+    # URL_set_pan_tilt = StringField("URL pan tilt setter", default="{ip}/Bump.xml?GoToP={pan}&GoToT={tilt}")
+    # URL_get_pan_tilt = StringField("URL pan tilt getter", default="{ip}/CP_Update.xml")
+    # RET_get_pan_tilt = StringField("Get Pan tilt parse string", default="*<PanPos>{}</PanPos>*<TiltPos>{}</TiltPos>*")
+    submit = SubmitField()
+
+from pprint import pprint as print
+
+@app.route("/export")
+def export_view():
+    files = glob("*.yml")
+    files.extend(glob("*.yaml"))
+    pcfg, ccfg, ptzcfg = sort_validate_configs(files)
+    template_data = {
+        "pcfg": pcfg,
+        "ccfg": ccfg,
+        "ptzcfg": ptzcfg
+    }
+    return render_template("export.html",**template_data)
+
+
+@app.route("/", methods=['POST', 'GET'])
+@app.route("/config", methods=['POST', 'GET'])
+def config():
+    """
+    Loads a yaml config file from posted file or get filename
+    :return:
+    """
     pano_config_dict = {
         "camera_config_file": str,
         "ptz_config_file": str,
@@ -368,10 +526,12 @@ def load_pano_config():
         "overlap": float,
         "zoom": int,
         "focus": int,
-        "1st_corner": str,
-        "2nd_corner": str,
+        "first_corner": str,
+        "second_corner": str,
         "use_focus_at_center": bool,
         "scan_order": str,
+        "min_free_space":int,
+        "pano_loop_interval":int,
         "pano_grid_size": str,
         "pano_main_folder": str,
         "pano_loop_interval": int,
@@ -386,23 +546,154 @@ def load_pano_config():
         "local_folder": str,
         "camera_name": str,
         "pano_fallback_folder": str,
-        "max_pano_no_images": int,
+        "max_no_pano_images": int,
         "min_free_space": int
     }
 
-    if request.method == "POST":
-        print(len(request.files))
-        print(list(request.files.keys()))
-        if len(request.files):
-            f = request.files['config-file']
-            if f and allowed_file(f.filename, ["yml", "yaml"]):
-                print(yaml.load(f.read()))
+    cam_config_dict = {
+        "ip": str,
+        "username": str,
+        "password": str,
+        "image_size_list": list,
+        "zoom_horizontal_fov_list": list,
+        "zoom_vertical_fov_list": list,
+        "zoom_list_out": list,
+        "zoom_val": int,
+        "URL_set_image_size": str,
+        "URL_set_zoom": str,
+        "URL_set_focus": str,
+        "URL_set_focus_auto": str,
+        "URL_set_focus_manual": str,
+        "URL_get_image": str,
+        "URL_get_image_size": str,
+        "URL_get_zoom": str,
+        "URL_get_focus": str,
+        "RET_get_image": str,
+        "RET_set_image_size": str,
+        "RET_set_zoom": str,
+        "RET_set_focus": str,
+        "RET_get_image_size": str,
+        "RET_get_zoom": str,
+        "RET_get_focus": str
+    }
+    ptz_config_dict = {
+        "ip": str,
+        "username": str,
+        "password": str,
+        "type": str,
+        "pan_range": list,
+        "tilt_range": list,
+        "pan_tilt_scale": float,
+        "URL_set_pan_tilt": str,
+        "URL_get_pan_tilt": str,
+        "RET_get_pan_tilt": str
+    }
 
+    def load_config_file(session_key,filename):
+        yml = None
+        if not os.path.isfile(filename):
+            flash(u'No file.', 'error')
+            return None
+        try:
+            with open(filename,'r') as f:
+                yml = yaml.load(f.read())
+        except Exception as e:
+            flash(u'Couldnt read yaml file: {}'.format(str(e)))
+            return None
+
+        if session_key == "camera_config":
+            for k,v in yml.items():
+                if k not in cam_config_dict.keys():
+                    flash(u'{} is not valid or not a configuration option'.format(k),'warning')
+                else:
+                    session[session_key][k] = v
+        elif session_key == "ptz_config":
+            for k,v in yml.items():
+                if k not in ptz_config_dict.keys():
+                    flash(u'{} is not valid or not a configuration option'.format(k),'warning')
+                else:
+                    session[session_key][k] = v
+        elif session_key == "pano_config":
+            for k,v in yml.items():
+                if k not in pano_config_dict.keys():
+                    flash(u'{} is not valid or not a configuration option'.format(k),'warning')
+                else:
+                    session[session_key][k] = v
+    files = glob("*.yml")
+    files.extend(glob("*.yaml"))
+    pcfg, ccfg, ptzcfg = sort_validate_configs(files)
+
+    print(session)
+    panoform = PanoConfigForm(request.form, prefix="panoform")
+    ptzform = PTZConfigForm(request.form, prefix="ptzform")
+    camform = CameraConfigForm(request.form, prefix="camform")
+
+    if request.method == "POST":
+        for k in request.form.keys():
+            if k.split("-")[-1] == 'sel':
+                a = {'camera-sel':"camera_config",'ptz-sel':"ptz_config",'pano-sel':"pano_config"}
+                load_config_file(a[k],request.form[k])
+
+        if len(request.files):
+            if "pano-config-file" in request.files.keys():
+                f = request.files['pano-config-file']
+                if f and allowed_file(f.filename, ["yml", "yaml"]):
+                    print(yaml.load(f.read()))
+
+            if "ptz-config-file" in request.files.keys():
+                f = request.files['ptz-config-file']
+                if f and allowed_file(f.filename, ["yml", "yaml"]):
+                    print(yaml.load(f.read()))
+
+            if "cam-config-file" in request.files.keys():
+                f = request.files['cam-config-file']
+                if f and allowed_file(f.filename, ["yml", "yaml"]):
+                    print(yaml.load(f.read()))
+        if panoform.validate() and panoform.submit.data:
+            for k in [x for x in vars(panoform) if not x.startswith("_") and not x == "meta"]:
+                session['pano_config'][k] = panoform[k].data
+        if ptzform.validate() and ptzform.submit.data:
+            for k in [x for x in vars(ptzform) if not x.startswith("_") and not x == "meta"]:
+                session['ptz_config'][k] = ptzform[k].data
+        if camform.validate() and camform.submit.data:
+            for k in [x for x in vars(camform) if not x.startswith("_") and not x == "meta"]:
+                session['camera_config'][k] = camform[k].data
+
+    for k, v in session['pano_config'].items():
+        # check to see whether the panorama form has a value that can be set from the session data
+        if v is not None:
+            try:
+                panoform[k].data = v
+            except Exception as e:
+                print(u'Exception repopulating form: {}'.format(str(e)))
+    for k, v in session['ptz_config'].items():
+        # check to see whether the panorama form has a value that can be set from the session data
+        if v is not None:
+            try:
+                ptzform[k].data = v
+            except Exception as e:
+                print(u'Exception repopulating form: {}'.format(str(e)))
+
+    for k, v in session['camera_config'].items():
+        # check to see whether the panorama form has a value that can be set from the session data
+        if v is not None:
+            try:
+                camform[k].data = v
+            except Exception as e:
+                print(u'Exception repopulating form: {}'.format(str(e)))
 
     template_data = {
-        "pano_config_dict": pano_config_dict
+        "panoform": panoform,
+        "ptzform": ptzform,
+        'camform':camform,
+        "pano_config_dict": pano_config_dict,
+        "cam_config_dict": cam_config_dict,
+        "ptz_config_dict": ptz_config_dict,
+        "pcfg": pcfg,
+        "ccfg": ccfg,
+        "ptzcfg": ptzcfg
     }
-    return render_template("pano-config.html", **template_data)
+    return render_template("config-edit.html", **template_data)
 
 
 def calculate_pano_grid():
@@ -410,8 +701,11 @@ def calculate_pano_grid():
     calculates the panorama grid
     :return:
     """
-    pan0, tilt0 = session['line_edit_pano_first_corner'].split(",")
-    pan1, tilt1 = session['line_edit_pano_second_corner'].split(",")
+    pan0, tilt0 = session['pano_config'].get('first_corner', ',').split(",")
+    pan1, tilt1 = session['pano_config'].get('second_corner', ',').split(",")
+    if '' in [pan0, pan1, tilt0, tilt1]:
+        flash("First Corner or Second Corner not set", "error")
+
     # HFoV, VFoV = session['lineEditFieldOfView'].split(",")
     # session['HFoV'] = float(HFoV)
     # session['VFoV'] = float(VFoV)
@@ -547,6 +841,7 @@ def take_panorama(is_one_time=True):
                      QtCore.SIGNAL('Message(QString)'),
                      self.printMessage)
         self.threadPool[len(self.threadPool) - 1].start()
+
 
 #
 #
