@@ -1,0 +1,38 @@
+
+ip: '192.168.1.100'
+username: Admin
+password: '123456'
+HTTP_login: "USER={user}&PWD={password}"
+format_url: "http://{ip}?{command}&{HTTP_login}"
+
+image_size_list:
+- [1920, 1080]
+- [1280, 720]
+- [640, 480]
+zoom_range: [30, 1000]
+zoom_list: [50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000]
+horizontal_fov_list: [71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126, 12.782, 9.217, 7.050, 5.824]
+vertical_fov_list: [39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324, 7.7136, 4.787, 3.729, 2.448]
+zoom_pos: 800
+#focus_val: 935
+#focus_mode: MANUAL
+URL_set_image_size: "/cgi-bin/encoder?VIDEO_RESOLUTION=N{width}x{height}"
+URL_set_zoom: "/cgi-bin/encoder?ZOOM=DIRECT,{zoom}"
+URL_set_focus: "/cgi-bin/encoder?FOCUS=DIRECT,{focus}"
+URL_set_focus_mode: "/cgi-bin/encoder?FOCUS={mode}"
+URL_get_image: "/cgi-bin/encoder?SNAPSHOT"
+URL_get_image_size: "/cgi-bin/encoder?VIDEO_RESOLUTION"
+URL_get_video: "/cgi-bin/encoder?GET_STREAM&VIDEO_FPS_NUM=2"
+URL_get_zoom: "/cgi-bin/encoder?ZOOM"
+URL_get_focus: "/cgi-bin/encoder?FOCUS"
+RET_get_image: RAW_JPG ## need to parse binary JPG data like:
+                      # stream = urllib.urlopen(URL_GetImage)
+                      # byte_array = io.BytesIO(stream.read())
+                      # Image = np.array(PIL.Image.open(byte_array))
+RET_set_image_size: 'OK: VIDEO_RESOLUTION=''N{}x{}'''
+RET_set_zoom: 'OK: OK: ZOOM=''DIRECT,{}'''
+RET_set_focus: 'OK: FOCUS=''DIRECT,{}'''
+RET_get_image_size: 'VIDEO_RESOLUTION=''N{}x{}'''
+RET_get_zoom: 'ZOOM_POSITION=''{}'''
+RET_get_focus: 'FOCUS_POSITION=''{}'''
+

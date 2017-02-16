@@ -1,0 +1,41 @@
+name: ARB-GV-ANU-FOREST-C01
+
+first_corner: [200,-14]
+second_corner: [150,14]
+
+camera_fov: [15.02, 8.5]
+overlap: 50
+scan_order: cols,right
+
+interval: 300
+starttime: 0500
+stoptime: 1900
+
+camera: DSLR
+
+ptz:
+  ip: '192.168.1.101:81'
+  username: admin
+  password: admin
+  HTTP_login: "USER={user}&PWD={password}"
+  format_url: "http://{ip}{command}&{HTTP_login}"
+  return_parser: xml
+  pan_range: [71, 355]
+  tilt_range: [-89, 29]
+  scale: 10.0
+  urls:
+    set_pan_tilt: "/Bump.xml?GoToP={pan}&GoToT={tilt}"
+    get_pan_tilt: "/CP_Update.xml!PanPos!TiltPos"
+  keys:
+    get_pan_tilt: [PanPos, TiltPos]
+
+upload:
+  enabled: True
+  spooling_dir: /home/images/spool/ARB-GV-ANU-FOREST
+  upload_dir: /home/images/upload/ARB-GV-ANU-FOREST
+  #spooling_dir: /data/ARB-GV-ANU-FOREST/spool
+  #upload_dir: /data/ARB-GV-ANU-FOREST/upload
+  server: sftp.traitcapture.org
+  server_dir: /
+  username: picam
+  password: from_key

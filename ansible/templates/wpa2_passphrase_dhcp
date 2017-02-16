@@ -1,0 +1,11 @@
+Description='{{item.ssid}} on {{ interface }}. ANSIBLE MANAGED, ANY CHANGES WILL BE OVERWRITTEN'
+Interface={{ interface }}
+Connection=wireless
+
+Security=wpa
+IP=dhcp
+
+ESSID='{{ item.ssid }}'
+Key='{{ item.passphrase }}'
+# Set a priority for automatic profile selection
+Priority={{item.priority or 1}}

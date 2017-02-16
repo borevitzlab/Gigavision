@@ -1,0 +1,54 @@
+- name: Install gphoto2-cffi
+ pip:
+   name: "git+https://github.com/borevitzlab/gphoto2-cffi#egg=gphoto2-cffi"
+   editable: no
+   state: latest
+ no_log: yes
+
+- name: Download spc-eyepi
+  git:
+    repo: https://github.com/borevitzlab/Gigavision.git
+    clone: yes
+    update: yes
+    force: yes
+    version: "HEAD"
+    dest: "{{home_dir}}/spc-eyepi"
+
+- name: Create Directories for spc-eyepi
+  file:
+    dest: "{{home_dir}}/{{item}}"
+    state: directory
+    group: users
+    mode: 0775
+  with_items:
+    - "spc-eyepi"
+    - "spc-eyepi/configs_byserial"
+    - "spc-eyepi/lights_byip"
+    - "images"
+
+- set_fact:
+    systemd_units:
+      - {unit: "reboot_daily.timer",          enabled: yes,  state: stopped    }
+      - {unit: "reboot_daily.service",        enabled: no,   state: stopped    }
+      - {unit: "eyepi-api.service",           enabled: yes,  state: started    }
+      - {unit: "eyepi-webinterface.service",  enabled: yes,  state: started    }
+      - {unit: "eyepi-capture.service",       enabled: yes,  state: restarted  }
+  no_log: yes
+
+- name: Copy systemd units
+  copy:
+    remote_src: yes
+    src: "{{home_dir}}/spc-eyepi/{{item.unit}}"
+    dest: "/etc/systemd/system/{{item.unit}}"
+  with_items:
+    - "{{systemd_units}}"
+
+- name: Restart and Enable spc-eyepi systemd units
+  systemd:
+    name: "{{item.unit}}"
+    daemon_reload: yes
+    state: "{{item.state}}"
+    enabled: "{{True if item.enabled else False}}"
+    masked: no
+  with_items:
+    - "{{systemd_units}}"
