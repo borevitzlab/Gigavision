@@ -1,0 +1,46 @@
+#IPVAL: '192.168.1.114'
+ip: '192.168.1.7'
+username: root
+password: lab305
+HTTP_login: "{user}:{password}"
+format_url: "http://{HTTP_login}@{ip}?{command}"
+
+# camera
+zoom_pos: 800
+
+zoom_range: [1, 9999]
+zoom_list: [50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000]
+
+image_size_list:
+- [1280, 720]
+- [800, 450]
+- [480, 270]
+- [320, 180]
+
+URL_set_image_size: "/axis-cgi/param.cgi?action=update&Image.I0.Resolution={width}x{height}"
+URL_set_zoom: "/axis-cgi/com/ptz.cgi?zoom={zoom}"
+URL_set_focus: "/axis-cgi/com/ptz.cgi?focus={focus}"
+URL_set_focus_mode: "/axis-cgi/com/ptz.cgi?autofocus={mode}"
+URL_get_image: "/axis-cgi/bitmap/image.bmp?resolution={width}x{height}&compression=0"
+URL_get_image_size: "/axis-cgi/imagesize.cgi?camera=1"
+RET_get_image: RAW_BMP ## need to parse binary JPG data like:
+                      # stream = urllib.urlopen(URL_GetImage)
+                      # byte_array = io.BytesIO(stream.read())
+                      # Image = np.array(PIL.Image.open(byte_array))
+URL_get_zoom: /axis-cgi/com/ptz.cgi?query=position
+URL_get_focus: /axis-cgi/com/ptz.cgi?query=position
+RET_GetImageSize: 'image width = {}\nimage height = {}'
+RET_GetZoom: '*zoom={}*'
+RET_GetFocus: '*focus={}*'
+
+# pan and tilt
+Type: StepperMotors
+PanRange: [-180, 180]
+TiltRange: [-90, 19]
+ZoomRange: [1, 9999]
+ZoomVal: 9999
+URL_SetPan: /axis-cgi/com/ptz.cgi?pan=PANVAL
+URL_SetTilt: /axis-cgi/com/ptz.cgi?tilt=TILTVAL
+URL_SetPanTilt: /axis-cgi/com/ptz.cgi?pan=PANVAL&tilt=TILTVAL
+URL_GetPanTilt: /axis-cgi/com/ptz.cgi?query=position
+RET_GetPanTilt: '*pan={}*tilt={}*'

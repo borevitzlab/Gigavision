@@ -42,4 +42,4 @@ else:
 disk_usage.__doc__ = __doc__
 
 if __name__ == '__main__':
-    print disk_usage(os.getcwd())
+    print(disk_usage(os.getcwd()))

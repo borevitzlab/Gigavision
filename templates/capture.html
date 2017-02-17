@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% set active_page = "Panorama Configuration files" %}
+{% block body %}
+    <div class="container-fluid">
+        <div id="user-edit-form" class="col-md-8 col-sm-6">
+            <form method="POST">
+                {% for field in form %}
+                    {{ render_field(field) }}
+                {% endfor %}
+            </form>
+        </div>
+        <div class="col-md-4 col-sm-6 text-center">
+            <div class="btn-group">
+                <button class="btn btn-warning" onclick="action_on('set-corner/1')">Set first corner</button>
+                <button class="btn btn-warning" onclick="action_on('set-corner/2')">Set second corner</button>
+            </div>
+        </div>
+    <div class="col-md-4 col-sm-6">
+        <br>
+    </div>
+        <div class="col-md-4 col-sm-6 text-center">
+            <div class="btn-group">
+                <button class="btn btn-info" onclick="action_on('calculate-grid')">Calculate Grid</button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-12 bg-info" id="playercontainer" style="min-height:256px;">
+        <img id="player" class="img-responsive center-block" src="">
+    </div>
+    <script type="text/javascript">
+    var stream_url = "{{ url_for('stream_overview') }}";
+    var playing = true;
+
+    $("#playercontainer").on("click",function(){
+        playing = !playing;
+        $("#playercontainer").toggleClass(playing?"bg-warning":"bg-info");
+        $("#playercontainer").toggleClass(!playing?"bg-warning":"bg-info");
+
+        $("#player").attr("src",playing?stream_url:null);
+    });
+        function action_on(endpoint) {
+            $("#player").attr("src",null);
+            $.post("/api/"+endpoint,
+                    function (data) {
+                        console.log(data);
+                        if(typeof data.callback === 'undefined'){
+                            data.messages.forEach(function(d){
+                                $('<li><span class="center-block text-center alert alert-' + d.classsuffix + '">' + d.message + '</span></li>').appendTo(".flashes");
+                            });
+                        }else{
+                            var api_callback = data.callback;
+                            var interval = setInterval(function () {
+                                $.getJSON(api_callback, function (d) {
+                                    $('<li><span class="center-block text-center alert alert-' + d.classsuffix + '">' + d.message + '</span></li>').appendTo(".flashes");
+                                    if (d.state != "PENDING" && d.state != "STARTED" && d.state != "PROGRESS" && data.state != "RECEIVED") {
+                                        clearInterval(interval);
+                                    }
+                                }).error(function () {
+                                    clearInterval(interval);
+                                });
+                            });
+                        }
+
+                    })
+                    .done(function () {
+                        $("#player").attr("src",stream_url);
+                        setTimeout(function () {
+                            $(".alert").fadeOut(2000, function () {
+                                $(".alert").remove();
+                            });
+                        }, 120000);
+                    })
+                    .fail(function () {
+                        alert("Couldnt access the url.");
+
+                        $("#player").attr("src",stream_url);
+                    });
+        }
+    $("#player").attr("src",playing?stream_url:null);
+    </script>
+
+
+{% endblock %}

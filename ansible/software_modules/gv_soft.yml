@@ -1,0 +1,46 @@
+- name: Install gphoto2-cffi
+  pip:
+   name: "git+https://github.com/borevitzlab/gphoto2-cffi#egg=gphoto2-cffi"
+   editable: no
+   state: latest
+  no_log: yes
+
+- name: Download gigavision
+  git:
+    repo: https://github.com/borevitzlab/Gigavision.git
+    clone: yes
+    update: yes
+    force: yes
+    version: "HEAD"
+    dest: "{{home_dir}}/Gigavision"
+
+- name: Create Directories for gigavision
+  file:
+    dest: "{{home_dir}}/{{item}}"
+    state: directory
+    group: users
+    mode: 0775
+  with_items:
+    - "Gigavision/configs_byserial"
+    - "images"
+
+- set_fact:
+    systemd_units:
+      - {unit: "gigavision@.service",   enabled: yes,  state: started    }
+  no_log: yes
+
+- name: Copy systemd units
+  copy:
+    remote_src: yes
+    src: "{{home_dir}}/Gigavision/{{item.unit}}"
+    dest: "/etc/systemd/system/{{item.unit}}"
+  with_items:
+    - "{{systemd_units}}"
+
+- name: Restart and Enable Gigavision systemd units
+  systemd:
+    name: "gigavision@{{hostname}}.service"
+    daemon_reload: yes
+    state: started
+    enabled: yes
+    masked: no

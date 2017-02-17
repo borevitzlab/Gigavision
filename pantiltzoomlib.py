@@ -3,26 +3,33 @@
 Created on Mon Nov 17 10:24:49 2014
 
 @author: chuong nguyen, chuong.nguyen@anu.edu.au
+@author: Gareth Dunstone, gareth.dunstone@anu.edu.au
 """
 
 import sys
-import os
+import os, json
 from datetime import datetime
 from io import BytesIO
-import urllib
+import shutil
+import logging, logging.config
 import numpy as np
 import time
-import re
-import glob
-import shutil
 import csv
-from skimage import io
-from skimage.feature import (match_descriptors, ORB, plot_matches)
-from skimage.color import rgb2gray
-from scipy.spatial.distance import hamming
+import yaml
+import tempfile
+from libs.Uploader import Uploader
+from libs.Updater import Updater
+from libs.Camera import Camera, GPCamera, IPCamera
+from libs.PanTilt import PanTilt
+import cv2
+import datetime
+from schedule import Scheduler
+
+logging.config.fileConfig("logging.ini")
+logging.getLogger("paramiko").setLevel(logging.WARNING)
 
 
-def drawMatchesOpenCV(img1, kp1, img2, kp2, matches):
+def draw_matches_opencv(img1, kp1, img2, kp2, matches):
     """
     Source: http://stackoverflow.com/questions/20259025/module-object-has-no-attribute-drawmatches-opencv-python
     This function takes in two images with their associated
@@ -34,14 +41,17 @@ def drawMatchesOpenCV(img1, kp1, img2, kp2, matches):
 
     Keypoints are delineated with circles, while lines are connected
     between matching keypoints.
-
-    img1,img2 - Grayscale images
-    kp1,kp2 - Detected list of keypoints through any of the OpenCV keypoint
-              detection algorithms
-    matches - A list of matches of corresponding keypoints through any
-              OpenCV keypoint matching algorithm
+    :param img1: grayscale image
+    :param kp1: Detected list of keypoints through any of the OpenCV keypoint detection algorithms
+    :param img2: grayscale image
+    :param kp2: Detected list of keypoints through any of the OpenCV keypoint detection algorithms
+    :param matches: A list of matches of corresponding keypoints through any OpenCV keypoint matching algorithm
+    :return:
     """
+
     import cv2
+    # define a taget height
+    TARGETHEIGHT = 800
 
     # Create a new output image that concatenates the two images together
     # (a.k.a) a montage
@@ -50,18 +60,18 @@ def drawMatchesOpenCV(img1, kp1, img2, kp2, matches):
     rows2 = img2.shape[0]
     cols2 = img2.shape[1]
 
-    out = np.zeros((max([rows1, rows2]), cols1+cols2, 3), dtype='uint8')
+    out = np.zeros((max([rows1, rows2]), cols1 + cols2, 3), dtype='uint8')
 
     # Place the first image to the left
     out[:rows1, :cols1, :] = np.dstack([img1, img1, img1])
 
     # Place the next image to the right of it
-    out[:rows2, cols1:cols1+cols2, :] = np.dstack([img2, img2, img2])
-
+    out[:rows2, cols1:cols1 + cols2, :] = np.dstack([img2, img2, img2])
+    ar = out.shape[1] / out.shape[0]
+    w = int(TARGETHEIGHT * ar)
     # For each pair of points we have between both images
     # draw circles, then connect a line between them
     for mat in matches:
-
         # Get the matching keypoints for each of the images
         img1_idx = mat.queryIdx
         img2_idx = mat.trainIdx
@@ -76,26 +86,35 @@ def drawMatchesOpenCV(img1, kp1, img2, kp2, matches):
         # colour blue
         # thickness = 1
         cv2.circle(out, (int(x1), int(y1)), 4, (255, 0, 0), 1)
-        cv2.circle(out, (int(x2)+cols1, int(y2)), 4, (255, 0, 0), 1)
+        cv2.circle(out, (int(x2) + cols1, int(y2)), 4, (255, 0, 0), 1)
 
         # Draw a line in between the two points
-        # thickness = 1
-        # colour blue
-        cv2.line(out, (int(x1), int(y1)), (int(x2)+cols1, int(y2)),
-                 (255, 0, 0), 1)
+        # thickness = 3
+        # colour red green blue
+        cv2.line(out, (int(x1), int(y1)), (int(x2) + cols1, int(y2)),
+                 (0, 0, 255), max(int(out.shape[0] / TARGETHEIGHT), 2))
 
+    # rescale image here.
+
+    out = cv2.resize(out, (w, TARGETHEIGHT))
     return out
 
 
-def getDisplacementOpenCV(Image0, Image1):
+def get_displacement_opencv(image0, image1):
+    """
+    Gets displacement (in pixels I think) difference between 2 images using opencv
+    :param image0: reference image
+    :param image1: target image
+    :return:
+    """
     import cv2
 
-    img1 = cv2.cvtColor(Image0, cv2.COLOR_BGR2GRAY)
-    img2 = cv2.cvtColor(Image1, cv2.COLOR_BGR2GRAY)
+    img1 = cv2.cvtColor(image0, cv2.COLOR_BGR2GRAY)
+    img2 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
 
-    # Create ORB detector with 1000 keypoints with a scaling pyramid factor
-    # of 1.2
-    orb = cv2.ORB(1000, 1.2)
+    # Create ORB detector with 1000 keypoints with a scaling pyramid factor of 1.2
+    # gareth changed here from cv2.ORB to cv2.ORB_create for opencv3.1.0 compatibility.
+    orb = cv2.ORB_create(1000, 1.2)
 
     # Detect keypoints
     (kp1, des1) = orb.detectAndCompute(img1, None)
@@ -110,9 +129,9 @@ def getDisplacementOpenCV(Image0, Image1):
     matches = sorted(matches, key=lambda val: val.distance)
 
     # collect displacement from the first 10 matches
-    dxList = []
-    dyList = []
-    for mat in matches[:10]:
+    dx_list = []
+    dy_list = []
+    for mat in matches[:20]:
         # Get the matching keypoints for each of the images
         img1_idx = mat.queryIdx
         img2_idx = mat.trainIdx
@@ -121,30 +140,40 @@ def getDisplacementOpenCV(Image0, Image1):
         # y - rows
         (x1, y1) = kp1[img1_idx].pt
         (x2, y2) = kp2[img2_idx].pt
-        dxList.append(abs(x1 - x2))
-        dyList.append(abs(y1 - y2))
+        dx_list.append(abs(x1 - x2))
+        dy_list.append(abs(y1 - y2))
 
-    dxMedian = np.median(np.asarray(dxList, dtype=np.double))
-    dyMedian = np.median(np.asarray(dyList, dtype=np.double))
+    dx_median = np.median(np.asarray(dx_list, dtype=np.double))
+    dy_median = np.median(np.asarray(dy_list, dtype=np.double))
 
-#    img3 = drawMatchesOpenCV(img1, kp1, img2, kp2, matches[:10])
-#    WindowName = "Displacement = {}, {}".format(dxMedian, dyMedian)
-#    cv2.imshow(WindowName, img3)
-#    cv2.waitKey()
+    img3 = draw_matches_opencv(img1, kp1, img2, kp2, matches[:20])
+    cv2.imwrite("matches.jpg", img3)
+    del img1
+    del img2
+    return dx_median, dy_median
 
-    return dxMedian, dyMedian
 
-
-def getDisplacement(Image0, Image1):
-    Image0Gray = rgb2gray(Image0)
-    Image1Gray = rgb2gray(Image1)
+def get_displacement(image0, image1):
+    """
+    Gets displacement (in pixels I think) difference between 2 images using scikit-image
+    not as accurate as the opencv version i think.
+    :param image0: reference image
+    :param image1: target image
+    :return:
+    """
+    from skimage.feature import (match_descriptors, ORB, plot_matches)
+    from skimage.color import rgb2gray
+    from scipy.spatial.distance import hamming
+    from scipy import misc
+    image0_gray = rgb2gray(image0)
+    image1_gray = rgb2gray(image1)
     descriptor_extractor = ORB(n_keypoints=200)
 
-    descriptor_extractor.detect_and_extract(Image0Gray)
+    descriptor_extractor.detect_and_extract(image0_gray)
     keypoints1 = descriptor_extractor.keypoints
     descriptors1 = descriptor_extractor.descriptors
 
-    descriptor_extractor.detect_and_extract(Image1Gray)
+    descriptor_extractor.detect_and_extract(image1_gray)
     keypoints2 = descriptor_extractor.keypoints
     descriptors2 = descriptor_extractor.descriptors
 
@@ -157,15 +186,15 @@ def getDisplacement(Image0, Image1):
         distance = hamming(descriptors1[match[0]], descriptors2[match[1]])
         distances12.append(distance)
 
-    indices = np.range(len(matches12))
+    indices = np.arange(len(matches12))
     indices = [index for (_, index) in sorted(zip(distances12, indices))]
     matches12 = matches12[indices]
 
     # collect displacement from the first 10 matches
-    dxList = []
-    dyList = []
+    dx_list = []
+    dy_list = []
     for mat in matches12[:10]:
-        # Get the matching keypoints for each of the images
+        # Get the matching key points for each of the images
         img1_idx = mat[0]
         img2_idx = mat[1]
 
@@ -173,813 +202,781 @@ def getDisplacement(Image0, Image1):
         # y - rows
         (x1, y1) = keypoints1[img1_idx]
         (x2, y2) = keypoints2[img2_idx]
-        dxList.append(abs(x1 - x2))
-        dyList.append(abs(y1 - y2))
+        dx_list.append(abs(x1 - x2))
+        dy_list.append(abs(y1 - y2))
 
-    dxMedian = np.median(np.asarray(dxList, dtype=np.double))
-    dyMedian = np.median(np.asarray(dyList, dtype=np.double))
-    plot_matches(Image0, Image1, descriptors1, descriptors2, matches12[:10])
-    return dxMedian, dyMedian
+    dx_median = np.median(np.asarray(dx_list, dtype=np.double))
+    dy_median = np.median(np.asarray(dy_list, dtype=np.double))
+    # plot_matches(image0, image1, descriptors1, descriptors2, matches12[:10])
+    return dx_median, dy_median
 
 
-class IPCamera(object):
+def sec2human(seconds)->str:
     """
-    Control ACTi Camera
-    Ref: http://www2.acti.com/getfile/KnowledgeBase_UploadFile/ACTi_Camera_URL_Commands_20120327_002.pdf
-
-    For high zoom, zoom value needs to change slowly for the camera to auto focus
-
+    formats a timedelta object into semi-fuzzy human readable time periods.
+    :param seconds: float or int
+    :return: human readable string
     """
-    def __init__(self, IP, User, Password, ImageSize=None, ImageQuality=100):
-        self.IP = IP
-        self.HTTPLogin = "http://{}/cgi-bin/encoder?"\
-            "USER={}&PWD={}".format(IP, User, Password)
-        self.IMAGE_SIZES = [[1920, 1080], [1280, 720], [640, 480]]
-
-        self.Commands = {}
-        self.Commands["zoom_range"] = "&ZOOM_CAP_GET"
-        self.Commands["zoom_curpos"] = "&ZOOM_POSITION"
-        self.Commands["zoom_mode"] = "&ZOOM={}"
-        self.Commands["zoom_set"] = "&ZOOM={},{}"
-        self.Commands["zoom_step"] = "&STEPPED_ZOOM={},{}"
-
-        self.Commands["focus_range"] = "&FOCUS_CAP_GET"
-        self.Commands["focus_curpos"] = "&FOCUS_POSITION"
-        self.Commands["focus_mode"] = "&FOCUS={}"
-        self.Commands["focus_set"] = "&FOCUS={},{}"
-        self.Commands["focus_step"] = "&STEPPED_FOCUS={},{}"
-
-        self.Commands["image_resolution"] = "&VIDEO_RESOLUTION=N{}x{}"
-        self.Commands["image_quality"] = "&VIDEO_MJPEG_QUALITY={}"
-        self.Commands["snap_photo"] = "&SNAPSHOT"
-        self.Commands["snap_photo2"] = "&SNAPSHOT=N{}x{},100&DUMMY={}"
-
-        # Valid values for ACTi camera
-        self.ZOOM_MODES = ["STOPS"]
-        self.ZOOM_STATES = ["DIRECT", "TELE"]
-        self.ZOOM_STEP_DIRECTIONS = ["TELE", "WIDE"]
-        self.ZOOM_STEP_RANGE = [1, 255]
-        self.ZOOM_DIRECT_RANGE = self.getZoomRange()
-
-        self.FOCUS_MODES = ["STOP", "FAR", "NEAR", "AUTO", "MANUAL", "ZOOM_AF",
-                            "REFOCUS"]
-        self.FOCUS_STATES = ["DIRECT"]
-        self.FOCUS_STEP_DIRECTIONS = ["NEAR", "FAR"]
-        self.FOCUS_STEP_RANGE = [1, 255]
-        self.FOCUS_DIRECT_RANGE = self.getFocusRange()
-
-        if ImageSize:
-            self.setImageSize(ImageSize)
-        self.Image = None
-        self.PhotoIndex = 0
-        print(self.status())
-        self.setImageQuality(ImageQuality)
-
-    def setImageQuality(self, ImageQuality):
-        assert(ImageQuality >= 1 and ImageQuality <= 100)
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["image_quality"].format(
-                                    ImageQuality))
-
-        Output = stream.read(1024).strip()
-        return Output
-
-    def setImageSize(self, ImageSize):
-        assert(ImageSize in self.IMAGE_SIZES)
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["image_resolution"].format(
-                                    ImageSize[0], ImageSize[1]))
-
-        Output = stream.read(1024).strip()
-        self.ImageSize = ImageSize
-        return Output
-
-    def getImageSize(self, ImageSize):
-        return self.ImageSize
-
-    def snapPhoto(self, ImageSize=None):
-        if ImageSize and ImageSize in self.IMAGE_SIZES:
-            URL = self.HTTPLogin + self.Commands["snap_photo2"].format(
-                ImageSize[0], ImageSize[1], self.PhotoIndex)
-        else:
-            URL = self.HTTPLogin + self.Commands["snap_photo"]
-        try:
-            import PIL
-            stream = urllib.urlopen(URL)
-            byte_array = BytesIO(stream.read())
-            self.Image = np.array(PIL.Image.open(byte_array))
-        except:
-            # fallback slow solution
-            Filename = self.snapPhoto2File(None, ImageSize)
-            self.Image = io.imread(Filename)
-        self.PhotoIndex += 1
-        return self.Image
-
-    def snapPhoto2File(self, Filename, ImageSize=None):
-        if ImageSize and ImageSize in self.IMAGE_SIZES:
-            URL = self.HTTPLogin + self.Commands["snap_photo2"].format(
-                ImageSize[0], ImageSize[1], self.PhotoIndex)
-        else:
-            URL = self.HTTPLogin + self.Commands["snap_photo"]
-        try:
-            filename, _ = urllib.urlretrieve(URL, Filename)
-            self.PhotoIndex += 1
-            return filename
-        except:
-            return None
-
-    def getValue(self, Text):
-        Text = Text.split("=")
-        if len(Text) >= 2:
-            TextValue = re.sub("'", "", Text[1])
-            ValueList = TextValue.split(",")
-            ValueList = [float(Value) if Value.replace(".", "", 1).isdigit()
-                         else Value for Value in ValueList]
-            return ValueList
-        else:
-            return None
-
-    def zoomStep(self, Direction, StepSize):
-        if Direction.lower() == "in":
-            Direction = "TELE"
-        elif Direction.lower() == "out":
-            Direction = "WIDE"
-        assert(Direction in self.ZOOM_STEP_DIRECTIONS and
-               StepSize >= self.ZOOM_STEP_RANGE[0] and
-               StepSize <= self.ZOOM_STEP_RANGE[1])
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["zoom_step"].format(
-                                    Direction, StepSize))
-        Output = stream.read(1024).strip()
-        return Output
-
-    def setZoomPosition(self, AbsPosition):
-        assert(AbsPosition >= self.ZOOM_DIRECT_RANGE[0] and
-               AbsPosition <= self.ZOOM_DIRECT_RANGE[1])
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["zoom_set"].format(
-                                    "DIRECT", AbsPosition))
-        Output = stream.read(1024).strip()
-        return Output
-
-    def setFocusMode(self, mode):
-        assert(mode.upper() in self.FOCUS_MODES)
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["focus_mode"].format(
-                                    mode.upper()))
-        Output = stream.read(1024).strip()
-        return Output
-
-    def getFocusMode(self):
-        stream = urllib.urlopen(self.HTTPLogin + "&FOCUS")
-        Output = stream.read(1024).strip()
-        Mode = self.getValue(Output)
-        return Mode
-
-    def setFocusPosition(self, AbsPosition):
-        assert(AbsPosition >= self.FOCUS_DIRECT_RANGE[0] and
-               AbsPosition <= self.FOCUS_DIRECT_RANGE[1])
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["focus_set"].format(
-                                    "DIRECT", AbsPosition))
-        Output = stream.read(1024).strip()
-        return Output
-
-    def getZoomPosition(self):
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["zoom_curpos"])
-        Output = stream.read(1024).strip()
-        Position = self.getValue(Output)
-        return Position[0]
-
-    def getZoomRange(self):
-        stream = urllib.urlopen(self.HTTPLogin + self.Commands["zoom_range"])
-        Outptput = stream.read(1024).strip()
-        return self.getValue(Outptput)
-
-    def refocus(self):
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["focus_mode"].format("REFOCUS"))
-        Outptput = stream.read(1024).strip()
-        return self.getValue(Outptput)
-
-    def getFocusPosition(self):
-        stream = urllib.urlopen(self.HTTPLogin +
-                                self.Commands["focus_curpos"])
-        Output = stream.read(1024).strip()
-        Position = self.getValue(Output)
-        return Position[0]
-
-    def getFocusRange(self):
-        stream = urllib.urlopen(self.HTTPLogin + self.Commands["focus_range"])
-        Outptput = stream.read(1024).strip()
-        Values = self.getValue(Outptput)
-        # ex: Values = ["Motorized", 1029.0, 221.0]
-        Range = Values[2:0:-1]
-        return Range
-
-    def updateStatus(self):
-        self.zoomPos = self.getZoomPosition()
-        self.zoomRange = self.getZoomRange()
-        self.focusPos = self.getFocusPosition()
-        self.focusRange = self.getFocusRange()
-
-    def status(self):
-        self.updateStatus()
-        Status = "ZoomPos = {}. FocusPos = {}.".format(self.zoomPos,
-                                                       self.focusPos)
-        Status += "\nZoom range = {}".format(self.ZOOM_DIRECT_RANGE)
-        Status += "\nFocus range = {}".format(self.FOCUS_DIRECT_RANGE)
-        return Status
-
-
-class PanTilt(object):
-    """
-    Control J-Systems PTZ
-
-    For new system or new firmware, the system needs calibration as follows:
-    - Open URL of the PTZ on a web browser
-    - Click on "Calibration" tab, enter username and password if necessary
-    - On Calibration window, click on "Open-loop" and then "Set Mode"
-    - Use joystick controller to rotate the pan axis to minimum position
-    - Click on 'Pan Axis Min' line, enter '2.0', and click "Set Calibration"
-    - Use joystick controller to rotate the pan axis to maximum position
-    - Click on 'Pan Axis Max' line, enter '358.0', and click "Set Calibration"
-    - Use joystick controller to rotate the tilt axis to minimum position
-    - Click on 'Tilt Axis Min' line, enter '-90.0', and click "Set Calibration"
-    - Use joystick controller to rotate the tilt axis to maximum position
-    - Click on 'Tilt Axis Max' line, enter '30.0', and click "Set Calibration"
-    - Click on "Closed-loop" and then "Set Mode"
-    - Close Calibration window
-    """
-    def __init__(self, IP, User=None, Password=None):
-        self.IP = IP
-        self.User = User
-        self.Password = Password
-        self.Link = "http://{}".format(self.IP)
-        print(self.status())
-
-    def getKeyValue(self, MessageXML, Key):
-        KeyStart = "<{}>".format(Key)
-        KeyEnd = "</{}>".format(Key)
-        Start = MessageXML.find(KeyStart)
-        # Sometimes KeyStart is missing
-        if Start < 0:
-            Start = 0
-        else:
-            Start = Start + len(KeyStart)
-        End = MessageXML.find(KeyEnd, Start)
-        if End > Start:
-            Value = MessageXML[Start:End].strip()
-            try:
-                return float(Value)
-            except:
-                return Value
-        else:
-            return ""
-
-    def panStep(self, Direction, Steps):
-        assert(abs(Steps) <= 127)
-        Dir = 1
-        if Direction.lower() == "left":
-            Dir = -1
-        Url = self.Link + "/Bump.xml?PCmd={}".format(Dir*Steps)
-        stream = urllib.urlopen(Url)
-        Output = stream.read(1024)
-        Info = self.getKeyValue(Output, "Text")
-        return Info
-
-    def tiltStep(self, Direction, Steps):
-        assert(abs(Steps) <= 127)
-        Dir = 1
-        if Direction.lower() == "down":
-            Dir = -1
-        Url = self.Link + "/Bump.xml?TCmd={}".format(Dir*Steps)
-        stream = urllib.urlopen(Url)
-        Output = stream.read(1024)
-        Info = self.getKeyValue(Output, "Text")
-        return Info
-
-    def setPanTiltPosition(self, PanDegree=0, TiltDegree=0):
-        Url = self.Link + "/Bump.xml?GoToP={}&GoToT={}".format(
-            int(PanDegree*10), int(TiltDegree*10))
-        stream = urllib.urlopen(Url)
-        Output = stream.read(1024)
-        Info = self.getKeyValue(Output, "Text")
-        NoLoops = 0
-        # loop until within 1 degree
-        while True:
-            PanPos, TiltPos = self.getPanTiltPosition()
-            PanDiff = int(abs(PanPos - PanDegree))
-            TiltDiff = int(abs(TiltPos - TiltDegree))
-            if PanDiff <= 1 and TiltDiff <= 1:
-                break
-            time.sleep(0.1)
-            NoLoops += 1
-            if NoLoops > 50:
-                print("Warning: pan-tilt fails to move to correct location")
-                print("  Desire position: PanPos={}, TiltPos={}".format(
-                    PanDegree, TiltDegree))
-                print("  Current position: PanPos={}, TiltPos={}".format(
-                    PanPos, TiltPos))
-                break
-        #loop until smallest distance is reached
-        while True:
-            PanPos, TiltPos = self.getPanTiltPosition()
-            PanDiffNew = abs(PanPos - PanDegree)
-            TiltDiffNew = abs(TiltPos - TiltDegree)
-            if PanDiffNew >= PanDiff or TiltDiffNew >= TiltDiff:
-                break
-            else:
-                PanDiff = PanDiffNew
-                TiltDiff = TiltDiffNew
-            time.sleep(0.1)
-            NoLoops += 1
-            if NoLoops > 50:
-                break
-
-        return Info
-
-    def setPanPosition(self, Degree):
-        Info = self.setPanTiltPosition(PanDegree=Degree)
-        return Info
-
-    def setTiltPosition(self, Degree):
-        Info = self.setPanTiltPosition(TiltDegree=Degree)
-        return Info
-
-    def getPanPosition(self):
-        self.updateStatus()
-        return self.PanPos
-
-    def getTiltPosition(self):
-        self.updateStatus()
-        return self.TiltPos
-
-    def getPanTiltPosition(self):
-        self.updateStatus()
-        return self.PanPos, self.TiltPos
-
-    def holdPanTilt(self, State):
-        if State is True:
-            Url = self.Link + "/Calibration.xml?Action=0"
-        else:
-            Url = self.Link + "/Calibration.xml?Action=C"
-        stream = urllib.urlopen(Url)
-        Output = stream.read(1024)
-        print(Output)
-        Info = self.getKeyValue(Output, "Text")
-        return Info
-
-    def updateStatus(self):
-        Url = self.Link + "/CP_Update.xml"
-        stream = urllib.urlopen(Url)
-        Output = stream.read(1024)
-
-        self.PanPos = self.getKeyValue(Output, "PanPos")  # degrees
-        self.TiltPos = self.getKeyValue(Output, "TiltPos")  # degrees
-
-        # Limit switch states
-        self.PCCWLS = self.getKeyValue(Output, "PCCWLS")
-        self.PCWLS = self.getKeyValue(Output, "PCWLS")
-        self.TDnLS = self.getKeyValue(Output, "TDnLS")
-        self.TUpLS = self.getKeyValue(Output, "TUpLS")
-
-        self.BattV = self.getKeyValue(Output, "BattV")  # Volt
-        self.Heater = self.getKeyValue(Output, "Heater")
-        self.Temp = self.getKeyValue(Output, "Temp")  # F degrees
-
-        self.ListState = self.getKeyValue(Output, "ListState")
-        self.ListIndex = self.getKeyValue(Output, "ListIndex")
-        self.CtrlMode = self.getKeyValue(Output, "CtrlMode")
-
-        self.AutoPatrol = self.getKeyValue(Output, "AutoPatrol")
-        self.Dwell = self.getKeyValue(Output, "Dwell")  # seconds
-
-    def status(self):
-        self.updateStatus()
-        Status = "PanPos = {} degrees. TiltPos = {} degrees.".format(
-            self.PanPos, self.TiltPos)
-        Status += "PCCWLS = {}, PCCWLS = {}, TDnLS = {}, TDnLS = {}".format(
-            self.PCCWLS, self.PCWLS, self.TDnLS, self.TUpLS)
-        return Status
+    periods = [
+        ('year', 60 * 60 * 24 * 365),
+        ('month', 60 * 60 * 24 * 30),
+        ('day', 60 * 60 * 24),
+        ('hour', 60 * 60),
+        ('minute', 60),
+        ('second', 1)
+    ]
+    strings = []
+    for period_name, period_seconds in periods:
+        if seconds > period_seconds:
+            period_value, seconds = divmod(seconds, period_seconds)
+            fmt_st = "{val} {name}" if period_value == 1 else "{val} {name}s"
+            strings.append(fmt_st.format(val=period_value, name=period_name))
+    return ", ".join(strings)
 
 
 class Panorama(object):
-    def __init__(self,
-                 CameraURL, CameraUsername, CameraPassword,
-                 PanTiltURL, PanTiltUsername=None, PanTiltPassword=None):
-        self.Cam = IPCamera(CameraURL, CameraUsername, CameraPassword)
-        self.PanTil = PanTilt(PanTiltURL, PanTiltUsername, PanTiltPassword)
-        self.CamZoom = None
-        self.CamFocus = None
-        self.CamHFoV = None
-        self.CamVFoV = None
-        self.CamZoomList = None
-        self.CamHFoVList = None
-        self.CamVFoVList = None
-        self.PanRange = None
-        self.TiltRange = None
-        self.ImageOverlap = 0.5
+    accuracy = 3
 
-    def setImageSize(self, ImageSize):
-        self.Cam.setImageSize(ImageSize)
+    def __init__(self, output_folder=None, camera=None, ptz=None, config=None, config_filename=None, queue=None):
 
-    def setImageOverlap(self, ImageOverlap):
-        self.ImageOverlap = ImageOverlap
+        if not config:
+            config = dict()
+        if config_filename:
+            config = yaml.load(open(config_filename).read())
+        config = config.copy()
+        self.name = config.get("name", "DEFAULT_PANO_NAME")
+        self.logger = logging.getLogger(self.name)
 
-    def setFocus(self, Focus):
-        if self.Cam.getFocusMode() != "MANUAL":
-            self.Cam.setFocusMode("MANUAL")
-        self.Cam.setFocusPosition(Focus)
-        self.CamFocus = Focus
+        start_time_string = str(config.get('starttime', "0000"))
+        start_time_string = start_time_string.replace(":", "")
+        end_time_string = str(config.get('stoptime', "2359"))
+        end_time_string = end_time_string.replace(":", "")
+        start_time_string = start_time_string[:4]
+        end_time_string = end_time_string[:4]
 
-    def setZoom(self, Zoom):
-        self.Cam.setZoomPosition(Zoom)
-        self.CamZoom = Zoom
+        assert end_time_string.isdigit(), "Non numerical start time, {}".format(str(end_time_string))
+        self.begin_capture = datetime.datetime.strptime(start_time_string, "%H%M").time()
 
-    def setFoVFromZoom(self, Zoom=None):
-        if Zoom is not None and self.CamZoom is None:
-            self.Cam.setZoomPosition(Zoom)
-            self.CamZoom = Zoom
-        elif Zoom is None and self.CamZoom is None:
-            print("Zoom is not set")
-            raise
-        elif self.CamZoomList is None and self.CamFoVList is None:
-            print("Field of view is not set")
-            raise
-        self.CamHFoV = np.interp(self.CamZoom,
-                                 self.CamZoomList, self.CamHFoVList)
-        if self.CamVFoVList is None:
-            self.CamVFoV = self.CamHFoV * \
-                self.Cam.ImageSize[1]/self.Cam.ImageSize[0]
-        else:
-            self.CamVFoV = np.interp(self.CamZoom,
-                                     self.CamZoomList, self.CamVFoVList)
+        assert end_time_string.isdigit(), "Non numerical start time, {}".format(str(end_time_string))
+        self.end_capture = datetime.datetime.strptime(end_time_string, "%H%M").time()
 
-    def setCameraFoV(self, CamHFoV=None, CamVFoV=None):
-        assert(CamHFoV is not None or CamVFoV is not None)
-        if CamHFoV is None:
-            self.CamHFoV = CamVFoV*self.Cam.ImageSize[0]/self.Cam.ImageSize[1]
-        else:
-            self.CamHFoV = CamHFoV
-        if CamVFoV is None:
-            self.CamVFoV = CamHFoV*self.Cam.ImageSize[1]/self.Cam.ImageSize[0]
-        else:
-            self.CamVFoV = CamVFoV
+        self.interval = config.get("interval", 3600)
+        camera = None
+        ptz = None
+        try:
+            while not camera:
+                camera_config = config.pop("camera", None)
+                if not camera_config:
+                    raise ValueError("No 'camera' section found in config file.")
 
-    def setCameraFovDist(self, ZoomList, HFoVList, VFoVList=None):
-        self.CamZoomList = ZoomList
-        self.CamHFoVList = HFoVList
-        self.CamVFoVList = VFoVList
+                if camera_config == "DSLR":
+                    camera = GPCamera(queue=queue)
+                elif type(camera_config) is dict:
+                    camera = IPCamera(self.name+"-cam", config=camera_config, queue=queue)
+        except Exception as e:
+            self.logger.error("Couldnt initialise Camera: " + str(e))
+            time.sleep(30)
+            camera = None
 
-    def getCameraFoV(self, Zoom=None):
-        if Zoom is None and \
-                self.CamHFoV is not None and self.CamVFoV is not None:
-            return self.CamHFoV, self.CamVFoV
-        elif self.CamZoomList is not None and self.CamFoVList is not None:
-            CamHFoV = np.interp(Zoom, self.CamZoomList, self.CamHFoVList)
-            CamVFoV = np.interp(Zoom, self.CamZoomList, self.CamVFoVList)
-            return CamHFoV, CamVFoV
-        else:
-            return None, None
+        self._camera = camera
+        if self._camera:
+            fov = config.pop("camera_fov", None)
+            if fov:
+                self._camera.hfov, self._camera.vfov = fov
+            self.logger.debug("Camera initialised")
 
-    def setPanoramaFoV(self, PanFoV, TiltFoV, PanCentre, TiltCentre):
-        self.PanRange = [PanFoV - PanCentre, PanFoV + PanCentre]
-        self.TiltRange = [TiltFoV - TiltCentre, TiltFoV + TiltCentre]
+        while not ptz:
+            try:
+                ptz_config = config.pop("ptz", None)
+                if not ptz_config:
+                    raise ValueError("No 'ptz' section found in config file.")
+                ptz = PanTilt(config=ptz_config, queue=queue)
+                self.logger.debug("ptz initialised")
+            except Exception as e:
+                self.logger.error("Couldnt initialise PTZ: " + str(e))
+                time.sleep(30)
+                ptz = None
 
-    def setPanoramaFoVRange(self, PanRange, TiltRange):
-        self.PanRange = PanRange
-        self.TiltRange = TiltRange
-        PanStep = (1-self.ImageOverlap)*self.CamHFoV
-        TiltStep = (1-self.ImageOverlap)*self.CamVFoV
-        PanPosList = np.arange(self.PanRange[0], self.PanRange[1], PanStep)
-        TiltPosList = np.arange(self.TiltRange[1], self.TiltRange[0]-TiltStep,
-                                -TiltStep)
-        self.MaxNoImages = len(PanPosList)*len(TiltPosList)
+        self._pantilt = ptz
 
-    def calibrateFoVList(self, ZoomList=range(50, 1000, 100),
-                         PanPos0=150, TiltPos0=0,
-                         PanInc=2, TiltInc=0):
-        CamHFoVList = []
-        CamVFoVList = []
-        self.Cam.setZoomPosition(ZoomList[0]-5)
+        self._output_dir = output_folder or config.pop("output_dir", "")
+        self._spool_dir = tempfile.mkdtemp(prefix=self.name)
+        self.output_dir = self._output_dir
+        # this is vital to create the output folder
+
+        self._image_overlap = float(config.pop("overlap", 50)) / 100
+        self._seconds_per_image = 5
+        self._csv_log = None
+        self._recovery_filename = ".gv_recover.json"
+        self._recovery_file = dict(image_index=0)
+        try:
+            if os.path.exists(os.path.join(os.getcwd(), self._recovery_filename)):
+                with open(os.path.join(os.getcwd(), self._recovery_filename), "r") as file:
+                    self._recovery_file = json.loads(file.read())
+        except:
+            with open(os.path.join(os.getcwd(), self._recovery_filename), "w+") as f:
+                f.write("{}")
+                f.seek(0)
+                self._recovery_file = json.loads(f.read())
+
+        first_corner = config.pop("first_corner", [100, 20])
+        second_corner = config.pop("second_corner", [300, -20])
+        assert type(first_corner) in (list, tuple), "first corner must be a list or tuple"
+        assert type(second_corner) in (list, tuple), "second corner must be a list or tuple"
+        assert len(first_corner) == 2, "first corner must be of length 2"
+        assert len(second_corner) == 2, "second corner must be of length 2"
+        self._pan_range = sorted([first_corner[0], second_corner[0]])
+        self._tilt_range = sorted([first_corner[1], second_corner[1]])
+        self._pan_step = self._tilt_step = None
+        self._pan_pos_list = self._tilt_pos_list = list()
+
+        self._camera.focus_mode = "AUTO"
+
+        scan_order_unparsed = config.pop("scan_order", "0")
+        self._scan_order_translation = {
+            'cols,right': 0,
+            'cols,left': 1,
+            'rows,down': 2,
+            'rows,up': 3,
+            "0": 0,
+            "1": 1,
+            "2": 2,
+            "3": 3,
+            0: 0,
+            1: 1,
+            2: 2,
+            3: 3
+        }
+        self._scan_order_translation_r = {
+            0: 'cols,right',
+            1: 'cols,left',
+            2: 'rows,down',
+            3: 'rows,up'
+        }
+        self._scan_order = self._scan_order_translation.get(str(scan_order_unparsed).lower().replace(" ", ""), 0)
+        self.logger.info(self.summary)
+
+    def set_current_as_first_corner(self):
+        """
+        This and set_current_as_second_corner, both internally call enumerate positions, so
+        :return:
+        """
+        self.first_corner = self._pantilt.position
+
+    def set_current_as_second_corner(self):
+        """
+
+        :return:
+        """
+        self.second_corner = self._pantilt.position
+
+    def enumerate_positions(self):
+        """
+        uses the currrent image overlap and camera fov to calculate a "grid" of pan and tilt positions
+        :return:
+        """
+        self.logger.debug("Enumerating positions")
+        self._pan_step = (1 - self._image_overlap) * self._camera.hfov
+        self._tilt_step = (1 - self._image_overlap) * self._camera.vfov
+        pan_start = self._pan_range[0]
+        pan_stop = self._pan_range[1]
+        tilt_start = self._tilt_range[0]
+        tilt_stop = self._tilt_range[1]
+
+        if self._scan_order == 1:
+            # cols left
+            pan_start, pan_stop = pan_stop, pan_start
+            self._pan_step *= -1
+        elif self._scan_order == 3:
+            # rows up
+            tilt_start, tilt_stop = tilt_stop, tilt_start
+            self._tilt_step *= -1
+        # todo: verify this.
+        # I think this is right?
+        # self._pan_pos_list = np.arange(self._pan_range[0], self._pan_range[1], self._pan_step)
+        # self._tilt_pos_list = np.arange(self._tilt_range[1], self._tilt_range[0] - self._tilt_step,
+        #                                 -self._tilt_step)
+        self._pan_pos_list = np.arange(pan_start, pan_stop, self._pan_step)
+        self._tilt_pos_list = np.arange(tilt_start, tilt_stop, self._tilt_step)
+
+        self.logger.debug("pan {}-{}".format(pan_start, pan_stop))
+        self.logger.debug("tilt {}-{}".format(tilt_start, tilt_stop))
+
+    @property
+    def summary(self)->str:
+        self.enumerate_positions()
+        max_num_images = len(self._pan_pos_list) * len(self._tilt_pos_list)
+        last_image_index = int(self._recovery_file.get("image_index", 0))
+        s = "\n"
+        s += "----- PANO SUMMARY -----\n"
+        s += "This panorama has {}(H) x {}(V) = {} images\n".format(
+            len(self._pan_pos_list), len(self._tilt_pos_list), max_num_images)
+        s += "Camera fov {0:.2f}|{1:.2f}\n".format(self.camera.hfov, self.camera.vfov)
+
+        minutes, seconds = divmod(self._seconds_per_image * (max_num_images - last_image_index), 60)
+        if last_image_index > 0:
+            s += "RECOVERY AT {}\n".format(last_image_index)
+        s += "This will complete in approx {0:.2f} min {1:.2f} sec\n".format(minutes, seconds)
+        s += "pan step = {0:.3f} deg, tilt step = {1:.3f} deg\n".format(self._pan_step, self._tilt_step)
+        s += "------------------------\n"
+        return s
+
+    @property
+    def camera(self)->Camera:
+        return self._camera
+
+    @camera.setter
+    def camera(self, value: Camera):
+        self._camera = value
+
+    @property
+    def pantilt(self) ->PanTilt:
+        return self._pantilt
+
+    @pantilt.setter
+    def pantilt(self, value: PanTilt):
+        self._pantilt = value
+
+    @property
+    def image_overlap(self):
+        return self._image_overlap
+
+    @image_overlap.setter
+    def image_overlap(self, value):
+        self._image_overlap = value
+
+    @property
+    def scan_order(self)->str:
+        return self._scan_order_translation_r.get(self._scan_order, "cols,right")
+
+    @scan_order.setter
+    def scan_order(self, value: str):
+        self._scan_order = self._scan_order_translation.get(str(value).lower().replace(" ", ""), 0)
+
+    @property
+    def output_dir(self)->str:
+        return self._output_dir
+
+    @output_dir.setter
+    def output_dir(self, value: str):
+        assert type(value) is str, "Set the output folder to a string"
+        if not os.path.isdir(value):
+            os.makedirs(value)
+        self._output_dir = value
+
+    @property
+    def panorama_fov(self)->tuple:
+        """
+        Gets the total fov of the Panorama.
+        :return:
+        """
+        return self._pan_range, self._tilt_range
+
+    @panorama_fov.setter
+    def panorama_fov(self, value: tuple):
+        """
+        sets the pan range and tilt range of the panorama using the fov, and centre points
+        :param value: 4 length tuple of pan_fov, tilt_fov, pan_centre, tilt_centre
+        :return:
+        """
+        try:
+            pan_fov, tilt_fov, pan_centre, tilt_centre = value
+        except ValueError:
+            raise ValueError("You must pass an iterable with the PanFov, TiltFov, PanCentre, TiltCentre")
+        self._pan_range = [pan_centre - (pan_fov / 2), pan_centre + (pan_fov / 2)]
+        self._tilt_range = [tilt_centre - (tilt_fov / 2), tilt_centre + (tilt_fov / 2)]
+        self.enumerate_positions()
+
+    @property
+    def first_corner(self)->tuple:
+        return self._pan_range[0], self._tilt_range[1]
+
+    @first_corner.setter
+    def first_corner(self, value):
+        assert type(value) in (list, tuple), "must be a list or tuple"
+        assert len(value) == 2, "must have 2 elements"
+        self._pan_range[0], self._tilt_range[1] = value
+        self.enumerate_positions()
+
+    @property
+    def center(self)->tuple:
+        return tuple((np.array(self.first_corner) + np.array(self.second_corner)) / 2)
+
+    @property
+    def second_corner(self):
+        return self._pan_range[1], self._tilt_range[0]
+
+    @second_corner.setter
+    def second_corner(self, value):
+        assert type(value) in (list, tuple), "must be a list or tuple"
+        assert len(value) == 2, "must have 2 elements"
+        self._pan_range[1], self._tilt_range[0] = value
+        self.enumerate_positions()
+
+    @staticmethod
+    def format_calibration(fovlists: tuple, test: str)->str:
+        """
+        formats a list of calibrated tuple of lists of fields of view and gives some statistics about the measurements.
+        :param fovlists: 2 length tuple of lists of hfov and vfov - tuple(list(hfov), list(vfov))
+        :param test: prefix
+        :return:
+        """
+        s = u"\n{test_num}).\n\tHFOV:\n{havg:.2f}±{havar:.4f},\tσ: {hstdev}\n\tVFOV:\n{vavg:.2f}±{vavar:.4f},\tσ: {vstdev:.4f}\n"
+        h, v = fovlists
+        return s.format(
+            test_num=test,
+            havg=np.average(h),
+            havar=max(h) - min(h),
+            hstdev=np.std(h),
+            vavg=np.average(v),
+            vavar=max(v) - min(v),
+            vstdev=np.std(v)
+        )
+
+    def test_calibration(self, number_of_tests: int):
+        """
+        tests the calibration process
+        :param number_of_tests:
+        :return:
+        """
+        import random
+        self.logger.info("Testing {} times".format(number_of_tests))
+
+        # tests = dict((_, int(random.uniform(1, 4))) for _ in range(number_of_tests))
+        def get_unif():
+            a = random.uniform(2, 2)
+            while abs(a) < 1:
+                a = random.uniform(2, 2)
+            return a
+
+        tests = {_: 2 for _ in range(number_of_tests)}
+
+        self._pantilt.position = np.mean(self._pantilt.pan_range), 0
+
+        for test, inc in tests.items():
+            self.logger.info("Testing with opencv {}".format(test))
+            fovlists = self.calibrate_fov_list(increment=inc)
+            self.logger.info(self.format_calibration(fovlists, test))
+            self._pantilt._position = np.mean(self._pantilt.pan_range), 0
+            self.logger.info("Testing without opencv {}".format(test))
+            fovlists = self.calibrate_fov_list(increment=inc, use_opencv=False)
+
+            self.logger.info(self.format_calibration(fovlists, test))
+        self._pantilt.position = np.mean(self._pantilt.pan_range), 0
+
+    def calibrate_fov_list(self,
+                           zoom_list: list=range(50, 1000, 100),
+                           panpos: float=None,
+                           tiltpos: float=None,
+                           increment: float=2,
+                           use_opencv: bool=True)->tuple:
+        """
+        calibrates the Panorama on a list of zoom levels.
+        :param zoom_list: list of zoom positions to calibrate
+        :param panpos: pan position to calibrate
+        :param tiltpos: tilt ""
+        :param increment: pan increment amount for the calibration
+        :param use_opencv: whether to use opencv
+        :return: 2 length tuple of lists of hfov and vfov - tuple(list(hfov), list(vfov))
+        """
+        camhfovlist = []
+        camvfovlist = []
+        self._pantilt.zoom_position = zoom_list[0] - 5
         time.sleep(1)
-        for ZoomPos in ZoomList:
-            self.Cam.setZoomPosition(ZoomPos)
-            CamHFoV, CamVFoV = self.calibrateFoV(ZoomPos, PanPos0, TiltPos0,
-                                                 PanInc, TiltInc)
-            CamHFoVList.append(CamHFoV)
-            CamVFoVList.append(CamVFoV)
+        curpos = self._pantilt.position
+        panpos = panpos or curpos[0]
+        tiltpos = tiltpos or curpos[1]
+        for idx, zoompos in enumerate(zoom_list):
+            self._pantilt._position = np.mean(self._pantilt.pan_range), 0
+            self.logger.info("Calibrating {}/{}".format(idx + 1, len(zoom_list)))
+            self._pantilt.zoom_position = zoompos
+            time.sleep(1)
+            hf, vf = self.calibrate_fov(zoompos, panpos, tiltpos, increment, use_opencv=use_opencv)
 
-        return CamHFoVList, CamVFoVList
+            if hf and vf:
+                camhfovlist.append(hf)
+                camvfovlist.append(vf)
+        time.sleep(1)
+        self._pantilt.position = panpos, tiltpos
+        return camhfovlist, camvfovlist
 
-    def calibrateFoV(self, ZoomPos, PanPos0=150, TiltPos0=0,
-                     PanInc=2, TiltInc=0):
+    def calibrate_fov(self,
+                      zoom_pos: float,
+                      pan_pos: float,
+                      tilt_pos: float,
+                      increment: float,
+                      use_opencv: bool=True)->tuple:
         """
         Capture images at different pan/tilt angles, then measure the pixel
         displacement between the images to estimate the field-of-view angle.
+        :param zoom_pos: begin zoom position
+        :param pan_pos: begin pan position
+        :param tilt_pos: begin tilt position
+        :param increment: amount to increment to get displacement.
+        :param use_opencv: Whether to use opencv or scikit image for displacement algorithm
+        :return: tuple of hfov, vfov estimates
         """
-        self.Cam.setZoomPosition(ZoomPos)
-        self.Cam.snapPhoto()
+
+        self._pantilt.zoom_position = zoom_pos
+        self._camera.capture()
+        hestimates = []
+        vestimates = []
         # add nearby position to reduce backlash
-        self.PanTil.setPanTiltPosition(PanPos0, TiltPos0)
+        self._pantilt.position = (pan_pos, tilt_pos)
+        time.sleep(0.2)
 
-        # capture image with pan motion
-        ImagePanList = []
-        for i in range(100):
-            self.PanTil.setPanTiltPosition(PanPos0+PanInc*i,
-                                           TiltPos0+TiltInc*i)
-            # change zoom to force refocusing
-            self.Cam.refocus()
-            time.sleep(0.1)
+        hfov_estimate = vfov_estimate = hfov = vfov = None
+        reference_image = displaced_image = None
+        reference_position = self._pantilt.position
+
+        while True:
+            reference_image = self._camera.capture()
+            if reference_image is not None:
+                reference_image = reference_image
+                break
+
+        def reject_outliers(data, m=2.):
+            try:
+                d = np.abs(data - np.median(data))
+                mdev = np.median(d)
+                s = d / mdev if mdev else 0.
+                return data[s < m]
+            except:
+                self.logger.error("Error rejecting outliers")
+                return data
+
+        def measure(movement: float) -> tuple:
+            movement = (movement, movement)
+            displ_image = None
+            self._pantilt.position = pan_pos, tilt_pos
+            pos = self._pantilt.position
+
+            position = (pos[0] + movement[0], pos[1] + movement[1])
+
+            # print("Measuring at {}|{}".format(*position))
+            self._pantilt.position = position
+            time.sleep(0.25)
             while True:
-                Image = self.Cam.snapPhoto()
-                if Image is not None:
-                    ImagePanList.append(Image)
+                # make sure camera finishes refocusing
+                displ_image = self._camera.capture()
+                if displ_image is not None:
                     break
-            if i == 0:
-                continue
-            Image0 = ImagePanList[0]
-            Image1 = ImagePanList[i]
-#            dx, dy = getDisplacementOpenCV(Image0, Image1)
-            dx, dy = getDisplacement(Image0, Image1)
-            if PanInc != 0:
-                CamHFoV = Image0.shape[1]*PanInc*i/dx
-            if TiltInc != 0:
-                CamVFoV = Image0.shape[0]*TiltInc*i/dy
-            if dx > 100 or dy > 100:
+
+            if use_opencv:
+                dx, dy = get_displacement_opencv(reference_image, displ_image)
+            else:
+                dx, dy = get_displacement(reference_image, displ_image)
+
+            assert dx != 0 and dy != 0, "Couldn't get displacement"
+
+            dxp = dx / reference_image.shape[1]
+            dyp = dy / reference_image.shape[0]
+            if dxp > 0.35 or dyp > 0.35:
+                return None, None
+
+            ptzpos = self._pantilt.position
+
+            displacement = abs(ptzpos[0] - reference_position[0]), abs(ptzpos[1] - reference_position[1])
+
+            if abs(displacement[0] - movement[0]) > 1.0:
+                self.logger.error("Displacement error pan {0:.4f}".format(abs(displacement[0] - movement[0])))
+            if abs(displacement[1] - movement[1]) > 1.0:
+                self.logger.error("Displacement error tilt {0:.4f}".format(abs(displacement[1] - movement[1])))
+
+            hfovt = reference_image.shape[1] * displacement[0] / dx
+            vfovt = reference_image.shape[0] * displacement[1] / dy
+            self.logger.debug("Guess: {0:.3f}|{1:.3f}".format(hfovt, vfovt))
+            return hfovt, vfovt
+
+        hestimates = []
+        vestimates = []
+
+        for a in np.arange(1, 20, 0.25):
+            h, v = measure(a * increment)
+            if not all((h, v)):
                 break
-
-        # make an increment equal to 1/4 of FoV
-        if PanInc != 0:
-            PanFoVSmall = 0.25*CamHFoV
+            hestimates.append(h)
+            vestimates.append(v)
         else:
-            PanFoVSmall = 0.25*CamVFoV*self.Cam.ImageSize[0]/self.Cam.ImageSize[1]
-        self.PanTil.setPanTiltPosition(PanPos0 + PanFoVSmall, TiltPos0)
-        while True:
-            # make sure camera finishes refocusing
-            Image1 = self.Cam.snapPhoto()
-            if Image1 is not None:
-                break
-        dx, dy = getDisplacement(Image0, Image1)
-        CamHFoV = Image0.shape[1]*PanFoVSmall/dx
+            self.logger.error("probably very wrong calibration for some reason")
+            return None, None
 
-        if TiltInc != 0:
-            TiltFoVSmall = 0.25*CamVFoV
-        else:
-            TiltFoVSmall = 0.25*CamHFoV*self.Cam.ImageSize[1]/self.Cam.ImageSize[0]
-        self.PanTil.setPanTiltPosition(PanPos0 + PanFoVSmall,
-                                       TiltPos0 + TiltFoVSmall)
-        while True:
-            # make sure camera finishes refocusing
-            Image2 = self.Cam.snapPhoto()
-            if Image2 is not None:
-                break
-        dx, dy = getDisplacement(Image1, Image2)
-        CamVFoV = Image0.shape[0]*TiltFoVSmall/dy
+        lh, lv = len(hestimates), len(vestimates)
+        hestimates, vestimates = reject_outliers(np.array(hestimates)), reject_outliers(np.array(vestimates))
+        self.logger.info("removed outliers: h{} v{} ".format(lh-len(hestimates), lv-len(vestimates)))
+        hfov_estimate, vfov_estimate = np.mean(hestimates), np.mean(vestimates)
 
-        return CamHFoV, CamVFoV
+        self.logger.info(Panorama.format_calibration((hestimates, vestimates), "This guess: "))
 
-    def run(self, OutputFolder, Prefix="ARB-HILL-GV01", LastImageIndex=0,
-            RecoveryFilename=None, ConfigFilename=None, Config=None,
-            SecondsPerImage=5):
-        if not os.path.exists(OutputFolder):
-            os.makedirs(OutputFolder)
-        if RecoveryFilename is not None and \
-                not os.path.exists(os.path.dirname(RecoveryFilename)):
-            os.makedirs(os.path.dirname(RecoveryFilename))
-        if ConfigFilename is not None and \
-                not os.path.exists(os.path.dirname(ConfigFilename)):
-            os.makedirs(os.path.dirname(ConfigFilename))
-        if Config is not None:
-            self.Cam.setFocusMode("MANUAL")
-        else:
-            self.Cam.setFocusMode("AUTO")
+        self._pantilt._position = np.mean(self._pantilt.pan_range), 0
+        time.sleep(1)
+        return hfov_estimate, vfov_estimate
 
-        PanStep = (1-self.ImageOverlap)*self.CamHFoV
-        TiltStep = (1-self.ImageOverlap)*self.CamVFoV
-        PanPosList = np.arange(self.PanRange[0], self.PanRange[1], PanStep)
-        TiltPosList = np.arange(self.TiltRange[1], self.TiltRange[0]-TiltStep,
-                                -TiltStep)
 
-        MaxNoImages = len(PanPosList)*len(TiltPosList)
-        print("This panorama has {}(H) x {}(V) = {} images".format(
-            len(PanPosList), len(TiltPosList), MaxNoImages))
-        if LastImageIndex == 0:
-            Minutes, Seconds = divmod(SecondsPerImage*MaxNoImages, 60)
-            print("This will complete in about {} min:{} sec".format(
-                Minutes, Seconds))
-            print("PanStep = {} degree, TiltStep = {} degree".format(
-                PanStep, TiltStep))
-        else:
-            NoImages = MaxNoImages - LastImageIndex
-            print("Recover from last run.")
-            print("This will take remaining {} images".format(NoImages))
-            Minutes, Seconds = divmod(SecondsPerImage*NoImages, 60)
-            print("This will complete in about {} min:{} sec".format(
-                Minutes, Seconds))
+    def quick_calibrate(self, increment):
+        h, v = self.calibrate_fov(self._pantilt._zoom_position, float(np.mean(self._pan_range)),float(np.mean(self._tilt_range)), increment=increment)
+        self._pantilt.zoom_list = [0]
+        self._camera.vfov_list = [v]
+        self._camera.hfov_list = [h]
+        self._camera.hfov = h
+        self._camera.vfov = v
 
-        # check and update zoom
-        if self.CamZoom is not None and \
-                self.Cam.getZoomPosition() != self.CamZoom:
-            print("Set focus from {} to {}".format(self.Cam.getZoomPosition(),
-                                                   self.CamZoom))
-            self.setZoom(self.CamZoom)
-        time.sleep(0.1)
+    def _init_csv_log(self, path: str):
+        self._csv_log = path
+        if not os.path.exists(self._csv_log):
+            with open(self._csv_log, 'w') as file:
+                file.write("image_index,pan_deg,tilt_deg,zoom_pos,focus_pos\n")
 
-        StartTime = time.time()
-        ImageCaptured = 0
-        for i, PanPos in enumerate(PanPosList):
-            for j, TiltPos in enumerate(TiltPosList):
-                ImageIndex = i*len(TiltPosList) + j
-                if ImageIndex < LastImageIndex:
-                    continue
-
-                Info = self.PanTil.setPanTiltPosition(PanPos, TiltPos)
-                if len(Info) > 0:
-                    print("Info: {}".format(Info))
-
-                # Check and update focus
-                if self.CamFocus is not None and \
-                        self.Cam.getFocusPosition() != self.CamFocus:
-                    print("Set focus from {} to {}".format(
-                        self.Cam.getFocusPosition(), self.CamFocus))
-                    self.Cam.setFocusMode("MANUAL")
-                    self.Cam.setFocusPosition(self.CamFocus)
+    @property
+    def csv_log(self)->dict:
+        if not os.path.isfile(self._csv_log):
+            self._init_csv_log(self._csv_log)
+        cfg = {"image_index": [], "pan_deg": [], "tilt_deg": [], "zoom_pos": [], "focus_pos": []}
+        with open(self._csv_log) as file:
+            csvread = csv.DictReader(file)
+            for row in csvread:
+                cfg["image_index"].append(int(row["image_index"]))
+                cfg["pan_deg"].append(float(row["pan_deg"]))
+                cfg["tilt_deg"].append(float(row["tilt_deg"]))
+                cfg["zoom_pos"].append(int(row["zoom_pos"]))
+                fp = row["focus_pos"]
+                if fp == "None":
+                    fp = self._camera.focus_position
                 else:
-                    if Config is None and self.CamFocus is None:
-                        FocusPos = self.Cam.refocus()
-                    elif Config is not None and self.CamFocus is None:
-                        FocusPos = self.Cam.setFocusPosition(
-                            Config["FocusPos"][ImageIndex])
-                        if int(FocusPos) != Config["FocusPos"][ImageIndex]:
-                            print("Warning: cannot set focus to {}".format(
-                                Config["FocusPos"][ImageIndex]))
-                time.sleep(0.1)
+                    fp = int(float(fp))
 
-                if ConfigFilename is not None:
-                    if not os.path.exists(ConfigFilename):
-                        with open(ConfigFilename, 'w') as File:
-                            File.write("ImgIndex,PanDeg,TiltDeg,Zoom,FocusPos\n")
-                    with open(ConfigFilename, 'a') as File:
-                        File.write("{},{},{},{},{}\n".format(
-                            ImageIndex, PanPos, TiltPos,
-                            self.CamZoom, # this should be read from camera
-                            self.Cam.getFocusPosition()))
+                cfg["focus_pos"].append(fp)
+        return cfg
 
-                if RecoveryFilename is not None:
-                    with open(RecoveryFilename, 'w') as File:
-                        File.write("NoCols,NoRows,CurImgIndex,SecPerImg\n")
-                        File.write("{},{},{},{}\n".format(
-                            len(PanPosList), len(TiltPosList), ImageIndex,
-                            SecondsPerImage))
+    @csv_log.setter
+    def csv_log(self, value: tuple):
+        if self._csv_log and os.path.isfile(self._csv_log):
+            image_index, pan_pos, tilt_pos = value
+            with open(self._csv_log, 'a') as File:
+                File.write("{},{},{},{},{}\n".format(
+                    image_index, pan_pos, tilt_pos,
+                    self._pantilt.zoom_position,
+                    self._camera.focus_position))
 
-                while True:
-                    Now = datetime.now()
-                    FileName = os.path.join(OutputFolder,
-                                            "{}_{}_00_00_{:04}.jpg".format(
-                                            Prefix,
-                                            Now.strftime("%Y_%m_%d_%H_%M"),
-                                            ImageIndex))
-                    FileName2 = self.Cam.snapPhoto2File(FileName)
+    @property
+    def recovery_file(self)->dict:
+        return self._recovery_file
 
-                    if FileName2 == FileName and \
-                            os.path.getsize(FileName) > 1000:
-                        print("Wrote image " + FileName)
-                        break
-                    else:
-                        os.remove(FileName)
-                        print("Warning: invalid image file size. Try again.")
+    @recovery_file.setter
+    def recovery_file(self, data: tuple):
+        index, started_time = data
+        self._recovery_file['image_index'] = index
+        with open(self._recovery_filename, 'w') as file:
+            data = {"cols": len(self._pan_pos_list),
+                    "rows": len(self._tilt_pos_list),
+                    "image_index": index,
+                    "sec_per_image": self._seconds_per_image,
+                    "started_time": started_time}
+            file.write(json.dumps(data))
 
-                # update time per image
-                CurrentTime = time.time()
-                ImageCaptured += 1
-                SecondsPerImage = (CurrentTime - StartTime)/ImageCaptured
-        # finally remove this file
-        os.remove(RecoveryFilename)
+    def take_panorama(self):
+        ts_fmt = "%Y_%m_%d_%H_%M_00_00"
+        last_image_captured = 0
+        now = datetime.datetime.now()
 
+        self.logger.debug("Moving to center to focus...")
+        self._pantilt.position = np.mean(self._pan_range), np.mean(self._tilt_range)
+        time.sleep(1)
+        self._camera.focus()
+        time.sleep(1)
+        last_started = self.recovery_file.get('started_time', None)
+        if last_started:
+            last_started = datetime.datetime.strptime(last_started, ts_fmt)
+            if int(now.timestamp())-int(last_started.timestamp()) < self.interval:
+                now = last_started
+            else:
+                self.logger.warning("Recovery exists, but its now too late. Starting from beginning.")
+                self.recovery_file = 0, now.strftime(ts_fmt)
+        this_dir = os.path.join(self._output_dir, now.strftime("%Y_%m_%d_%H"))
+        os.makedirs(this_dir, exist_ok=True)
 
-def PanoDemo(Camera_IP, Camera_User, Camera_Password,
-             PanTil_IP,
-             OutputFolder, ConfigFilename=None,
-             Focus=None, Zoom=None, FoV=None):
-    ImageSize = [1920, 1080]
-#    Focus = 935
-#    Zoom = 800  # 1050
-    ZoomList = range(50, 1100, 100)
-    CamHFoVList = [71.664, 58.269, 47.670, 40.981, 33.177, 25.246, 18.126,
-                   12.782, 9.217, 7.050, 5.824]
-    CamVFoVList = [39.469, 33.601, 26.508, 22.227, 16.750, 13.002, 10.324,
-                   7.7136, 4.787, 3.729, 2.448]
-    PanRange = [80, 200]
-    TiltRange = [-20, 20]
-    SecondsPerImage = 5  # just an estimate
+        self._csv_log = now.strftime("{name}-"+ts_fmt+".csv").format(name=self.name)
+        cfg = self.csv_log
+        focus_list = cfg.get('focus_pos', [])
 
-    Pano = Panorama(Camera_IP, Camera_User, Camera_Password, PanTil_IP)
-    Pano.setImageSize(ImageSize)
-    Pano.setCameraFovDist(ZoomList, CamHFoVList, CamVFoVList)
-    Pano.setPanoramaFoVRange(PanRange, TiltRange)
-    print("CamHFoV = {}, CamVFoV = {}".format(Pano.CamHFoV, Pano.CamVFoV))
-    if Zoom is not None:
-#        Pano.setZoom(Zoom)
-        Pano.setFoVFromZoom(Zoom)
-    if Focus is not None:
-        Pano.setFocus(Focus)
+        start_time = time.time()
+        # this is just here in case you want to update overview.jpg
+        # im1 = cv2.resize(self.camera.capture(), None, fx=0.1, fy=0.1)
+        # overview = np.zeros((im1.shape[0]*len(self._tilt_pos_list),
+        #                      im1.shape[1]*len(self._pan_pos_list),
+        #                      3), np.uint8)
+        # cv2.imwrite("overview.jpg", overview)
 
-    if FoV is not None:
-        Pano.setCameraFoV(FoV)
-    elif Zoom is None and Focus is None:
-        print("")
+        def cap(_i: int, _j: int, _pan_pos: float, _tilt_pos: float, _image_index: int, lcap: int)->int:
+            self._pantilt.position = _pan_pos, _tilt_pos
+            time.sleep(0.1)
 
-    while True and os.path.exists(OutputFolder):
-        Config = None
-        if ConfigFilename is not None:
-            with open(ConfigFilename) as File:
-                csvread = csv.DictReader(File)
-                Config = {"ImgIndex": [], "PanDeg": [], "TiltDeg": [],
-                          "Zoom": [], "FocusPos": []}
-                for row in csvread:
-                    Config["ImgIndex"].append(int(row["ImgIndex"]))
-                    Config["PanDeg"].append(float(row["PanDeg"]))
-                    Config["TiltDeg"].append(float(row["TiltDeg"]))
-                    Config["Zoom"].append(int(row["Zoom"]))
-                    Config["FocusPos"].append(int(float(row["FocusPos"])))
-
-        Now = datetime.now()
-        PanoFolder = os.path.join(OutputFolder,
-                                  Now.strftime("%Y"),
-                                  Now.strftime("%Y_%m"),
-                                  Now.strftime("%Y_%m_%d"),
-                                  Now.strftime("%Y_%m_%d_%H"))
-        RecoveryFilename = os.path.join(PanoFolder, "_data", "recovery.csv")
-        ConfigFilename = os.path.join(PanoFolder, "_data", "config.csv")
-        if os.path.exists(RecoveryFilename):
-            with open(RecoveryFilename, "r") as File:
-                # header "NoCols,NoRows,CurImgIndex,SecPerImg"
+            self.csv_log = _image_index, _pan_pos, _tilt_pos
+            self.recovery_file = _image_index, now.strftime(ts_fmt)
+            for _ in range(0, 15):
+                filename = os.path.join(self._spool_dir,
+                                        now.strftime("{name}_"+ts_fmt+"_{index:04}").format(name=self.name,
+                                                                                            index=_image_index))
                 try:
-                    line = File.readline()  # skip header
-                    line = File.readline()
-                    nums = [float(num) for num in line.split(",")]
-                except:
-                    nums = None
-            if nums is not None and len(nums) == 4:
-                RemainingSeconds = (nums[0]*nums[1] - nums[2])*nums[3]
-                if RemainingSeconds//60 + int(Now.strftime("%M")) <= 60:
-                    # remove last file that may be corrupted
-                    FileList = glob.glob(
-                        os.path.join(PanoFolder, "{:04}.jpg".format(nums[2])))
-                    if len(FileList) > 0:
-                        for Filename in FileList:
-                            os.remove(Filename)
+                    output_filenames = list(self._camera.capture(filename=filename))
+                    # output_filenames = self._camera.capture_monkey(filename=filename)
+                    self.camera.communicate_with_updater()
+                    if type(output_filenames) is list and len(output_filenames):
+                        # image = cv2.resize(self.camera.image.copy(),
+                        #                    None, fx=0.1, fy=0.1,
+                        #                    interpolation=cv2.INTER_NEAREST)
 
-                    Pano.run(PanoFolder, LastImageIndex=nums[2],
-                             RecoveryFilename=RecoveryFilename,
-                             ConfigFilename=ConfigFilename, Config=Config)
-                    continue
-                else:
-                    print("Found recovery data but it's too late to recover.")
+                        # yoff = _i * image.shape[0]
+                        # xoff = _j * image.shape[1]
+                        # overview[yoff:yoff+image.shape[0], xoff:xoff+image.shape[1]] = image
+                        # cv2.imwrite("overview.jpg", overview)
+                        for f in output_filenames:
+                            shutil.move(f, os.path.join(this_dir, os.path.basename(f)))
+                        self.logger.info("wrote image {}/{}".format(_image_index+1,
+                                                                    (len(self._pan_pos_list) * len(self._tilt_pos_list))))
+                        lcap += 1
+                        # update time per image
+                        current_time = time.time()
+                        self._seconds_per_image = (current_time - start_time) / lcap
+                        self.logger.info("Seconds per image {0:.2f}s".format(self._seconds_per_image))
+                        return lcap
+                except Exception as e:
+                    self.logger.error("Bad things happened: {}".format(str(e)))
+            else:
+                self.logger.error("failed capturing!")
+                return lcap
 
-        Now = datetime.now()
-        PanoFolder = os.path.join(OutputFolder,
-                                  Now.strftime("%Y"),
-                                  Now.strftime("%Y_%m"),
-                                  Now.strftime("%Y_%m_%d"),
-                                  Now.strftime("%Y_%m_%d_%H"))
-        RecoveryFilename = os.path.join(PanoFolder, "_data", "recovery.csv")
-        ConfigFilename = os.path.join(PanoFolder, "_data", "config.csv")
-        # run if finishing before the begining of the next o'clock
-        if int(Now.strftime("%M")) + Pano.MaxNoImages*SecondsPerImage//60 <= 60:
-            print("Started recording new panorama at {}".format(PanoFolder))
-#            Pano.test()
-            if os.path.exists(PanoFolder):
-                shutil.rmtree(PanoFolder)
-            Pano.run(PanoFolder, RecoveryFilename=RecoveryFilename,
-                     ConfigFilename=ConfigFilename, Config=Config)
 
-        Now = datetime.now()
-        RemainingMinutes = 60-int(Now.strftime("%M"))
-        print("It's {}.".format(Now.strftime("%H:%M"))),
-        print("Wait for {} minutes before start.".format(RemainingMinutes))
-        time.sleep(RemainingMinutes*60)
+        # reverse it because we should start from top and go down
+        tilt_pos_list = list(reversed(self._tilt_pos_list))
+        pan_pos_list = self._pan_pos_list
+        if self.scan_order == 1:
+            # cols left
+            pan_pos_list = self._pan_pos_list
+            tilt_pos_list = list(reversed(self._tilt_pos_list))
+        elif self.scan_order == 3:
+            # rows up
+            tilt_pos_list = self._tilt_pos_list
+            pan_pos_list = list(reversed(self._pan_pos_list))
+        recovery_index = self.recovery_file.get('image_index', 0)
 
+        if self._scan_order >= 2:
+            for i, tilt_pos in enumerate(tilt_pos_list):
+                for j, pan_pos in enumerate(pan_pos_list):
+                    image_index = i * len(pan_pos_list) + j
+                    if image_index < recovery_index:
+                        continue
+                    last_image_captured = cap(i, j, pan_pos, tilt_pos, image_index, last_image_captured)
+
+        else:
+            for j, pan_pos in enumerate(pan_pos_list):
+                for i, tilt_pos in enumerate(tilt_pos_list):
+                    image_index = j * (len(tilt_pos_list)) + i
+                    if image_index < recovery_index:
+                        continue
+                    last_image_captured = cap(i, j, pan_pos, tilt_pos, image_index, last_image_captured)
+
+        shutil.move(self._csv_log, os.path.join(self._output_dir, os.path.basename(self._csv_log)))
+        os.remove(self._recovery_filename)
+        self._recovery_file['image_index'] = 0
+        self.logger.info("Panorama complete in {}".format(sec2human(time.time() - start_time)))
+
+    def calibrate_and_run(self):
+        self._pantilt.position = np.mean(self._pantilt.pan_range), 0
+        fovlists = self.calibrate_fov_list(zoom_list=list(range(2)), increment=2)
+
+        self.logger.info("Calibration complete")
+        self.logger.info(Panorama.format_calibration(fovlists, "Calibration results: "))
+        h, v = fovlists
+        try:
+            self._camera.zoom_list = list(range(2))
+            self._camera.vfov_list = v
+            self._camera.hfov_list = h
+            self._camera.hfov = np.mean(h)
+            self._camera.vfov = np.mean(v)
+            self.enumerate_positions()
+            self.logger.info(self.summary)
+        except Exception as e:
+            self.logger.error(str(e))
+        self.take_panorama()
+
+    def run_from_config(self):
+        self.logger.info(self.summary)
+        self.take_panorama()
+
+    @staticmethod
+    def time2seconds(t: datetime.datetime)->int:
+        """
+        converts a datetime to an integer of seconds since epoch
+        """
+        try:
+            return int(t.timestamp())
+        except:
+            # only implemented in python3.3
+            # this is an old compatibility thing
+            return t.hour * 60 * 60 + t.minute * 60 + t.second
+
+    def time_to_capture(self):
+        """
+        filters out times for capture, returns True by default
+        returns False if the conditions where the camera should NOT capture are met.
+        :return:
+        """
+        current_capture_time = datetime.datetime.now()
+        current_naive_time = current_capture_time.time()
+
+        if self.begin_capture < self.end_capture:
+            # where the start capture time is less than the end capture time
+            if not self.begin_capture <= current_naive_time <= self.end_capture:
+                return False
+        else:
+            # where the start capture time is greater than the end capture time
+            # i.e. capturing across midnight.
+            if self.end_capture <= current_naive_time <= self.begin_capture:
+                return False
+
+        # capture interval
+        if not (self.time2seconds(current_capture_time) % self.interval < Panorama.accuracy):
+            return False
+        return True
+
+    @property
+    def next_pano(self):
+        nextin = self.time2seconds(datetime.datetime.now())
+        nowstamp = self.time2seconds(datetime.datetime.now())
+        while True:
+            nextin += 1
+            if (nextin % self.interval) < Panorama.accuracy:
+                break
+        return nextin - nowstamp
+
+    def run_loop(self):
+        while True:
+            if self.time_to_capture():
+                self.logger.info(self.summary)
+                self.take_panorama()
+                self.logger.info("Next pano in {}".format(sec2human(self.next_pano)))
+            time.sleep(1)
 
 if __name__ == "__main__":
-    Camera_IP = "192.168.1.100"
-    Camera_User = "Admin"
-    Camera_Password = "123456"
-    PanTil_IP = "192.168.1.101:81"
-    # On Raspberry Pi, run:
-    # $ mkdir /home/pi/Data/a_data
-    # $ sshfs chuong@percy.anu.edu.au:/network/phenocam-largedatasets/a_data /home/pi/Data/a_data
-    # and change OutputFolder
-    # OutputFolder = "/home/pi/Data/a_data/Gigavision/chuong_tests/"
-    OutputFolder = "/home/chuong/Data/a_data/Gigavision/chuong_tests/"
-    Zoom = 800
-#    ConfigFileName = "/home/chuong/Data/a_data/Gigavision/chuong_tests/2014/2014_12/2014_12_17/2014_12_17_18/_data/config.csv"
-#    PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP,
-#             OutputFolder, Zoom=Zoom, ConfigFileName)
-    Focus = 935
 
-    PanoDemo(Camera_IP, Camera_User, Camera_Password, PanTil_IP,
-             OutputFolder, Zoom=Zoom, Focus=Focus)
+    if len(sys.argv) < 2:
+        print("Usage \"script.py /path/to/config.yml\"")
+        sys.exit()
+
+    config_file = sys.argv[-1]
+
+    updater = Updater()
+    # updater.start()
+
+    pano = Panorama(config_filename=config_file, queue=updater.communication_queue)
+
+    # pano.test_calibration(1)
+    #uploader = Uploader(pano.camera.identifier,
+    #                    queue=updater.communication_queue,
+    #                    config_filename=config_file)
+    #uploader.daemon = True
+    #uploader.start()
+    pano.take_panorama()
+    pano.logger.info("Next pano in {}".format(sec2human(pano.next_pano)))
+    pano.run_loop()

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% set active_page = "Panorama Configuration files" %}
+{% block body %}
+    <div class="container-fluid">
+        <div class="form-group col-md-4">
+            <form method="POST">
+                <label for="pano-sel">Pano:</label>
+                <select class="form-control" id="pano-sel" name="pano-sel" onchange="this.form.submit()">
+                    {% for option in pcfg %}
+                        <option {% if option==session['pano_config_fn'] %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+        <div class="form-group col-md-4">
+            <form method="POST">
+                <label for="camera-sel">Camera:</label>
+                <select class="form-control" id="camera-sel" name="camera-sel" onchange="this.form.submit()">
+                    {% for option in ccfg %}
+                        <option {% if option==session['camera_config_fn'] %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+        <div class="form-group col-md-4">
+            <form method="POST">
+                <label for="ptz-sel">PTZ:</label>
+                <select class="form-control" id="ptz-sel" name="ptz-sel" onchange="this.form.submit()">
+                    {% for option in ptzcfg %}
+                        <option {% if option==session['ptz_config_fn'] %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+
+        <div id="file-upload-form" class="col-md-4">
+            <form method="post" enctype="multipart/form-data">
+                <div class="btn-group">
+                    <span class="btn btn-default btn-file">
+                        Browse for Pano config <input type="file" name="pano-config-file">
+                    </span>
+                    <button type="submit" class="btn btn-default">
+                        <span class="glyphicon glyphicon-upload" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    <br>
+        <div id="file-upload-form" class="col-md-4">
+            <form method="post" enctype="multipart/form-data">
+                <div class="btn-group">
+                    <span class="btn btn-default btn-file">
+                        Browse for Camera Config <input type="file" name="cam-config-file">
+                    </span>
+                    <button type="submit" class="btn btn-default">
+                        <span class="glyphicon glyphicon-upload" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    <br>
+        <div id="file-upload-form" class="col-md-4">
+            <form method="post" enctype="multipart/form-data">
+                <div class="btn-group">
+                    <span class="btn btn-default btn-file">
+                        Browse for PTZ config <input type="file" name="ptz-config-file">
+                    </span>
+                    <button type="submit" class="btn btn-default">
+                        <span class="glyphicon glyphicon-upload" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-12">
+            <hr/>
+        </div>
+        <div id="pano-config-file-edit-form" class="col-md-4">
+            <form method="POST">
+                {% for field in panoform %}
+                    {{ render_field(field) }}
+                {% endfor %}
+            </form>
+        </div>
+        <div id="cam-config-file-edit-form" class="col-md-4">
+            <form method="POST">
+                {% for field in camform %}
+                    {{ render_field(field) }}
+                {% endfor %}
+            </form>
+        </div>
+        <div id="ptz-config-file-edit-form" class="col-md-4">
+            <form method="POST">
+                {% for field in ptzform %}
+                    {{ render_field(field) }}
+                {% endfor %}
+            </form>
+        </div>
+    </div>
+{% endblock %}

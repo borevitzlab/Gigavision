@@ -1,0 +1,78 @@
+name: AXIS-Test
+
+first_corner: [11.5079, 16.2282]
+second_corner: [104.5051, -11.6703]
+camera_fov: [16.87, 9.50]
+overlap: 50
+
+interval: 3600
+starttime: 0520
+stoptime: 1900
+output_dir: /home/images/upload/Test
+
+camera:
+  ip: '192.168.1.51'
+  username: root
+  password: lab305
+  use_focus_at_center: True
+
+  HTTP_login: "{user}:{password}"
+  format_url: "http://{HTTP_login}@{ip}{command}"
+  return_parser: plaintext
+
+  image_size_list:
+  - [1280, 720]
+  - [800, 450]
+  - [480, 270]
+  - [320, 180]
+
+  autofocus_modes: ['on', 'off']
+
+  urls:
+    set_image_size: "/axis-cgi/param.cgi?action=update&Image.I0.Resolution={width}x{height}"
+    set_focus: "/axis-cgi/com/ptz.cgi?focus={focus}"
+    set_autofocus_mode: "/axis-cgi/com/ptz.cgi?autofocus={mode}"
+    get_image: "/axis-cgi/bitmap/image.bmp?resolution={width}x{height}&compression=0"
+    get_image_size: "/axis-cgi/imagesize.cgi?camera=1"
+    get_focus: "/axis-cgi/com/ptz.cgi?query=position"
+  keys:
+    get_image_size: ["image width","image height"]
+    get_focus: "focus"
+    get_autofocus_mode: "autofocus"
+
+ptz:
+  ip: '192.168.1.51'
+  username: root
+  password: lab305
+
+  HTTP_login: "{user}:{password}"
+  format_url: "http://{HTTP_login}@{ip}{command}"
+  return_parser: plaintext
+
+  use_focus_at_center: True
+  zoom: 1500
+  scan_order: cols,right
+  zoom_range: [1, 9999]
+  zoom_list: [50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000]
+
+  pan_range: [-180, 180]
+  tilt_range: [-90, 19]
+  scale: 1.0
+
+  urls:
+    set_zoom: /axis-cgi/com/ptz.cgi?zoom={zoom}
+    set_pan: /axis-cgi/com/ptz.cgi?pan={pan}
+    set_tilt: /axis-cgi/com/ptz.cgi?tilt={tilt}
+    set_pan_tilt: /axis-cgi/com/ptz.cgi?pan={pan}&tilt={tilt}
+    get_pan_tilt: /axis-cgi/com/ptz.cgi?query=position
+    get_zoom: /axis-cgi/com/ptz.cgi?query=position
+  keys:
+    get_pan_tilt: ["pan","tilt"]
+    get_zoom: "zoom"
+
+upload:
+  enabled: False
+  server: sftp.traitcapture.org
+  server_dir: /
+  username: picam
+  password: from_key

@@ -393,8 +393,7 @@ if __name__ == '__main__':
                 Index += 1
     while True:
         Start = datetime.now()
-        WithinHourRange = (Start.hour >= StartHour and
-                           Start.hour <= EndHour)
+        WithinHourRange = (StartHour <= Start.hour <= EndHour)
         if WithinHourRange:
             # wait until camera is available
             while not isCameraAvailable():

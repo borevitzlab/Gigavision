@@ -1,0 +1,15 @@
+ip: '192.168.1.101:81'
+username: admin
+password: admin
+HTTP_login: "USER={user}&PWD={password}"
+format_url: "http://{ip}{command}&{HTTP_login}"
+
+type: ServoMotors
+pan_range: [71, 355]
+tilt_range: [-89, 29]
+pan_tilt_scale: 10.0
+
+URL_set_pan_tilt: "/Bump.xml?GoToP={pan}&GoToT={tilt}"
+URL_get_pan_tilt: "/CP_Update.xml!PanPos!TiltPos"
+#URL_pan_step: "/Bump.xml?PCmd={pan}!Text"
+#URL_tilt_step: ""/Bump.xml?TCmd={tilt}!Text"

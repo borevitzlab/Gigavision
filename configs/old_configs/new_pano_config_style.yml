@@ -1,0 +1,22 @@
+name: ARB-GV-ANU-FOREST-C01
+
+first_corner: [300,-24]
+second_corner: [130,14]
+camera_config_file: configs/D70.yml
+ptz_config_file: configs/JSystems_new.yml
+
+camera_fov: [15.02, 8.5]
+overlap: 50
+scan_order: cols,right
+use_focus_at_center: True
+zoom: 800
+
+spooling_dir: /home/stormaes/images/spool/ARB-GV-ANU-FOREST
+upload_dir: /home/stormaes/images/upload/ARB-GV-ANU-FOREST
+interval: 3600
+starttime: 0520
+stoptime: 1900
+server: sftp.traitcapture.org
+server_dir: /
+username: picam
+password: from_key
