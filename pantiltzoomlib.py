@@ -816,7 +816,7 @@ class Panorama(object):
             for _ in range(0, 15):
                 filename = os.path.join(self._spool_dir,
                                         now.strftime("{name}_"+ts_fmt+"_{index:04}").format(name=self.name,
-                                                                                            index=_image_index))
+                                                                                            index=_image_index+1))
                 try:
                     output_filenames = list(self._camera.capture(filename=filename))
                     # output_filenames = self._camera.capture_monkey(filename=filename)
