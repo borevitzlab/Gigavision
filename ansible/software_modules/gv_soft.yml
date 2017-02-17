@@ -1,9 +1,9 @@
 - name: Install gphoto2-cffi
- pip:
+  pip:
    name: "git+https://github.com/borevitzlab/gphoto2-cffi#egg=gphoto2-cffi"
    editable: no
    state: latest
- no_log: yes
+  no_log: yes
 
 - name: Download gigavision
   git:
@@ -14,33 +14,33 @@
     version: "HEAD"
     dest: "{{home_dir}}/Gigavision"
 
-- name: Create Directories for spc-eyepi
+- name: Create Directories for gigavision
   file:
     dest: "{{home_dir}}/{{item}}"
     state: directory
     group: users
     mode: 0775
   with_items:
-    - "gigavision"
+    - "Gigavision/configs_byserial"
     - "images"
-#
-#- set_fact:
-#    systemd_units:
-#      - {unit: "gigavision@.service",   enabled: yes,  state: started    }
-#  no_log: yes
-#
-#- name: Copy systemd units
-#  copy:
-#    remote_src: yes
-#    src: "{{home_dir}}/Gigavision/{{item.unit}}"
-#    dest: "/etc/systemd/system/{{item.unit}}"
-#  with_items:
-#    - "{{systemd_units}}"
-#
-#- name: Restart and Enable Gigavision systemd units
-#  systemd:
-#    name: "gigavision@{{hostname}}.service"
-#    daemon_reload: yes
-#    state: started
-#    enabled: yes
-#    masked: no
+
+- set_fact:
+    systemd_units:
+      - {unit: "gigavision@.service",   enabled: yes,  state: started    }
+  no_log: yes
+
+- name: Copy systemd units
+  copy:
+    remote_src: yes
+    src: "{{home_dir}}/Gigavision/{{item.unit}}"
+    dest: "/etc/systemd/system/{{item.unit}}"
+  with_items:
+    - "{{systemd_units}}"
+
+- name: Restart and Enable Gigavision systemd units
+  systemd:
+    name: "gigavision@{{hostname}}.service"
+    daemon_reload: yes
+    state: started
+    enabled: yes
+    masked: no
