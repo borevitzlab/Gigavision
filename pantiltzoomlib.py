@@ -46,8 +46,7 @@ def draw_matches_opencv(img1, kp1, img2, kp2, matches):
 
     Keypoints are delineated with circles, while lines are connected between
     matching keypoints.
-
-    TESTING TESTING123dassds
+    Testing now.
 
     :param img1: grayscale image
     :type img1: np.ndarray
@@ -75,6 +74,7 @@ def draw_matches_opencv(img1, kp1, img2, kp2, matches):
     cols2 = img2.shape[1]
 
     out = np.zeros((max([rows1, rows2]), cols1 + cols2, 3), dtype='uint8')
+
 
     # Place the first image to the left
     out[:rows1, :cols1, :] = np.dstack([img1, img1, img1])
