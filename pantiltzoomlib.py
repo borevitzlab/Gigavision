@@ -2,8 +2,10 @@
 """
 Created on Mon Nov 17 10:24:49 2014
 
-@author: chuong nguyen, chuong.nguyen@anu.edu.au
-@author: Gareth Dunstone, gareth.dunstone@anu.edu.au
+:author: chuong nguyen, chuong.nguyen@anu.edu.au
+:author: Gareth Dunstone, gareth.dunstone@anu.edu.au
+
+
 """
 
 import sys
@@ -23,9 +25,12 @@ from libs.Camera import Camera, GPCamera, IPCamera
 from libs.PanTilt import PanTilt
 import cv2
 import datetime
-from schedule import Scheduler
 
-logging.config.fileConfig("logging.ini")
+try:
+    logging.config.fileConfig("logging.ini")
+except:
+    pass
+
 logging.getLogger("paramiko").setLevel(logging.WARNING)
 
 
@@ -222,7 +227,7 @@ def get_displacement(image0, image1):
     return dx_median, dy_median
 
 
-def sec2human(seconds)->str:
+def sec2human(seconds) -> str:
     """
     formats a timedelta object into semi-fuzzy human readable time periods.
 
@@ -249,12 +254,12 @@ def sec2human(seconds)->str:
 
 
 class Panorama(object):
-    accuracy = 3
     """
-    Panorama class
-
+    Panorama class.
     Provides the calibration and creation of tiled panoramas with a configuration file.
     """
+    accuracy = 3
+
     def __init__(self, output_folder=None, config=None, config_filename=None, queue=None):
 
         if not config:
@@ -376,15 +381,14 @@ class Panorama(object):
 
     def set_current_as_first_corner(self):
         """
-        This and set_current_as_second_corner, both internally call enumerate positions.
+        This and :func:`set_current_as_second_corner`, both internally call enumerate positions.
 
         """
         self.first_corner = self._pantilt.position
 
     def set_current_as_second_corner(self):
         """
-        sets the current position as the second corder.
-
+        See :func:`set_current_as_first_corner`.
         """
         self.second_corner = self._pantilt.position
 
@@ -392,7 +396,7 @@ class Panorama(object):
         """
         Uses the currrent image overlap, camera fov and corners to calculate a "grid" of pan and tilt positions.
 
-        Also sets the internal enumeration of pan/tilt positions
+        Also sets the internal enumeration of pan/tilt positions.
         """
         self.logger.debug("Enumerating positions")
         self._pan_step = (1 - self._image_overlap) * self._camera.hfov
@@ -418,11 +422,13 @@ class Panorama(object):
         self.logger.debug("tilt {}-{}".format(tilt_start, tilt_stop))
 
     @property
-    def summary(self)->str:
+    def summary(self) -> str:
         """
         returns a human readable summary of the panorama parameters.
         These include pan step, camera fov etc.
-        :return str: information about the panorama
+
+        :return: information about the panorama
+        :rtype: str
         """
         self.enumerate_positions()
         max_num_images = len(self._pan_pos_list) * len(self._tilt_pos_list)
@@ -442,7 +448,7 @@ class Panorama(object):
         return s
 
     @property
-    def camera(self)->Camera:
+    def camera(self) -> Camera:
         return self._camera
 
     @camera.setter
@@ -450,7 +456,7 @@ class Panorama(object):
         self._camera = value
 
     @property
-    def pantilt(self) ->PanTilt:
+    def pantilt(self) -> PanTilt:
         return self._pantilt
 
     @pantilt.setter
@@ -466,7 +472,7 @@ class Panorama(object):
         self._image_overlap = value
 
     @property
-    def scan_order(self)->str:
+    def scan_order(self) -> str:
         return self._scan_order_translation_r.get(self._scan_order, "cols,right")
 
     @scan_order.setter
@@ -474,7 +480,7 @@ class Panorama(object):
         self._scan_order = self._scan_order_translation.get(str(value).lower().replace(" ", ""), 0)
 
     @property
-    def output_dir(self)->str:
+    def output_dir(self) -> str:
         return self._output_dir
 
     @output_dir.setter
@@ -485,10 +491,12 @@ class Panorama(object):
         self._output_dir = value
 
     @property
-    def panorama_fov(self)->tuple:
+    def panorama_fov(self) -> tuple:
         """
         Gets the total fov of the Panorama.
-        :return:
+
+        :return: total fov of the panorama as (hfov, vfov)
+        :rtype: tuple[float, float]
         """
         return self._pan_range, self._tilt_range
 
@@ -496,8 +504,9 @@ class Panorama(object):
     def panorama_fov(self, value: tuple):
         """
         sets the pan range and tilt range of the panorama using the fov, and centre points
+
         :param value: 4 length tuple of pan_fov, tilt_fov, pan_centre, tilt_centre
-        :return:
+        :type value: tuple
         """
         try:
             pan_fov, tilt_fov, pan_centre, tilt_centre = value
@@ -508,7 +517,12 @@ class Panorama(object):
         self.enumerate_positions()
 
     @property
-    def first_corner(self)->tuple:
+    def first_corner(self) -> tuple:
+        """
+        the starting corner of the panorama.
+        :return: tuple of first corner as (pan,tilt)
+        :rtype: tuple[float,float]
+        """
         return self._pan_range[0], self._tilt_range[1]
 
     @first_corner.setter
@@ -519,11 +533,20 @@ class Panorama(object):
         self.enumerate_positions()
 
     @property
-    def center(self)->tuple:
+    def center(self) -> tuple:
+        """
+        :return: tuple of center position as (pan,tilt)
+        :rtype: tuple[float,float]
+        """
         return tuple((np.array(self.first_corner) + np.array(self.second_corner)) / 2)
 
     @property
     def second_corner(self):
+        """
+        the finishing corner of the panorama.
+        :return: tuple of second corner as (pan,tilt)
+        :rtype: tuple[float,float]
+        """
         return self._pan_range[1], self._tilt_range[0]
 
     @second_corner.setter
@@ -534,12 +557,17 @@ class Panorama(object):
         self.enumerate_positions()
 
     @staticmethod
-    def format_calibration(fovlists: tuple, test: str)->str:
+    def format_calibration(fovlists: tuple, test: str) -> str:
         """
-        formats a list of calibrated tuple of lists of fields of view and gives some statistics about the measurements.
+        formats a list of calibrated tuple of lists of fields of view and gives some statistics
+        about the measurements.
+
         :param fovlists: 2 length tuple of lists of hfov and vfov - tuple(list(hfov), list(vfov))
-        :param test: prefix
-        :return:
+        :type fovlists: tuple[ list(float), list(float) ]
+        :param test: prefix for put before the output (ie, which number test it is)
+        :type test: str
+        :return: formattted string of the camera calibration.
+        :rtype: str
         """
         s = u"\n{test_num}).\n\tHFOV:\n{havg:.2f}±{havar:.4f},\tσ: {hstdev}\n\tVFOV:\n{vavg:.2f}±{vavar:.4f},\tσ: {vstdev:.4f}\n"
         h, v = fovlists
@@ -555,9 +583,9 @@ class Panorama(object):
 
     def test_calibration(self, number_of_tests: int):
         """
-        tests the calibration process
-        :param number_of_tests:
-        :return:
+        Tests the calibration process for accuracy, and prints the output values.
+
+        :param number_of_tests: number of times to calibrate and compare calibration values.
         """
         import random
         self.logger.info("Testing {} times".format(number_of_tests))
@@ -585,13 +613,14 @@ class Panorama(object):
         self._pantilt.position = np.mean(self._pantilt.pan_range), 0
 
     def calibrate_fov_list(self,
-                           zoom_list: list=range(50, 1000, 100),
-                           panpos: float=None,
-                           tiltpos: float=None,
-                           increment: float=2,
-                           use_opencv: bool=True)->tuple:
+                           zoom_list: list = range(50, 1000, 100),
+                           panpos: float = None,
+                           tiltpos: float = None,
+                           increment: float = 2,
+                           use_opencv: bool = True) -> tuple:
         """
-        calibrates the Panorama on a list of zoom levels.
+        calibrates the Panorama for a list of zoom levels.
+
         :param zoom_list: list of zoom positions to calibrate
         :param panpos: pan position to calibrate
         :param tiltpos: tilt ""
@@ -608,8 +637,8 @@ class Panorama(object):
         tiltpos = tiltpos or curpos[1]
         for idx, zoompos in enumerate(zoom_list):
             self._pantilt._position = np.mean(self._pantilt.pan_range), 0
-            self.logger.info("Calibrating {}/{}".format(idx + 1, len(zoom_list)))
             self._pantilt.zoom_position = zoompos
+            self.logger.info("Calibrating {}/{}".format(idx + 1, len(zoom_list)))
             time.sleep(1)
             hf, vf = self.calibrate_fov(zoompos, panpos, tiltpos, increment, use_opencv=use_opencv)
 
@@ -625,16 +654,25 @@ class Panorama(object):
                       pan_pos: float,
                       tilt_pos: float,
                       increment: float,
-                      use_opencv: bool=True)->tuple:
+                      use_opencv: bool = True) -> tuple:
         """
         Capture images at different pan/tilt angles, then measure the pixel
         displacement between the images to estimate the field-of-view angle.
+
+        This function is also designed to reject outliers when measuring.
+
         :param zoom_pos: begin zoom position
+        :type zoom_pos: float
         :param pan_pos: begin pan position
+        :type pan_pos: float
         :param tilt_pos: begin tilt position
+        :type tilt_pos: float
         :param increment: amount to increment to get displacement.
+        :type increment: float
         :param use_opencv: Whether to use opencv or scikit image for displacement algorithm
+        :type use_opencv: bool
         :return: tuple of hfov, vfov estimates
+        :rtype: tuple[float,float]
         """
 
         self._pantilt.zoom_position = zoom_pos
@@ -723,7 +761,7 @@ class Panorama(object):
 
         lh, lv = len(hestimates), len(vestimates)
         hestimates, vestimates = reject_outliers(np.array(hestimates)), reject_outliers(np.array(vestimates))
-        self.logger.info("removed outliers: h{} v{} ".format(lh-len(hestimates), lv-len(vestimates)))
+        self.logger.info("removed outliers: h{} v{} ".format(lh - len(hestimates), lv - len(vestimates)))
         hfov_estimate, vfov_estimate = np.mean(hestimates), np.mean(vestimates)
 
         self.logger.info(Panorama.format_calibration((hestimates, vestimates), "This guess: "))
@@ -732,9 +770,15 @@ class Panorama(object):
         time.sleep(1)
         return hfov_estimate, vfov_estimate
 
-
-    def quick_calibrate(self, increment):
-        h, v = self.calibrate_fov(self._pantilt._zoom_position, float(np.mean(self._pan_range)),float(np.mean(self._tilt_range)), increment=increment)
+    def quick_calibrate(self, increment: float):
+        """
+        Performs a quick calibration, a single time, and store the calibration values in the child camera object,
+        and the child ptz object.
+        :param increment: amount to increment by until we get optimal displacement.
+        :type increment: float
+        """
+        h, v = self.calibrate_fov(self._pantilt._zoom_position, float(np.mean(self._pan_range)),
+                                  float(np.mean(self._tilt_range)), increment=increment)
         self._pantilt.zoom_list = [0]
         self._camera.vfov_list = [v]
         self._camera.hfov_list = [h]
@@ -747,8 +791,12 @@ class Panorama(object):
             with open(self._csv_log, 'w') as file:
                 file.write("image_index,pan_deg,tilt_deg,zoom_pos,focus_pos\n")
 
-    @property
-    def csv_log(self)->dict:
+    def load_csv_log(self) -> dict:
+        """
+        loads a csv log into a dictionary so that we can continue to write to it.
+
+        :return: dict of values in the csv.
+        """
         if not os.path.isfile(self._csv_log):
             self._init_csv_log(self._csv_log)
         cfg = {"image_index": [], "pan_deg": [], "tilt_deg": [], "zoom_pos": [], "focus_pos": []}
@@ -768,23 +816,28 @@ class Panorama(object):
                 cfg["focus_pos"].append(fp)
         return cfg
 
-    @csv_log.setter
-    def csv_log(self, value: tuple):
+    def write_csv_log(self, image_index, pan_pos, tilt_pos):
+        """
+        writes a new line of values to the csv log.
+
+        :param image_index: current index to be written
+        :param pan_pos: the current pan position
+        :param tilt_pos: the current tilt position.
+        """
         if self._csv_log and os.path.isfile(self._csv_log):
-            image_index, pan_pos, tilt_pos = value
             with open(self._csv_log, 'a') as File:
                 File.write("{},{},{},{},{}\n".format(
                     image_index, pan_pos, tilt_pos,
                     self._pantilt.zoom_position,
                     self._camera.focus_position))
 
-    @property
-    def recovery_file(self)->dict:
-        return self._recovery_file
+    def write_to_recovery_file(self, index, started_time):
+        """
+        writes the current state to the recovery file.
 
-    @recovery_file.setter
-    def recovery_file(self, data: tuple):
-        index, started_time = data
+        :param index: the current index into the panorama.
+        :param started_time: the time the panorama was started.
+        """
         self._recovery_file['image_index'] = index
         with open(self._recovery_filename, 'w') as file:
             data = {"cols": len(self._pan_pos_list),
@@ -795,6 +848,9 @@ class Panorama(object):
             file.write(json.dumps(data))
 
     def take_panorama(self):
+        """
+        takes a panorama using the current values stored in this :class:`Panorama` object.
+        """
         ts_fmt = "%Y_%m_%d_%H_%M_00_00"
         last_image_captured = 0
         now = datetime.datetime.now()
@@ -804,22 +860,23 @@ class Panorama(object):
         time.sleep(1)
         self._camera.focus()
         time.sleep(1)
-        last_started = self.recovery_file.get('started_time', None)
+        last_started = self._recovery_file.get('started_time', None)
         if last_started:
             last_started = datetime.datetime.strptime(last_started, ts_fmt)
-            if int(now.timestamp())-int(last_started.timestamp()) < self.interval:
+            if int(now.timestamp()) - int(last_started.timestamp()) < self.interval:
                 now = last_started
             else:
                 self.logger.warning("Recovery exists, but its now too late. Starting from beginning.")
-                self.recovery_file = 0, now.strftime(ts_fmt)
+                self.write_to_recovery_file(0, now.strftime(ts_fmt))
         this_dir = os.path.join(self._output_dir, now.strftime("%Y_%m_%d_%H"))
         os.makedirs(this_dir, exist_ok=True)
 
-        self._csv_log = now.strftime("{name}-"+ts_fmt+".csv").format(name=self.name)
-        cfg = self.csv_log
+        self._csv_log = now.strftime("{name}-" + ts_fmt + ".csv").format(name=self.name)
+        cfg = self.load_csv_log()
         focus_list = cfg.get('focus_pos', [])
 
         start_time = time.time()
+
         # this is just here in case you want to update overview.jpg
         # im1 = cv2.resize(self.camera.capture(), None, fx=0.1, fy=0.1)
         # overview = np.zeros((im1.shape[0]*len(self._tilt_pos_list),
@@ -827,16 +884,25 @@ class Panorama(object):
         #                      3), np.uint8)
         # cv2.imwrite("overview.jpg", overview)
 
-        def cap(_i: int, _j: int, _pan_pos: float, _tilt_pos: float, _image_index: int, lcap: int)->int:
+        def cap(_pan_pos: float, _tilt_pos: float, _image_index: int, lcap: int) -> int:
+            """
+            captures an image for the position _pan_pos,_tilt_pos with the image index _image_index
+
+            :param _pan_pos: the pan position to take an image
+            :param _tilt_pos: the tilt position to take an image
+            :param _image_index: index of the current image. used to write the image filename.
+            :param lcap: used to calculate how long capture is taking.
+            :return:
+            """
             self._pantilt.position = _pan_pos, _tilt_pos
             time.sleep(0.1)
 
-            self.csv_log = _image_index, _pan_pos, _tilt_pos
-            self.recovery_file = _image_index, now.strftime(ts_fmt)
+            self.write_csv_log(_image_index, _pan_pos, _tilt_pos)
+            self.write_to_recovery_file(_image_index, now.strftime(ts_fmt))
             for _ in range(0, 15):
                 filename = os.path.join(self._spool_dir,
-                                        now.strftime("{name}_"+ts_fmt+"_{index:04}").format(name=self.name,
-                                                                                            index=_image_index+1))
+                                        now.strftime("{name}_" + ts_fmt + "_{index:04}").format(name=self.name,
+                                                                                                index=_image_index + 1))
                 try:
                     output_filenames = list(self._camera.capture(filename=filename))
                     # output_filenames = self._camera.capture_monkey(filename=filename)
@@ -852,8 +918,9 @@ class Panorama(object):
                         # cv2.imwrite("overview.jpg", overview)
                         for f in output_filenames:
                             shutil.move(f, os.path.join(this_dir, os.path.basename(f)))
-                        self.logger.info("wrote image {}/{}".format(_image_index+1,
-                                                                    (len(self._pan_pos_list) * len(self._tilt_pos_list))))
+                        self.logger.info("wrote image {}/{}".format(_image_index + 1,
+                                                                    (len(self._pan_pos_list) * len(
+                                                                        self._tilt_pos_list))))
                         lcap += 1
                         # update time per image
                         current_time = time.time()
@@ -866,7 +933,6 @@ class Panorama(object):
                 self.logger.error("failed capturing!")
                 return lcap
 
-
         # reverse it because we should start from top and go down
         tilt_pos_list = list(reversed(self._tilt_pos_list))
         pan_pos_list = self._pan_pos_list
@@ -878,7 +944,7 @@ class Panorama(object):
             # rows up
             tilt_pos_list = self._tilt_pos_list
             pan_pos_list = list(reversed(self._pan_pos_list))
-        recovery_index = self.recovery_file.get('image_index', 0)
+        recovery_index = self._recovery_file.get('image_index', 0)
 
         if self._scan_order >= 2:
             for i, tilt_pos in enumerate(tilt_pos_list):
@@ -886,7 +952,7 @@ class Panorama(object):
                     image_index = i * len(pan_pos_list) + j
                     if image_index < recovery_index:
                         continue
-                    last_image_captured = cap(i, j, pan_pos, tilt_pos, image_index, last_image_captured)
+                    last_image_captured = cap(pan_pos, tilt_pos, image_index, last_image_captured)
 
         else:
             for j, pan_pos in enumerate(pan_pos_list):
@@ -894,7 +960,7 @@ class Panorama(object):
                     image_index = j * (len(tilt_pos_list)) + i
                     if image_index < recovery_index:
                         continue
-                    last_image_captured = cap(i, j, pan_pos, tilt_pos, image_index, last_image_captured)
+                    last_image_captured = cap(pan_pos, tilt_pos, image_index, last_image_captured)
 
         shutil.move(self._csv_log, os.path.join(self._output_dir, os.path.basename(self._csv_log)))
         os.remove(self._recovery_filename)
@@ -902,6 +968,9 @@ class Panorama(object):
         self.logger.info("Panorama complete in {}".format(sec2human(time.time() - start_time)))
 
     def calibrate_and_run(self):
+        """
+        calibrates, and takes a panorama.
+        """
         self._pantilt.position = np.mean(self._pantilt.pan_range), 0
         fovlists = self.calibrate_fov_list(zoom_list=list(range(2)), increment=2)
 
@@ -921,11 +990,14 @@ class Panorama(object):
         self.take_panorama()
 
     def run_from_config(self):
+        """
+        Prints the summary and takes a panorama
+        """
         self.logger.info(self.summary)
         self.take_panorama()
 
     @staticmethod
-    def time2seconds(t: datetime.datetime)->int:
+    def time2seconds(t: datetime.datetime) -> int:
         """
         converts a datetime to an integer of seconds since epoch
         """
@@ -978,6 +1050,7 @@ class Panorama(object):
                 self.logger.info("Next pano in {}".format(sec2human(self.next_pano)))
             time.sleep(1)
 
+
 if __name__ == "__main__":
 
     if len(sys.argv) < 2:
@@ -998,10 +1071,10 @@ if __name__ == "__main__":
 
 
     uploader = Uploader(pano.camera.identifier,
-                       queue=updater.communication_queue,
-                       config=config)
-    #uploader.daemon = True
-    #uploader.start()
+                        queue=updater.communication_queue,
+                        config=config)
+    # uploader.daemon = True
+    # uploader.start()
     pano.take_panorama()
     pano.logger.info("Next pano in {}".format(sec2human(pano.next_pano)))
     pano.run_loop()
