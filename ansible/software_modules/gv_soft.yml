@@ -26,7 +26,7 @@
 
 - set_fact:
     systemd_units:
-      - {unit: "gigavision@.service",   enabled: yes,  state: started    }
+      - {unit: "gigavision.service",   enabled: yes,  state: started    }
   no_log: yes
 
 - name: Copy systemd units
@@ -39,7 +39,7 @@
 
 - name: Restart and Enable Gigavision systemd units
   systemd:
-    name: "gigavision@{{inventory_hostname}}.service"
+    name: "gigavision.service"
     daemon_reload: yes
     state: started
     enabled: yes
