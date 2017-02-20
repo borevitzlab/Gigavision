@@ -153,13 +153,12 @@ class Uploader(Thread):
 
     def mkdir_recursive(self, link, remote_directory, mkdir=None, chdir=None):
         """
-        creates directories recursively on the remote server
+        Creates directories recursively on the remote server.
 
         :param link: ftp/sftp connection object
         :param remote_directory:
-        :param chdir:
-        :param mkdir:
-        :return:
+        :param chdir: method used to change to a directory
+        :param mkdir: method used to make a directory
         """
         if not (mkdir and chdir):
             if isinstance(link, pysftp.Connection):
