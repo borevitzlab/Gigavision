@@ -1,4 +1,4 @@
-ackwEYEr
-========
+The docs have moved!
+==================
 
-A modular system for acquiring image from camera on a schedule
+Documentation for Gigavision can now be found [here](https://borevitzlab.github.io/Gigavision).
