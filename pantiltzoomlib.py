@@ -260,7 +260,7 @@ class Panorama(object):
     """
     accuracy = 3
 
-    def __init__(self, output_folder=None, config=None, config_filename=None, queue=None):
+    def __init__(self, config=None, config_filename=None, queue=None):
 
         if not config:
             config = dict()
@@ -322,7 +322,7 @@ class Panorama(object):
 
         self._pantilt = ptz
 
-        self._output_dir = output_folder or config.get("output_dir", "")
+        self._output_dir = config.get("output_dir", os.path.join(os.path.join("/home/images",self.name)))
         self._spool_dir = tempfile.mkdtemp(prefix=self.name)
         self.output_dir = self._output_dir
         # this is vital to create the output folder
@@ -1065,7 +1065,7 @@ if __name__ == "__main__":
     with open(config_file) as config_fh:
         config = yaml.load(config_fh.read())
 
-    pano = Panorama(config, queue=updater.communication_queue)
+    pano = Panorama(config=config, queue=updater.communication_queue)
 
     # pano.test_calibration(1)
 
