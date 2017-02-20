@@ -41,11 +41,11 @@ def draw_matches_opencv(img1, kp1, img2, kp2, matches):
     keypoints, as well as a list of DMatch data structure (matches)
     that contains which keypoints matched in which images.
 
-    An image will be produced where a montage is shown with
-    the first image followed by the second image beside it.
+    An image will be produced where a montage is shown with the first image followed
+    by the second image beside it.
 
-    Keypoints are delineated with circles, while lines are connected
-    between matching keypoints.
+    Keypoints are delineated with circles, while lines are connected between
+    matching keypoints.
 
     :param img1: grayscale image
     :type img1: np.ndarray
@@ -110,7 +110,6 @@ def draw_matches_opencv(img1, kp1, img2, kp2, matches):
 
     out = cv2.resize(out, (w, TARGETHEIGHT))
     return out
-
 
 
 def get_displacement_opencv(image0, image1):
