@@ -11,7 +11,7 @@ stoptime: 1900
 output_dir: /home/images/upload/Test
 
 camera:
-  ip: '192.168.1.51'
+  ip: '192.168.1.78'
   username: root
   password: lab305
   use_focus_at_center: True
@@ -41,7 +41,7 @@ camera:
     get_autofocus_mode: "autofocus"
 
 ptz:
-  ip: '192.168.1.51'
+  ip: '192.168.1.78'
   username: root
   password: lab305
 

@@ -24,6 +24,9 @@
         }
 
   tasks:
+    - include: tasks/set_hostname_facts.yml
+      tags: always
+
     - include: tasks/base_setup.yml
       tags: base,setup
 
