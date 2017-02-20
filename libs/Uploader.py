@@ -87,7 +87,8 @@ class Uploader(Thread):
 
     def upload(self, file_names):
         """
-        uploads files via sftp. deletes the files as they are uploaded.
+        uploads files via sftp.
+        deletes the files as they are uploaded, creates new directories if needed.
 
         :param file_names: filenames to upload
         """
@@ -153,7 +154,7 @@ class Uploader(Thread):
 
     def mkdir_recursive(self, link, remote_directory, mkdir=None, chdir=None):
         """
-        Creates directories recursively on the remote server.
+        Creates directories recursively on the remote server
 
         :param link: ftp/sftp connection object
         :param remote_directory:
