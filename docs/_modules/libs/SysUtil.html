@@ -1,0 +1,465 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>libs.SysUtil &#8212; SPC-EyePi 3.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '3.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">SPC-EyePi</a></h1>
+
+
+
+<p class="blurb">Capture/Control software for DSLRs, USB cameras, and the Raspberry Pi camera.</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=borevitzlab&repo=spc-eyepi&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ansible.html">Ansible Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../py-modindex.html">Module Index</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for libs.SysUtil</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">random</span><span class="o">,</span> <span class="nn">string</span><span class="o">,</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">socket</span><span class="o">,</span> <span class="nn">json</span><span class="o">,</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="k">import</span> <span class="n">glob</span>
+<span class="kn">from</span> <span class="nn">urllib</span> <span class="k">import</span> <span class="n">request</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">import</span> <span class="nn">configparser</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+
+<div class="viewcode-block" id="sizeof_fmt"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.sizeof_fmt">[docs]</a><span class="k">def</span> <span class="nf">sizeof_fmt</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;B&#39;</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">unit</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;Ki&#39;</span><span class="p">,</span> <span class="s1">&#39;Mi&#39;</span><span class="p">,</span> <span class="s1">&#39;Gi&#39;</span><span class="p">,</span> <span class="s1">&#39;Ti&#39;</span><span class="p">,</span> <span class="s1">&#39;Pi&#39;</span><span class="p">,</span> <span class="s1">&#39;Ei&#39;</span><span class="p">,</span> <span class="s1">&#39;Zi&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">num</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1024.0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%3.1f%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">unit</span><span class="p">,</span> <span class="n">suffix</span><span class="p">)</span>
+        <span class="n">num</span> <span class="o">/=</span> <span class="mf">1024.0</span>
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%.1f%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="s1">&#39;Yi&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="p">)</span></div>
+
+<span class="n">default_config</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">[DEFAULT]</span>
+<span class="s2">exposure = 0</span>
+<span class="s2">enabled = on</span>
+<span class="s2">resize = on</span>
+
+<span class="s2">[camera]</span>
+<span class="s2">name =</span>
+<span class="s2">enabled = on</span>
+
+<span class="s2">[ftp]</span>
+<span class="s2">enabled = on</span>
+<span class="s2">replace = on</span>
+<span class="s2">resize = on</span>
+<span class="s2">timestamped = on</span>
+<span class="s2">server = sftp.traitcapture.org</span>
+<span class="s2">directory = /</span>
+<span class="s2">username = picam</span>
+<span class="s2">password = DEFAULT_PASSWORD</span>
+
+<span class="s2">[timelapse]</span>
+<span class="s2">interval = 300</span>
+<span class="s2">starttime = 00:00</span>
+<span class="s2">stoptime = 23:59</span>
+
+<span class="s2">[localfiles]</span>
+<span class="s2">spooling_dir =</span>
+<span class="s2">upload_dir =</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="SysUtil"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil">[docs]</a><span class="k">class</span> <span class="nc">SysUtil</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    System utility class.</span>
+<span class="sd">    Helper class to cache various things like the hostname, machine-id, amount of space in the filesystem.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_ip_address</span> <span class="o">=</span> <span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="n">_external_ip</span> <span class="o">=</span> <span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="n">_machine_id</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="n">_hostname</span> <span class="o">=</span> <span class="s2">&quot;HOSTNAME&quot;</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="n">_tor_host</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;unknown.onion&quot;</span><span class="p">,</span> <span class="s2">&quot;not a real key&quot;</span><span class="p">,</span> <span class="s2">&quot;not a real client&quot;</span><span class="p">),</span> <span class="mi">0</span>
+    <span class="n">_version</span> <span class="o">=</span> <span class="s2">&quot;Unknown spc-eyepi version&quot;</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="n">a_statvfs</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">statvfs</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+    <span class="n">_fs</span> <span class="o">=</span> <span class="p">(</span><span class="n">a_statvfs</span><span class="o">.</span><span class="n">f_frsize</span> <span class="o">*</span> <span class="n">a_statvfs</span><span class="o">.</span><span class="n">f_bavail</span><span class="p">,</span> <span class="n">a_statvfs</span><span class="o">.</span><span class="n">f_frsize</span> <span class="o">*</span> <span class="n">a_statvfs</span><span class="o">.</span><span class="n">f_blocks</span><span class="p">),</span> <span class="mi">0</span>
+    <span class="n">_watches</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">thread</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">stop</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">SysUtil</span><span class="o">.</span><span class="n">thread</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">SysUtil</span><span class="o">.</span><span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_thread</span><span class="p">)</span>
+            <span class="n">SysUtil</span><span class="o">.</span><span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_nested_lookup</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">document</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        nested document lookup,</span>
+<span class="sd">        works on dicts and lists</span>
+<span class="sd">        :param key: string of key to lookup</span>
+<span class="sd">        :param document: dict or list to lookup</span>
+<span class="sd">        :return: yields item</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">document</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">document</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">SysUtil</span><span class="o">.</span><span class="n">_nested_lookup</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+                    <span class="k">yield</span> <span class="n">result</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">document</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">document</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="n">key</span><span class="p">:</span>
+                    <span class="k">yield</span> <span class="n">v</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">SysUtil</span><span class="o">.</span><span class="n">_nested_lookup</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+                        <span class="k">yield</span> <span class="n">result</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">v</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">SysUtil</span><span class="o">.</span><span class="n">_nested_lookup</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+                            <span class="k">yield</span> <span class="n">result</span>
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="SysUtil.sizeof_fmt"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.sizeof_fmt">[docs]</a>    <span class="k">def</span> <span class="nf">sizeof_fmt</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;B&#39;</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">unit</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;Ki&#39;</span><span class="p">,</span> <span class="s1">&#39;Mi&#39;</span><span class="p">,</span> <span class="s1">&#39;Gi&#39;</span><span class="p">,</span> <span class="s1">&#39;Ti&#39;</span><span class="p">,</span> <span class="s1">&#39;Pi&#39;</span><span class="p">,</span> <span class="s1">&#39;Ei&#39;</span><span class="p">,</span> <span class="s1">&#39;Zi&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">num</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1024.0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%3.1f%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">unit</span><span class="p">,</span> <span class="n">suffix</span><span class="p">)</span>
+            <span class="n">num</span> <span class="o">/=</span> <span class="mf">1024.0</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%.1f%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="s1">&#39;Yi&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="p">)</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.get_hostname"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.get_hostname">[docs]</a>    <span class="k">def</span> <span class="nf">get_hostname</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_hostname</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="s2">&quot;/etc/hostname&quot;</span><span class="p">):</span>
+                <span class="n">hostname</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">string</span><span class="o">.</span><span class="n">ascii_letters</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">))</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s2">&quot;hostname </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_hostname</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;/etc/hostname&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fn</span><span class="p">:</span>
+                    <span class="n">hostname</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_hostname</span> <span class="o">=</span> <span class="n">hostname</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_hostname</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.get_machineid"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.get_machineid">[docs]</a>    <span class="k">def</span> <span class="nf">get_machineid</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_machine_id</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="s2">&quot;/etc/machine-id&quot;</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s2">&quot;systemd-machine-id-setup&quot;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;/etc/machine-id&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_machine_id</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_machine_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.get_tor_host"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.get_tor_host">[docs]</a>    <span class="k">def</span> <span class="nf">get_tor_host</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_tor_host</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;/home/tor_private/hostname&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">onion_address</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_tor_host</span> <span class="o">=</span> <span class="n">onion_address</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_tor_host</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;unknown&quot;</span><span class="p">,</span> <span class="s1">&#39;unknown&#39;</span><span class="p">,</span> <span class="s2">&quot;unknown&quot;</span><span class="p">),</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_tor_host</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.get_fs_space"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.get_fs_space">[docs]</a>    <span class="k">def</span> <span class="nf">get_fs_space</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        returns free/total</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_fs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">a_statvfs</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">statvfs</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_fs</span> <span class="o">=</span> <span class="p">(</span><span class="n">a_statvfs</span><span class="o">.</span><span class="n">f_frsize</span> <span class="o">*</span> <span class="n">a_statvfs</span><span class="o">.</span><span class="n">f_bavail</span><span class="p">,</span> <span class="n">a_statvfs</span><span class="o">.</span><span class="n">f_frsize</span> <span class="o">*</span> <span class="n">a_statvfs</span><span class="o">.</span><span class="n">f_blocks</span><span class="p">),</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_fs</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_fs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.get_fs_space_mb"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.get_fs_space_mb">[docs]</a>    <span class="k">def</span> <span class="nf">get_fs_space_mb</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="n">free_space</span><span class="p">,</span> <span class="n">total_space</span> <span class="o">=</span> <span class="n">SysUtil</span><span class="o">.</span><span class="n">get_fs_space</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="n">free_space</span> <span class="o">/=</span> <span class="mf">1024.0</span>
+            <span class="n">total_space</span> <span class="o">/=</span> <span class="mf">1024.0</span>
+        <span class="k">return</span> <span class="n">free_space</span><span class="p">,</span> <span class="n">total_space</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.get_version"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.get_version">[docs]</a>    <span class="k">def</span> <span class="nf">get_version</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_version</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_version</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="s2">&quot;/usr/bin/git describe --always&quot;</span><span class="p">],</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">),</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_version</span> <span class="o">=</span> <span class="s2">&quot;unknown&quot;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_version</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.get_internal_ip"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.get_internal_ip">[docs]</a>    <span class="k">def</span> <span class="nf">get_internal_ip</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_ip_address</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s2">&quot;8.8.8.8&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_ip_address</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">getsockname</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_ip_address</span> <span class="o">=</span> <span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_ip_address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.get_external_ip"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.get_external_ip">[docs]</a>    <span class="k">def</span> <span class="nf">get_external_ip</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        returns the external IP address of the raspberry pi.</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_external_ip</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">60</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;https://api.ipify.org/?format=json&#39;</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_external_ip</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">,</span>
+                                                              <span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))[</span><span class="s1">&#39;ip&#39;</span><span class="p">],</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_external_ip</span> <span class="o">=</span> <span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_external_ip</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.get_identifier_from_name"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.get_identifier_from_name">[docs]</a>    <span class="k">def</span> <span class="nf">get_identifier_from_name</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        returns either the identifier (from name) or the name filled with the machine id</span>
+<span class="sd">        clamps to 32 characters.</span>
+<span class="sd">        :param name: name to fill</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">identifier</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">x</span> <span class="k">if</span> <span class="n">idx</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">name</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">get_machineid</span><span class="p">())))</span>
+        <span class="k">return</span> <span class="n">identifier</span><span class="p">[:</span><span class="mi">32</span><span class="p">]</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.get_identifier_from_filename"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.get_identifier_from_filename">[docs]</a>    <span class="k">def</span> <span class="nf">get_identifier_from_filename</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">file_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        returns either the identifier (from the file name) or the name filled with the machine id</span>
+<span class="sd">        :param file_name: filename</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fsn</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">file_name</span><span class="p">))),</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_identifier_from_name</span><span class="p">(</span><span class="n">fsn</span><span class="p">)</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.ensure_config"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.ensure_config">[docs]</a>    <span class="k">def</span> <span class="nf">ensure_config</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ConfigParser</span><span class="p">()</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">read_string</span><span class="p">(</span><span class="n">default_config</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">identifier_to_ini</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">)):</span>
+                <span class="k">return</span> <span class="n">config</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;localfiles&#39;</span><span class="p">][</span><span class="s1">&#39;spooling_dir&#39;</span><span class="p">]:</span>
+            <span class="n">config</span><span class="p">[</span><span class="s1">&#39;localfiles&#39;</span><span class="p">][</span><span class="s1">&#39;spooling_dir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;/home/images/spool/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;localfiles&#39;</span><span class="p">][</span><span class="s1">&#39;upload_dir&#39;</span><span class="p">]:</span>
+            <span class="n">config</span><span class="p">[</span><span class="s1">&#39;localfiles&#39;</span><span class="p">][</span><span class="s1">&#39;upload_dir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;/home/images/upload/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;camera&#39;</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]:</span>
+            <span class="n">config</span><span class="p">[</span><span class="s1">&#39;camera&#39;</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_hostname</span><span class="p">()</span><span class="o">+</span><span class="n">identifier</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span>
+
+        <span class="bp">cls</span><span class="o">.</span><span class="n">write_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">identifier</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">config</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.write_config"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.write_config">[docs]</a>    <span class="k">def</span> <span class="nf">write_config</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">SysUtil</span><span class="o">.</span><span class="n">identifier_to_ini</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;w+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">configfile</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">configfile</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">config</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.identifier_to_ini"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.identifier_to_ini">[docs]</a>    <span class="k">def</span> <span class="nf">identifier_to_ini</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">glob</span><span class="p">(</span><span class="s2">&quot;configs_byserial/*.ini&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">identifier</span> <span class="o">==</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_identifier_from_filename</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">fn</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;configs_byserial/&quot;</span><span class="p">,</span> <span class="n">identifier</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.ini&quot;</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.identifier_to_yml"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.identifier_to_yml">[docs]</a>    <span class="k">def</span> <span class="nf">identifier_to_yml</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">glob</span><span class="p">(</span><span class="s2">&quot;configs_byserial/*.yml&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">identifier</span> <span class="o">==</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_identifier_from_filename</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">fn</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;configs_byserial/&quot;</span><span class="p">,</span> <span class="n">identifier</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.yml&quot;</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.all_config_data"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.all_config_data">[docs]</a>    <span class="k">def</span> <span class="nf">all_config_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">ini</span> <span class="ow">in</span> <span class="n">glob</span><span class="p">(</span><span class="s2">&quot;configs_byserial/*.ini&quot;</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+            <span class="n">cfg</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ConfigParser</span><span class="p">()</span>
+            <span class="n">cfg</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">ini</span><span class="p">)</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="n">section</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">items</span><span class="p">(</span><span class="n">section</span><span class="p">))</span> <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">sections</span><span class="p">()}</span>
+            <span class="n">data</span><span class="p">[</span><span class="bp">cls</span><span class="o">.</span><span class="n">get_identifier_from_filename</span><span class="p">(</span><span class="n">ini</span><span class="p">)]</span> <span class="o">=</span> <span class="n">d</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.add_watch"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.add_watch">[docs]</a>    <span class="k">def</span> <span class="nf">add_watch</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">callback</span><span class="p">):</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_watches</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">st_mtime</span><span class="p">,</span> <span class="n">callback</span><span class="p">))</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SysUtil.open_yaml"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.SysUtil.open_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">open_yaml</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">q</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+            <span class="k">return</span> <span class="n">q</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span></div>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_thread</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">while</span> <span class="kc">True</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">stop</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mtime</span><span class="p">,</span> <span class="n">callback</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_watches</span><span class="p">):</span>
+                    <span class="n">tmt</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">st_mtime</span>
+                    <span class="k">if</span> <span class="n">tmt</span> <span class="o">!=</span> <span class="n">mtime</span><span class="p">:</span>
+                        <span class="bp">cls</span><span class="o">.</span><span class="n">_watches</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">tmt</span><span class="p">,</span> <span class="n">callback</span><span class="p">)</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;calling </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">callback</span><span class="p">))</span>
+                            <span class="n">callback</span><span class="p">()</span>
+                        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">thread</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="Test"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.Test">[docs]</a><span class="k">class</span> <span class="nc">Test</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="Test.testCLS"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.Test.testCLS">[docs]</a>    <span class="k">class</span> <span class="nc">testCLS</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="s2">&quot;test.tmp&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">completed_setup</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="Test.testCLS.setup"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.Test.testCLS.setup">[docs]</a>        <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;mock setup function called&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">completed_setup</span> <span class="o">=</span> <span class="kc">True</span></div></div>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">passed</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">failed</span> <span class="o">=</span> <span class="p">[]</span>
+
+
+<div class="viewcode-block" id="Test.test_caching"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.Test.test_caching">[docs]</a>    <span class="k">def</span> <span class="nf">test_caching</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function</span><span class="p">,</span> <span class="n">private</span><span class="p">):</span>
+        <span class="n">lasttime</span> <span class="o">=</span> <span class="n">private</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="n">function</span><span class="p">()</span>
+            <span class="n">lasttime2</span> <span class="o">=</span> <span class="n">private</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">failed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">lasttime</span> <span class="o">!=</span> <span class="n">lasttime2</span><span class="p">,</span> <span class="s2">&quot;access times are the same what gives?&quot;</span></div>
+
+<div class="viewcode-block" id="Test.test_system_id"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.Test.test_system_id">[docs]</a>    <span class="k">def</span> <span class="nf">test_system_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">SysUtil</span><span class="o">.</span><span class="n">get_machineid</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">b</span> <span class="o">=</span> <span class="n">SysUtil</span><span class="o">.</span><span class="n">get_machineid</span><span class="p">()</span>
+                <span class="k">assert</span> <span class="n">b</span> <span class="o">==</span> <span class="n">a</span><span class="p">,</span> <span class="s1">&#39;at some point the system id changed, this is wrong.&#39;</span>
+                <span class="n">b</span> <span class="o">=</span> <span class="n">a</span>
+                <span class="n">lasttime2</span> <span class="o">=</span> <span class="n">SysUtil</span><span class="o">.</span><span class="n">_machine_id</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">failed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Test.test_watcher"><a class="viewcode-back" href="../../libs.html#libs.SysUtil.Test.test_watcher">[docs]</a>    <span class="k">def</span> <span class="nf">test_watcher</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">Test</span><span class="o">.</span><span class="n">testCLS</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;test data&quot;</span><span class="p">)</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">SysUtil</span><span class="p">()</span><span class="o">.</span><span class="n">add_watch</span><span class="p">(</span><span class="s2">&quot;test.tmp&quot;</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">setup</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;changed test data&quot;</span><span class="p">)</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+            <span class="n">SysUtil</span><span class="o">.</span><span class="n">stop</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">failed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="n">c</span><span class="o">.</span><span class="n">completed_setup</span><span class="p">,</span> <span class="s2">&quot;callback was not called from watcher&quot;</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="n">SysUtil</span><span class="o">.</span><span class="n">thread</span><span class="p">,</span> <span class="s2">&quot;thread not closed&quot;</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="s1">&#39;test didnt remove file&#39;</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &copy;2016, Gareth Dunstone, Kevin Murray, Tim Brown.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
