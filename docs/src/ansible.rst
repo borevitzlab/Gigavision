@@ -1,7 +1,5 @@
-
-
 Ansible Deployment
-==================
+##################
 
 Requirements
 ------------

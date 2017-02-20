@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Starting point for capture &#8212; Gigavision 0.1.0 documentation</title>
+    <title>Entry point for capture &#8212; Gigavision 0.1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -43,13 +43,13 @@
 
 
 
-<p class="blurb">Capture/Control software for DSLRs, USB cameras, and the Raspberry Pi camera.</p>
+<p class="blurb">Capture/Control/Upload software for panorama grids capture systems.</p>
 
 
 
 
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=borevitzlab&repo=spc-eyepi&type=star&count=true&size=large&v=2"
+<iframe src="https://ghbtns.com/github-btn.html?user=borevitzlab&repo=Gigavision&type=star&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
 
@@ -60,6 +60,7 @@
 <h3>Navigation</h3>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="ansible.html">Ansible Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">General Index</a></li>
 <li class="toctree-l1"><a class="reference internal" href="py-modindex.html">Module Index</a></li>
 </ul>
 
@@ -80,10 +81,431 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="starting-point-for-capture">
-<h1>Starting point for capture<a class="headerlink" href="#starting-point-for-capture" title="Permalink to this headline">§</a></h1>
+  <div class="section" id="entry-point-for-capture">
+<h1>Entry point for capture<a class="headerlink" href="#entry-point-for-capture" title="Permalink to this headline">§</a></h1>
 <p>This python script serves as the entry point for capturing and uploading.</p>
 <p>It detects cameras, creates uploaders and an updater, starts threads etc.</p>
+<span class="target" id="module-pantiltzoomlib"></span><p>Created on Mon Nov 17 10:24:49 2014</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">author:</th><td class="field-body">chuong nguyen, <a class="reference external" href="mailto:chuong&#46;nguyen&#37;&#52;&#48;anu&#46;edu&#46;au">chuong<span>&#46;</span>nguyen<span>&#64;</span>anu<span>&#46;</span>edu<span>&#46;</span>au</a></td>
+</tr>
+<tr class="field-even field"><th class="field-name">author:</th><td class="field-body">Gareth Dunstone, <a class="reference external" href="mailto:gareth&#46;dunstone&#37;&#52;&#48;anu&#46;edu&#46;au">gareth<span>&#46;</span>dunstone<span>&#64;</span>anu<span>&#46;</span>edu<span>&#46;</span>au</a></td>
+</tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="pantiltzoomlib.draw_matches_opencv">
+<code class="descclassname">pantiltzoomlib.</code><code class="descname">draw_matches_opencv</code><span class="sig-paren">(</span><em>img1</em>, <em>kp1</em>, <em>img2</em>, <em>kp2</em>, <em>matches</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#draw_matches_opencv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.draw_matches_opencv" title="Permalink to this definition">§</a></dt>
+<dd><p>Source: <a class="reference external" href="http://stackoverflow.com/questions/20259025/module-object-has-no-attribute-drawmatches-opencv-python">http://stackoverflow.com/questions/20259025/module-object-has-no-attribute-drawmatches-opencv-python</a>
+This function takes in two images with their associated
+keypoints, as well as a list of DMatch data structure (matches)
+that contains which keypoints matched in which images.</p>
+<p>An image will be produced where a montage is shown with
+the first image followed by the second image beside it.</p>
+<p>Keypoints are delineated with circles, while lines are connected
+between matching keypoints.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>img1</strong> (<em>np.ndarray</em>) &#8211; grayscale image</li>
+<li><strong>kp1</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#list" title="(in Python v3.5)"><em>list</em></a>) &#8211; Detected list of keypoints through any of the OpenCV keypoint detection algorithms</li>
+<li><strong>img2</strong> (<em>np.ndarray</em>) &#8211; grayscale image</li>
+<li><strong>kp2</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#list" title="(in Python v3.5)"><em>list</em></a>) &#8211; Detected list of keypoints through any of the OpenCV keypoint detection algorithms</li>
+<li><strong>matches</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#list" title="(in Python v3.5)"><em>list</em></a>) &#8211; A list of matches of corresponding keypoints through any OpenCV keypoint matching algorithm</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">image of matches between images.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">np.ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pantiltzoomlib.get_displacement_opencv">
+<code class="descclassname">pantiltzoomlib.</code><code class="descname">get_displacement_opencv</code><span class="sig-paren">(</span><em>image0</em>, <em>image1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#get_displacement_opencv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.get_displacement_opencv" title="Permalink to this definition">§</a></dt>
+<dd><p>Gets displacement (in pixels I think) difference between 2 images using opencv</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>image0</strong> (<em>np.ndarray</em>) &#8211; reference image</li>
+<li><strong>image1</strong> (<em>np.ndarray</em>) &#8211; target image</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pantiltzoomlib.get_displacement">
+<code class="descclassname">pantiltzoomlib.</code><code class="descname">get_displacement</code><span class="sig-paren">(</span><em>image0</em>, <em>image1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#get_displacement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.get_displacement" title="Permalink to this definition">§</a></dt>
+<dd><p>Gets displacement (in pixels I think) difference between 2 images using scikit-image
+not as accurate as the opencv version i think.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>image0</strong> &#8211; reference image</li>
+<li><strong>image1</strong> &#8211; target image</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pantiltzoomlib.sec2human">
+<code class="descclassname">pantiltzoomlib.</code><code class="descname">sec2human</code><span class="sig-paren">(</span><em>seconds</em><span class="sig-paren">)</span> &rarr; str<a class="reference internal" href="_modules/pantiltzoomlib.html#sec2human"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.sec2human" title="Permalink to this definition">§</a></dt>
+<dd><p>formats a timedelta object into semi-fuzzy human readable time periods.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>seconds</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)"><em>float</em></a>) &#8211; seconds to format into a time period</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">human readable string</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)">str</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pantiltzoomlib.Panorama">
+<em class="property">class </em><code class="descclassname">pantiltzoomlib.</code><code class="descname">Panorama</code><span class="sig-paren">(</span><em>output_folder=None</em>, <em>config=None</em>, <em>config_filename=None</em>, <em>queue=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama" title="Permalink to this definition">§</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#object" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Panorama class.
+Provides the calibration and creation of tiled panoramas with a configuration file.</p>
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.accuracy">
+<code class="descname">accuracy</code><em class="property"> = 3</em><a class="headerlink" href="#pantiltzoomlib.Panorama.accuracy" title="Permalink to this definition">§</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.set_current_as_first_corner">
+<code class="descname">set_current_as_first_corner</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.set_current_as_first_corner"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.set_current_as_first_corner" title="Permalink to this definition">§</a></dt>
+<dd><p>This and <a class="reference internal" href="#pantiltzoomlib.Panorama.set_current_as_second_corner" title="pantiltzoomlib.Panorama.set_current_as_second_corner"><code class="xref py py-func docutils literal"><span class="pre">set_current_as_second_corner()</span></code></a>, both internally call enumerate positions.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.set_current_as_second_corner">
+<code class="descname">set_current_as_second_corner</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.set_current_as_second_corner"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.set_current_as_second_corner" title="Permalink to this definition">§</a></dt>
+<dd><p>See <a class="reference internal" href="#pantiltzoomlib.Panorama.set_current_as_first_corner" title="pantiltzoomlib.Panorama.set_current_as_first_corner"><code class="xref py py-func docutils literal"><span class="pre">set_current_as_first_corner()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.enumerate_positions">
+<code class="descname">enumerate_positions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.enumerate_positions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.enumerate_positions" title="Permalink to this definition">§</a></dt>
+<dd><p>Uses the currrent image overlap, camera fov and corners to calculate a &#8220;grid&#8221; of pan and tilt positions.</p>
+<p>Also sets the internal enumeration of pan/tilt positions.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.summary">
+<code class="descname">summary</code><a class="headerlink" href="#pantiltzoomlib.Panorama.summary" title="Permalink to this definition">§</a></dt>
+<dd><p>returns a human readable summary of the panorama parameters.
+These include pan step, camera fov etc.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">information about the panorama</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)">str</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.camera">
+<code class="descname">camera</code><a class="headerlink" href="#pantiltzoomlib.Panorama.camera" title="Permalink to this definition">§</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.pantilt">
+<code class="descname">pantilt</code><a class="headerlink" href="#pantiltzoomlib.Panorama.pantilt" title="Permalink to this definition">§</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.image_overlap">
+<code class="descname">image_overlap</code><a class="headerlink" href="#pantiltzoomlib.Panorama.image_overlap" title="Permalink to this definition">§</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.scan_order">
+<code class="descname">scan_order</code><a class="headerlink" href="#pantiltzoomlib.Panorama.scan_order" title="Permalink to this definition">§</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.output_dir">
+<code class="descname">output_dir</code><a class="headerlink" href="#pantiltzoomlib.Panorama.output_dir" title="Permalink to this definition">§</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.panorama_fov">
+<code class="descname">panorama_fov</code><a class="headerlink" href="#pantiltzoomlib.Panorama.panorama_fov" title="Permalink to this definition">§</a></dt>
+<dd><p>Gets the total fov of the Panorama.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">total fov of the panorama as (hfov, vfov)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#tuple" title="(in Python v3.5)">tuple</a>[<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)">float</a>, <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)">float</a>]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.first_corner">
+<code class="descname">first_corner</code><a class="headerlink" href="#pantiltzoomlib.Panorama.first_corner" title="Permalink to this definition">§</a></dt>
+<dd><p>the starting corner of the panorama.
+:return: tuple of first corner as (pan,tilt)
+:rtype: tuple[float,float]</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.center">
+<code class="descname">center</code><a class="headerlink" href="#pantiltzoomlib.Panorama.center" title="Permalink to this definition">§</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">tuple of center position as (pan,tilt)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#tuple" title="(in Python v3.5)">tuple</a>[<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)">float</a>,<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)">float</a>]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.second_corner">
+<code class="descname">second_corner</code><a class="headerlink" href="#pantiltzoomlib.Panorama.second_corner" title="Permalink to this definition">§</a></dt>
+<dd><p>the finishing corner of the panorama.
+:return: tuple of second corner as (pan,tilt)
+:rtype: tuple[float,float]</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pantiltzoomlib.Panorama.format_calibration">
+<em class="property">static </em><code class="descname">format_calibration</code><span class="sig-paren">(</span><em>fovlists: tuple</em>, <em>test: str</em><span class="sig-paren">)</span> &rarr; str<a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.format_calibration"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.format_calibration" title="Permalink to this definition">§</a></dt>
+<dd><p>formats a list of calibrated tuple of lists of fields of view and gives some statistics
+about the measurements.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fovlists</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#tuple" title="(in Python v3.5)"><em>tuple</em></a><em>[ </em><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#list" title="(in Python v3.5)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)"><em>float</em></a><em>)</em><em></em><em>, </em><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#list" title="(in Python v3.5)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)"><em>float</em></a><em>) </em><em></em><em>]</em><em></em>) &#8211; 2 length tuple of lists of hfov and vfov - tuple(list(hfov), list(vfov))</li>
+<li><strong>test</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; prefix for put before the output (ie, which number test it is)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">formattted string of the camera calibration.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)">str</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.test_calibration">
+<code class="descname">test_calibration</code><span class="sig-paren">(</span><em>number_of_tests: int</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.test_calibration"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.test_calibration" title="Permalink to this definition">§</a></dt>
+<dd><p>Tests the calibration process for accuracy, and prints the output values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>number_of_tests</strong> &#8211; number of times to calibrate and compare calibration values.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.calibrate_fov_list">
+<code class="descname">calibrate_fov_list</code><span class="sig-paren">(</span><em>zoom_list: list = range(50</em>, <em>1000</em>, <em>100)</em>, <em>panpos: float = None</em>, <em>tiltpos: float = None</em>, <em>increment: float = 2</em>, <em>use_opencv: bool = True</em><span class="sig-paren">)</span> &rarr; tuple<a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.calibrate_fov_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.calibrate_fov_list" title="Permalink to this definition">§</a></dt>
+<dd><p>calibrates the Panorama for a list of zoom levels.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>zoom_list</strong> &#8211; list of zoom positions to calibrate</li>
+<li><strong>panpos</strong> &#8211; pan position to calibrate</li>
+<li><strong>tiltpos</strong> &#8211; tilt &#8220;&#8221;</li>
+<li><strong>increment</strong> &#8211; pan increment amount for the calibration</li>
+<li><strong>use_opencv</strong> &#8211; whether to use opencv</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">2 length tuple of lists of hfov and vfov - tuple(list(hfov), list(vfov))</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.calibrate_fov">
+<code class="descname">calibrate_fov</code><span class="sig-paren">(</span><em>zoom_pos: float</em>, <em>pan_pos: float</em>, <em>tilt_pos: float</em>, <em>increment: float</em>, <em>use_opencv: bool = True</em><span class="sig-paren">)</span> &rarr; tuple<a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.calibrate_fov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.calibrate_fov" title="Permalink to this definition">§</a></dt>
+<dd><p>Capture images at different pan/tilt angles, then measure the pixel
+displacement between the images to estimate the field-of-view angle.</p>
+<p>This function is also designed to reject outliers when measuring.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>zoom_pos</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)"><em>float</em></a>) &#8211; begin zoom position</li>
+<li><strong>pan_pos</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)"><em>float</em></a>) &#8211; begin pan position</li>
+<li><strong>tilt_pos</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)"><em>float</em></a>) &#8211; begin tilt position</li>
+<li><strong>increment</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)"><em>float</em></a>) &#8211; amount to increment to get displacement.</li>
+<li><strong>use_opencv</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bool" title="(in Python v3.5)"><em>bool</em></a>) &#8211; Whether to use opencv or scikit image for displacement algorithm</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">tuple of hfov, vfov estimates</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#tuple" title="(in Python v3.5)">tuple</a>[<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)">float</a>,<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#float" title="(in Python v3.5)">float</a>]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.quick_calibrate">
+<code class="descname">quick_calibrate</code><span class="sig-paren">(</span><em>increment: float</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.quick_calibrate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.quick_calibrate" title="Permalink to this definition">§</a></dt>
+<dd><p>Performs a quick calibration, a single time, and store the calibration values in the child camera object,
+and the child ptz object.
+:param increment: amount to increment by until we get optimal displacement.
+:type increment: float</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.load_csv_log">
+<code class="descname">load_csv_log</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &rarr; dict<a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.load_csv_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.load_csv_log" title="Permalink to this definition">§</a></dt>
+<dd><p>loads a csv log into a dictionary so that we can continue to write to it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dict of values in the csv.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.write_csv_log">
+<code class="descname">write_csv_log</code><span class="sig-paren">(</span><em>image_index</em>, <em>pan_pos</em>, <em>tilt_pos</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.write_csv_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.write_csv_log" title="Permalink to this definition">§</a></dt>
+<dd><p>writes a new line of values to the csv log.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>image_index</strong> &#8211; current index to be written</li>
+<li><strong>pan_pos</strong> &#8211; the current pan position</li>
+<li><strong>tilt_pos</strong> &#8211; the current tilt position.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.write_to_recovery_file">
+<code class="descname">write_to_recovery_file</code><span class="sig-paren">(</span><em>index</em>, <em>started_time</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.write_to_recovery_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.write_to_recovery_file" title="Permalink to this definition">§</a></dt>
+<dd><p>writes the current state to the recovery file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>index</strong> &#8211; the current index into the panorama.</li>
+<li><strong>started_time</strong> &#8211; the time the panorama was started.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.take_panorama">
+<code class="descname">take_panorama</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.take_panorama"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.take_panorama" title="Permalink to this definition">§</a></dt>
+<dd><p>takes a panorama using the current values stored in this <a class="reference internal" href="#pantiltzoomlib.Panorama" title="pantiltzoomlib.Panorama"><code class="xref py py-class docutils literal"><span class="pre">Panorama</span></code></a> object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.calibrate_and_run">
+<code class="descname">calibrate_and_run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.calibrate_and_run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.calibrate_and_run" title="Permalink to this definition">§</a></dt>
+<dd><p>calibrates, and takes a panorama.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.run_from_config">
+<code class="descname">run_from_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.run_from_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.run_from_config" title="Permalink to this definition">§</a></dt>
+<dd><p>Prints the summary and takes a panorama</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pantiltzoomlib.Panorama.time2seconds">
+<em class="property">static </em><code class="descname">time2seconds</code><span class="sig-paren">(</span><em>t: datetime.datetime</em><span class="sig-paren">)</span> &rarr; int<a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.time2seconds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.time2seconds" title="Permalink to this definition">§</a></dt>
+<dd><p>converts a datetime to an integer of seconds since epoch</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.time_to_capture">
+<code class="descname">time_to_capture</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.time_to_capture"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.time_to_capture" title="Permalink to this definition">§</a></dt>
+<dd><p>filters out times for capture, returns True by default
+returns False if the conditions where the camera should NOT capture are met.
+:return:</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pantiltzoomlib.Panorama.next_pano">
+<code class="descname">next_pano</code><a class="headerlink" href="#pantiltzoomlib.Panorama.next_pano" title="Permalink to this definition">§</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pantiltzoomlib.Panorama.run_loop">
+<code class="descname">run_loop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.run_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.run_loop" title="Permalink to this definition">§</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </div>
 
 

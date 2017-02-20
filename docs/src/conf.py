@@ -116,8 +116,8 @@ html_sidebars = {
     ]
 }
 html_theme_options = {
-    'description': "Capture/Control software for DSLRs, USB cameras, and the Raspberry Pi camera.",
-    'github_repo': "spc-eyepi",
+    'description': "Capture/Control/Upload software for panorama grids capture systems.",
+    'github_repo': "Gigavision",
     'github_user': "borevitzlab",
     'github_button': True,
     'github_type': 'star',
@@ -194,7 +194,7 @@ intersphinx_mapping = {
     # '': ('', None),
     'python': ('https://docs.python.org/3.5', None),
     'numpy': ('http://numpy.readthedocs.io/en/latest/', None),
-    'pyudev': ('https://pyudev.readthedocs.io/en/latest/', None),
+    # 'pyudev': ('https://pyudev.readthedocs.io/en/latest/', None),
     'flask': ('http://flask.pocoo.org/docs/0.12/', None),
     'flask_bcrypt': ('https://flask-bcrypt.readthedocs.io/en/latest/', None),
     'picamera': ("http://picamera.readthedocs.io/en/release-1.12/", None)
