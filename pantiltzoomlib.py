@@ -112,6 +112,7 @@ def draw_matches_opencv(img1, kp1, img2, kp2, matches):
     return out
 
 
+
 def get_displacement_opencv(image0, image1):
     """
     Gets displacement (in pixels I think) difference between 2 images using opencv
