@@ -39,7 +39,7 @@
 
 - name: Restart and Enable Gigavision systemd units
   systemd:
-    name: "gigavision@{{hostname}}.service"
+    name: "gigavision@{{inventory_hostname}}.service"
     daemon_reload: yes
     state: started
     enabled: yes
