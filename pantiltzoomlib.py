@@ -49,6 +49,7 @@ def draw_matches_opencv(img1, kp1, img2, kp2, matches):
 
     A whole new test!
     A new fantastic way to doc!
+    No one to tell us no!
 
     :param img1: grayscale image
     :type img1: np.ndarray
