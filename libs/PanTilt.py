@@ -7,9 +7,12 @@ import requests
 from requests.auth import HTTPBasicAuth
 from xml.etree import ElementTree
 
-logging.config.fileConfig("logging.ini")
-logging.getLogger("paramiko").setLevel(logging.WARNING)
-
+try:
+    logging.config.fileConfig("logging.ini")
+    logging.getLogger("paramiko").setLevel(logging.WARNING)
+except:
+    # it wont import if the logging file isnt present.
+    pass
 
 class PanTilt(object):
     """

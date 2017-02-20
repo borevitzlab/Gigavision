@@ -18,14 +18,6 @@ libs.CryptUtil
     :undoc-members:
     :show-inheritance:
 
-libs.Light
-----------
-
-.. automodule:: libs.Light
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 libs.PanTilt
 ------------
 

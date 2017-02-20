@@ -44,13 +44,13 @@
 
 
 
-<p class="blurb">Capture/Control software for DSLRs, USB cameras, and the Raspberry Pi camera.</p>
+<p class="blurb">Capture/Control/Upload software for panorama grids capture systems.</p>
 
 
 
 
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=borevitzlab&repo=spc-eyepi&type=star&count=true&size=large&v=2"
+<iframe src="https://ghbtns.com/github-btn.html?user=borevitzlab&repo=Gigavision&type=star&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
 
@@ -61,6 +61,7 @@
 <h3>Navigation</h3>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="ansible.html">Ansible Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">General Index</a></li>
 <li class="toctree-l1"><a class="reference internal" href="py-modindex.html">Module Index</a></li>
 </ul>
 
@@ -72,7 +73,6 @@
 <li><a class="reference internal" href="#features">Features</a></li>
 <li><a class="reference internal" href="#requirements">Requirements</a></li>
 <li><a class="reference internal" href="#extra-details">Extra Details</a></li>
-<li><a class="reference internal" href="#documentation-links">Documentation Links</a></li>
 </ul>
 </li>
 </ul>
@@ -126,8 +126,6 @@
 </ul>
 </dd>
 </dl>
-<p>Automatically detects connected usb DSLRs and the Raspberry Pi camera (just duplicate <em>example.ini</em> to <em>picam.ini</em> and <em>eyepi.ini</em> and change the configuration values). DSLR&#8217;s are given a unique ID based on hardware serial.</p>
-<p>Camera name can be easily changed to a user friendly value.</p>
 </div>
 <div class="section" id="requirements">
 <h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline">§</a></h2>
@@ -169,14 +167,7 @@
 <div class="section" id="extra-details">
 <h2>Extra Details<a class="headerlink" href="#extra-details" title="Permalink to this headline">§</a></h2>
 <p>If you are capturing using a Raspberry Pi camera or an IP camera you need to install <strong>py3exiv2</strong> if you want your images to have exif data, as the method of capture doesn&#8217;t add exif data.</p>
-</div>
-<div class="section" id="documentation-links">
-<h2>Documentation Links<a class="headerlink" href="#documentation-links" title="Permalink to this headline">§</a></h2>
-<ul class="simple">
-<li><a class="reference internal" href="ansible.html"><span class="doc">Ansible Deployment</span></a></li>
-<li><a class="reference external" href="https://pyudev.readthedocs.io/en/latest/genindex.html#" title="(in pyudev v0.21)"><span>Index</span></a></li>
-<li><a class="reference external" href="https://pyudev.readthedocs.io/en/latest/py-modindex.html#" title="(in pyudev v0.21)"><span>Module Index</span></a></li>
-</ul>
+<p>Camera name is determined by the value in the configuration file. The Ansible playbook that is provided automatically enables a service that starts a configuration file matching the hostname.</p>
 </div>
 </div>
 

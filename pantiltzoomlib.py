@@ -41,12 +41,19 @@ def draw_matches_opencv(img1, kp1, img2, kp2, matches):
 
     Keypoints are delineated with circles, while lines are connected
     between matching keypoints.
+
     :param img1: grayscale image
+    :type img1: np.ndarray
     :param kp1: Detected list of keypoints through any of the OpenCV keypoint detection algorithms
+    :type kp1: list
     :param img2: grayscale image
+    :type img2: np.ndarray
     :param kp2: Detected list of keypoints through any of the OpenCV keypoint detection algorithms
+    :type kp2: list
     :param matches: A list of matches of corresponding keypoints through any OpenCV keypoint matching algorithm
-    :return:
+    :type matches: list
+    :return: image of matches between images.
+    :rtype: np.ndarray
     """
 
     import cv2
@@ -103,8 +110,11 @@ def draw_matches_opencv(img1, kp1, img2, kp2, matches):
 def get_displacement_opencv(image0, image1):
     """
     Gets displacement (in pixels I think) difference between 2 images using opencv
+
     :param image0: reference image
+    :type image0: np.ndarray
     :param image1: target image
+    :type image1: np.ndarray
     :return:
     """
     import cv2
@@ -157,6 +167,7 @@ def get_displacement(image0, image1):
     """
     Gets displacement (in pixels I think) difference between 2 images using scikit-image
     not as accurate as the opencv version i think.
+
     :param image0: reference image
     :param image1: target image
     :return:
@@ -214,8 +225,11 @@ def get_displacement(image0, image1):
 def sec2human(seconds)->str:
     """
     formats a timedelta object into semi-fuzzy human readable time periods.
-    :param seconds: float or int
+
+    :param seconds: seconds to format into a time period
+    :type seconds: int or float
     :return: human readable string
+    :rtype: str
     """
     periods = [
         ('year', 60 * 60 * 24 * 365),
@@ -236,8 +250,12 @@ def sec2human(seconds)->str:
 
 class Panorama(object):
     accuracy = 3
+    """
+    Panorama class
 
-    def __init__(self, output_folder=None, camera=None, ptz=None, config=None, config_filename=None, queue=None):
+    Provides the calibration and creation of tiled panoramas with a configuration file.
+    """
+    def __init__(self, output_folder=None, config=None, config_filename=None, queue=None):
 
         if not config:
             config = dict()
@@ -265,14 +283,14 @@ class Panorama(object):
         ptz = None
         try:
             while not camera:
-                camera_config = config.pop("camera", None)
+                camera_config = config.get("camera")
                 if not camera_config:
                     raise ValueError("No 'camera' section found in config file.")
 
                 if camera_config == "DSLR":
                     camera = GPCamera(queue=queue)
                 elif type(camera_config) is dict:
-                    camera = IPCamera(self.name+"-cam", config=camera_config, queue=queue)
+                    camera = IPCamera(self.name, config=camera_config, queue=queue)
         except Exception as e:
             self.logger.error("Couldnt initialise Camera: " + str(e))
             time.sleep(30)
@@ -280,14 +298,14 @@ class Panorama(object):
 
         self._camera = camera
         if self._camera:
-            fov = config.pop("camera_fov", None)
+            fov = config.get("camera_fov")
             if fov:
                 self._camera.hfov, self._camera.vfov = fov
             self.logger.debug("Camera initialised")
 
         while not ptz:
             try:
-                ptz_config = config.pop("ptz", None)
+                ptz_config = config.get("ptz")
                 if not ptz_config:
                     raise ValueError("No 'ptz' section found in config file.")
                 ptz = PanTilt(config=ptz_config, queue=queue)
@@ -299,12 +317,12 @@ class Panorama(object):
 
         self._pantilt = ptz
 
-        self._output_dir = output_folder or config.pop("output_dir", "")
+        self._output_dir = output_folder or config.get("output_dir", "")
         self._spool_dir = tempfile.mkdtemp(prefix=self.name)
         self.output_dir = self._output_dir
         # this is vital to create the output folder
 
-        self._image_overlap = float(config.pop("overlap", 50)) / 100
+        self._image_overlap = float(config.get("overlap", 50)) / 100
         self._seconds_per_image = 5
         self._csv_log = None
         self._recovery_filename = ".gv_recover.json"
@@ -319,8 +337,8 @@ class Panorama(object):
                 f.seek(0)
                 self._recovery_file = json.loads(f.read())
 
-        first_corner = config.pop("first_corner", [100, 20])
-        second_corner = config.pop("second_corner", [300, -20])
+        first_corner = config.get("first_corner", [100, 20])
+        second_corner = config.get("second_corner", [300, -20])
         assert type(first_corner) in (list, tuple), "first corner must be a list or tuple"
         assert type(second_corner) in (list, tuple), "second corner must be a list or tuple"
         assert len(first_corner) == 2, "first corner must be of length 2"
@@ -332,7 +350,7 @@ class Panorama(object):
 
         self._camera.focus_mode = "AUTO"
 
-        scan_order_unparsed = config.pop("scan_order", "0")
+        scan_order_unparsed = config.get("scan_order", "0")
         self._scan_order_translation = {
             'cols,right': 0,
             'cols,left': 1,
@@ -358,22 +376,23 @@ class Panorama(object):
 
     def set_current_as_first_corner(self):
         """
-        This and set_current_as_second_corner, both internally call enumerate positions, so
-        :return:
+        This and set_current_as_second_corner, both internally call enumerate positions.
+
         """
         self.first_corner = self._pantilt.position
 
     def set_current_as_second_corner(self):
         """
+        sets the current position as the second corder.
 
-        :return:
         """
         self.second_corner = self._pantilt.position
 
     def enumerate_positions(self):
         """
-        uses the currrent image overlap and camera fov to calculate a "grid" of pan and tilt positions
-        :return:
+        Uses the currrent image overlap, camera fov and corners to calculate a "grid" of pan and tilt positions.
+
+        Also sets the internal enumeration of pan/tilt positions
         """
         self.logger.debug("Enumerating positions")
         self._pan_step = (1 - self._image_overlap) * self._camera.hfov
@@ -391,11 +410,7 @@ class Panorama(object):
             # rows up
             tilt_start, tilt_stop = tilt_stop, tilt_start
             self._tilt_step *= -1
-        # todo: verify this.
-        # I think this is right?
-        # self._pan_pos_list = np.arange(self._pan_range[0], self._pan_range[1], self._pan_step)
-        # self._tilt_pos_list = np.arange(self._tilt_range[1], self._tilt_range[0] - self._tilt_step,
-        #                                 -self._tilt_step)
+
         self._pan_pos_list = np.arange(pan_start, pan_stop, self._pan_step)
         self._tilt_pos_list = np.arange(tilt_start, tilt_stop, self._tilt_step)
 
@@ -404,6 +419,11 @@ class Panorama(object):
 
     @property
     def summary(self)->str:
+        """
+        returns a human readable summary of the panorama parameters.
+        These include pan step, camera fov etc.
+        :return str: information about the panorama
+        """
         self.enumerate_positions()
         max_num_images = len(self._pan_pos_list) * len(self._tilt_pos_list)
         last_image_index = int(self._recovery_file.get("image_index", 0))
@@ -968,13 +988,18 @@ if __name__ == "__main__":
 
     updater = Updater()
     # updater.start()
+    config = dict()
+    with open(config_file) as config_fh:
+        config = yaml.load(config_fh.read())
 
-    pano = Panorama(config_filename=config_file, queue=updater.communication_queue)
+    pano = Panorama(config, queue=updater.communication_queue)
 
     # pano.test_calibration(1)
-    #uploader = Uploader(pano.camera.identifier,
-    #                    queue=updater.communication_queue,
-    #                    config_filename=config_file)
+
+
+    uploader = Uploader(pano.camera.identifier,
+                       queue=updater.communication_queue,
+                       config=config)
     #uploader.daemon = True
     #uploader.start()
     pano.take_panorama()

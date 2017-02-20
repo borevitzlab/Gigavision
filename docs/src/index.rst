@@ -6,6 +6,7 @@
    :hidden:
 
    ansible
+   genindex
    py-modindex
 
 
@@ -38,10 +39,6 @@ Planned or in development:
  * On device stitching and blending
  * Focal stacks
  * HDR
-
-Automatically detects connected usb DSLRs and the Raspberry Pi camera (just duplicate *example.ini* to *picam.ini* and *eyepi.ini* and change the configuration values). DSLR's are given a unique ID based on hardware serial.
-
-Camera name can be easily changed to a user friendly value.
 
 Requirements
 ------------
@@ -79,9 +76,4 @@ Extra Details
 
 If you are capturing using a Raspberry Pi camera or an IP camera you need to install **py3exiv2** if you want your images to have exif data, as the method of capture doesn't add exif data.
 
-Documentation Links
--------------------
-
-* :doc:`ansible`
-* :ref:`genindex`
-* :ref:`modindex`
+Camera name is determined by the value in the configuration file. The Ansible playbook that is provided automatically enables a service that starts a configuration file matching the hostname.
