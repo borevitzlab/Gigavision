@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>SPC-EyePi &#8212; SPC-EyePi 3.2 documentation</title>
+    <title>Gigavision &#8212; Gigavision 0.1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '3.2',
+        VERSION:     '0.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -40,7 +40,7 @@
     
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="#">SPC-EyePi</a></h1>
+<h1 class="logo"><a href="#">Gigavision</a></h1>
 
 
 
@@ -67,7 +67,7 @@
 
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">SPC-EyePi</a><ul>
+<li><a class="reference internal" href="#">Gigavision</a><ul>
 <li><a class="reference internal" href="#credits-license">Credits/License</a></li>
 <li><a class="reference internal" href="#features">Features</a></li>
 <li><a class="reference internal" href="#requirements">Requirements</a></li>
@@ -95,38 +95,34 @@
             
   <div class="toctree-wrapper compound" id="mastertoc">
 </div>
-<div class="section" id="spc-eyepi">
-<h1>SPC-EyePi<a class="headerlink" href="#spc-eyepi" title="Permalink to this headline">§</a></h1>
+<div class="section" id="gigavision">
+<h1>Gigavision<a class="headerlink" href="#gigavision" title="Permalink to this headline">§</a></h1>
 <div class="section" id="credits-license">
 <h2>Credits/License<a class="headerlink" href="#credits-license" title="Permalink to this headline">§</a></h2>
-<p>The goal of this project is to create a robust open source code base for controlling DSLR and the on-board Raspberry Pi camera from a Raspberry Pi or similar Linux boards.</p>
+<p>The goal of this project is to create an open source, modular control interface for taking time lapse grid panoramas.</p>
 <p>This project is open source but please <a class="reference external" href="https://github.com/borevitzlab">contact us</a> before using the code so we can know who is using it and please make sure to link back here in any code you use. This project is in active development but we are happy to work with other groups to develop new features so drop us a line if you are interested.</p>
-<p>This code was developed for the TraitCapture project at ANU.</p>
-<p>Please cite: <em>Brown, Tim B., et al.</em> <a class="reference external" href="http://www.sciencedirect.com/science/article/pii/S1369526614000181">TraitCapture : genomic and environment modelling of plant phenomic data. Current opinion in plant biology 18 (2014): 73-79</a>. when using the code.</p>
 </div>
 <div class="section" id="features">
 <h2>Features<a class="headerlink" href="#features" title="Permalink to this headline">§</a></h2>
 <dl class="docutils">
 <dt>Currently supported and maintained:</dt>
 <dd><ul class="first last simple">
-<li>Control of multiple DSLR cameras.</li>
-<li>Upload of JPG, RAW or JPG+RAW images.</li>
-<li>Captured photos are cached locally and  uploaded to a central server of your choice via sftp or ftp.</li>
-<li>Cameras settings can be controlled from a web page.</li>
+<li>Captures to JPEG &amp; CR2 (RAW) images if using a DSLR, JPEG &amp; TIF if using the Raspberry Pi camera module or an IP camera.</li>
+<li>Has been tested with the AXIS Q6034-E, and a J-Systems Pan Tilt.</li>
+<li>Tested with Canons (600D, 700D, 70D) but not extensively. Should work with Nikon cameras but not tested at all.</li>
+<li>Resume function if panorama was interrupted and restarted within a time interval.</li>
+<li>Captured photos are captured to ram, cached locally and then uploaded to a server of your choice via sftp or ftp.</li>
 <li>Wifi and ethernet. Creates an ad-hoc wifi network no know network is found for easier config of new systems and in new wifi environments.</li>
-<li>Camera uploads it&#8217;s IP address along with image for easy finding of the camera on your network</li>
-<li>Camera can auto-upload both timestamped and fixed filenames (for use as a webcam or with auto archiving systems requiring a fixed image name).</li>
-<li>Extensively tested with Canons (600D, 700D, 70D). Works with Nikon D7100 but not extensively tested.</li>
-<li>Ansible provisioning system for raspberry Pis running Arch Linux.</li>
+<li>Ansible provisioning for Raspberry Pis control systems running Arch Linux.</li>
 </ul>
 </dd>
 <dt>Planned or in development:</dt>
 <dd><ul class="first last simple">
-<li>Time-series scheduler  to auto-set camera exposure and shutter speed settings (useful for shooting 24-hrs a day in fixed but variable lighting situations like plant growth chambers)</li>
-<li>RAM spooling with sd card fallback to increase SD card life.</li>
-<li>Auto Bulb-ramping... we are aspiring to be able to shoot 24-7 DSLR timelapses through sunrise and sunset.</li>
-<li>DB-based camera management system.</li>
-<li>Weatherproof and solar powered camera housing  for full remote timelapse solution</li>
+<li>DB-based camera management system</li>
+<li>Cameras settings web interface</li>
+<li>On device stitching and blending</li>
+<li>Focal stacks</li>
+<li>HDR</li>
 </ul>
 </dd>
 </dl>
@@ -140,20 +136,17 @@
 <dd><ul class="first last simple">
 <li>python3.5</li>
 <li>python-cffi</li>
+<li>gphoto2</li>
+<li>libgphoto2</li>
 <li>exiv2</li>
 <li>opencv 3.1 <a class="reference external" href="https://www.archlinux.org/packages/extra/x86_64/opencv/">[Arch-Extra]</a></li>
 <li>tor (optional)</li>
 </ul>
 </dd>
-<dt><em>python</em></dt>
+<dt><em>python/aur/git</em></dt>
 <dd><ul class="first last simple">
-<li><a class="reference external" href="http://flask.pocoo.org/">flask</a></li>
-<li>flask-bcrypt <a class="reference external" href="https://pypi.python.org/pypi/Flask-Bcrypt">[pip]</a></li>
-<li>flask-login <a class="reference external" href="https://pypi.python.org/pypi/Flask-Login">[pip]</a></li>
-<li>WTForms <a class="reference external" href="https://pypi.python.org/pypi/WTForms">[pip]</a></li>
-<li>browsepy <a class="reference external" href="https://pypi.python.org/pypi/browsepy/0.4.0">[pip]</a></li>
 <li>pyudev <a class="reference external" href="https://pypi.python.org/pypi/pyudev">[pip]</a></li>
-<li>gphoto2-cffi <a class="reference external" href="https://github.com/borevitzlab/gphoto2-cffi">[git6]</a></li>
+<li>gphoto2-cffi <a class="reference external" href="https://github.com/borevitzlab/gphoto2-cffi">[git]</a></li>
 <li>numpy</li>
 <li>pillow <a class="reference external" href="https://pypi.python.org/pypi/Pillow/3.1.1">[pip]</a></li>
 <li>picamera (optional) <a class="reference external" href="https://pypi.python.org/pypi/picamera/1.12">[pip]</a></li>
@@ -164,17 +157,18 @@
 <li>create_ap <a class="reference external" href="https://aur.archlinux.org/packages/create_ap">[aur]</a></li>
 <li>schedule <a class="reference external" href="https://pypi.python.org/pypi/schedule">[pip]</a></li>
 <li>pyyaml <a class="reference external" href="https://pypi.python.org/pypi/PyYAML/3.12">[pip]</a></li>
-<li>RPi.GPIO (optional) <a class="reference external" href="https://pypi.python.org/pypi/RPi.GPIO/0.6.3">[pip]</a></li>
+<li><a class="reference external" href="http://flask.pocoo.org/">flask</a></li>
+<li>flask-bcrypt <a class="reference external" href="https://pypi.python.org/pypi/Flask-Bcrypt">[pip]</a></li>
+<li>flask-login <a class="reference external" href="https://pypi.python.org/pypi/Flask-Login">[pip]</a></li>
+<li>WTForms <a class="reference external" href="https://pypi.python.org/pypi/WTForms">[pip]</a></li>
+<li>browsepy <a class="reference external" href="https://pypi.python.org/pypi/browsepy/0.4.0">[pip]</a></li>
 </ul>
 </dd>
 </dl>
 </div>
 <div class="section" id="extra-details">
 <h2>Extra Details<a class="headerlink" href="#extra-details" title="Permalink to this headline">§</a></h2>
-<p>If you are capturing using a Raspberry Pi camera you need to install <strong>py3exiv2</strong> if you want your images to have exif data, as the method of capture doesn&#8217;t add exif data.</p>
-<p>There is code to support the IVMech IVPort, however its a little tricky to get working as there is no method to detect the device yet, and of course you need to install <strong>RPi.GPIO</strong>.</p>
-<p>To get into the web interface using the wifi the default ip address is 192.168.12.1 and you will need to use the user admin:spceyepidefaultaccess (it must be running first).</p>
-<p>SPC-EyePi also updates from the master branch of this repository.</p>
+<p>If you are capturing using a Raspberry Pi camera or an IP camera you need to install <strong>py3exiv2</strong> if you want your images to have exif data, as the method of capture doesn&#8217;t add exif data.</p>
 </div>
 <div class="section" id="documentation-links">
 <h2>Documentation Links<a class="headerlink" href="#documentation-links" title="Permalink to this headline">§</a></h2>
@@ -193,7 +187,7 @@
     <div class="clearer"></div>
   </div>
     <div class="footer">
-      &copy;2016, Gareth Dunstone, Kevin Murray, Tim Brown.
+      &copy;2017, Gareth Dunstone, Chuong Nguyen, Tim Brown.
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
