@@ -31,6 +31,7 @@ class Uploader(Thread):
         if queue is None:
             queue = deque(tuple(), 256)
 
+
         self.communication_queue = queue
         self.identifier = identifier
         self.logger = logging.getLogger(self.getName())
