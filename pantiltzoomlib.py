@@ -1075,12 +1075,12 @@ if __name__ == "__main__":
 
     # pano.test_calibration(1)
 
-
-    uploader = Uploader(pano.camera.identifier,
-                        queue=updater.communication_queue,
-                        config=config)
-    # uploader.daemon = True
-    # uploader.start()
+    if config.get("upload", dict()).get("enabled") != False:
+        uploader = Uploader(pano.camera.identifier,
+                            queue=updater.communication_queue,
+                            config=config)
+        uploader.daemon = True
+        uploader.start()
     pano.take_panorama()
     pano.logger.info("Next pano in {}".format(sec2human(pano.next_pano)))
     pano.run_loop()
