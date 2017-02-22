@@ -1076,7 +1076,7 @@ if __name__ == "__main__":
     # pano.test_calibration(1)
 
     if config.get("upload", dict()).get("enabled") != False:
-        uploader = Uploader(pano.camera.identifier,
+        uploader = Uploader(pano.name,
                             queue=updater.communication_queue,
                             config=config)
         uploader.daemon = True
