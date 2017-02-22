@@ -94,14 +94,16 @@ class Uploader(Thread):
                 params['password'] = self.password
 
             with pysftp.Connection(**params) as link:
+                root = os.path.join(self.server_dir, self.camera_name)
                 # make the root dir in case it doesnt exist.
                 self.mkdir_recursive(link, os.path.join(self.server_dir, self.camera_name))
                 self.logger.debug("Uploading...")
+
                 # dump ze files.
                 for f in file_names:
-                    # use sftpuloadtracker to handle the progress
+                    link.chdir(root)
                     if os.path.isdir(f):
-                        dirtarget = f.replace(self.source_dir, os.path.join(self.server_dir, self.camera_name))
+                        dirtarget = f.replace(self.source_dir, root)
                         dirtarget = dirtarget.replace("//", "/")
                         self.mkdir_recursive(link, dirtarget)
                         continue
