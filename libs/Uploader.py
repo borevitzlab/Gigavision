@@ -101,12 +101,15 @@ class Uploader(Thread):
 
                 # dump ze files.
                 for f in file_names:
-                    target_file = os.path.join(self.server_dir, self.camera_name, f.replace(self.source_dir, ""))
+                    target_file = os.path.join(root, f.replace(self.source_dir, ""))
+                    if target_file.startswith("/"):
+                        target_file = target_file[1:]
                     link.chdir("/")
                     if os.path.isdir(f):
                         self.mkdir_recursive(link, target_file)
                         continue
-
+                    if not link.isdir(os.path.dirname(target_file)):
+                        self.mkdir_recursive(link, os.path.dirname(target_file))
                     try:
 
                         link.put(f, target_file + ".tmp")
