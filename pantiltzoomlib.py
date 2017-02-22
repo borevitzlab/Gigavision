@@ -294,7 +294,12 @@ class Panorama(object):
                     raise ValueError("No 'camera' section found in config file.")
 
                 if camera_config == "DSLR":
-                    camera = GPCamera(self.name, queue=queue)
+                    import gphoto2cffi as gp
+                    cameras = gp.list_cameras()
+                    if not len(cameras):
+                        raise FileNotFoundError("No DSLR connected.")
+
+                    camera = GPCamera(cameras[0].status.serialnumber, queue=queue)
                 elif type(camera_config) is dict:
                     camera = IPCamera(self.name, config=camera_config, queue=queue)
         except Exception as e:
