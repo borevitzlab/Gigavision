@@ -101,13 +101,14 @@ class Uploader(Thread):
 
                 # dump ze files.
                 for f in file_names:
-                    target_file = f.replace(self.source_dir, os.path.join(self.server_dir, self.camera_name)).replace("//", "/")
+                    target_file = os.path.join(self.server_dir, self.camera_name, f.replace(self.source_dir, ""))
                     link.chdir("/")
                     if os.path.isdir(f):
                         self.mkdir_recursive(link, target_file)
                         continue
 
                     try:
+
                         link.put(f, target_file + ".tmp")
                         if link.exists(target_file):
                             link.remove(target_file)
