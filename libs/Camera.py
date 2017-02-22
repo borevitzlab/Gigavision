@@ -168,6 +168,7 @@ class Camera(object):
         self.orinal_config = None
         self.failed = list()
         self._exif = dict()
+        self.focus_position = None
         self._frame = None
         self._image = numpy.empty((Camera.default_width, Camera.default_height, 3), numpy.uint8)
         if not noconf:
