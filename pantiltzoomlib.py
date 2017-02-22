@@ -269,7 +269,11 @@ class Panorama(object):
             config = yaml.load(open(config_filename).read())
         config = config.copy()
         self.name = config.get("name", "DEFAULT_PANO_NAME")
+
         self.logger = logging.getLogger(self.name)
+        self._output_dir = os.path.join(config.get("output_dir", "/home/images/upload"), self.name)
+        self._spool_dir = tempfile.mkdtemp(prefix=self.name)
+        self.output_dir = self._output_dir
 
         start_time_string = str(config.get('starttime', "0000"))
         start_time_string = start_time_string.replace(":", "")
@@ -328,9 +332,7 @@ class Panorama(object):
 
         self._pantilt = ptz
 
-        self._output_dir = config.get("output_dir", os.path.join("/home/images", self.name))
-        self._spool_dir = tempfile.mkdtemp(prefix=self.name)
-        self.output_dir = self._output_dir
+
         # this is vital to create the output folder
 
         self._image_overlap = float(config.get("overlap", 50)) / 100
