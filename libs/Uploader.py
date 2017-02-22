@@ -54,20 +54,19 @@ class Uploader(Thread):
             self.target_directory = config.get("server_dir", "/")
             self.upload_directory = config.get("images_dir", os.path.join("/home/images/upload", self.camera_name))
             self.upload_enabled = config.get("enabled", True)
-            return
+        else:
+            self.config_filename = SysUtil.identifier_to_ini(self.identifier)
+            self.config = \
+                self.hostname = \
+                self.username = \
+                self.password = \
+                self.target_directory = \
+                self.camera_name = \
+                self.upload_directory = \
+                self.upload_enabled = None
 
-        self.config_filename = SysUtil.identifier_to_ini(self.identifier)
-        self.config = \
-            self.hostname = \
-            self.username = \
-            self.password = \
-            self.target_directory = \
-            self.camera_name = \
-            self.upload_directory = \
-            self.upload_enabled = None
-
-        self.re_init()
-        SysUtil().add_watch(self.config_filename, self.re_init)
+            self.re_init()
+            SysUtil().add_watch(self.config_filename, self.re_init)
 
     def re_init(self):
         """
