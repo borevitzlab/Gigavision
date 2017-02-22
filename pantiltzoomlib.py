@@ -328,7 +328,7 @@ class Panorama(object):
 
         self._pantilt = ptz
 
-        self._output_dir = config.get("output_dir", os.path.join(os.path.join("/home/images",self.name)))
+        self._output_dir = config.get("output_dir", os.path.join("/home/images", self.name))
         self._spool_dir = tempfile.mkdtemp(prefix=self.name)
         self.output_dir = self._output_dir
         # this is vital to create the output folder
