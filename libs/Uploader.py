@@ -101,7 +101,7 @@ class Uploader(Thread):
                 for f in file_names:
                     # use sftpuloadtracker to handle the progress
                     if os.path.isdir(f):
-                        dirtarget = f.replace(self.source_dir, self.server_dir)
+                        dirtarget = f.replace(self.source_dir, os.path.join(self.server_dir, self.camera_name))
                         dirtarget = dirtarget.replace("//", "/")
                         self.mkdir_recursive(link, dirtarget)
                         continue

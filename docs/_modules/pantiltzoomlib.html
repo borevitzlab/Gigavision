@@ -1092,6 +1092,9 @@
 <div class="viewcode-block" id="Panorama.time2seconds"><a class="viewcode-back" href="../pantiltzoomlib.html#pantiltzoomlib.Panorama.time2seconds">[docs]</a>    <span class="k">def</span> <span class="nf">time2seconds</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        converts a datetime to an integer of seconds since epoch</span>
+
+<span class="sd">        :return: seconds since 1970-01-01 00:00</span>
+<span class="sd">        :rtype: int</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">timestamp</span><span class="p">())</span>
@@ -1104,7 +1107,9 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        filters out times for capture, returns True by default</span>
 <span class="sd">        returns False if the conditions where the camera should NOT capture are met.</span>
-<span class="sd">        :return:</span>
+
+<span class="sd">        :return: whether we should start capturing images now or not</span>
+<span class="sd">        :rtype: bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">current_capture_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
         <span class="n">current_naive_time</span> <span class="o">=</span> <span class="n">current_capture_time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
@@ -1126,6 +1131,12 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">next_pano</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        calculates the amount of time until the next panorama</span>
+
+<span class="sd">        :return: time until the next panorama (in seconds)</span>
+<span class="sd">        :rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">nextin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time2seconds</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
         <span class="n">nowstamp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time2seconds</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
@@ -1135,6 +1146,9 @@
         <span class="k">return</span> <span class="n">nextin</span> <span class="o">-</span> <span class="n">nowstamp</span>
 
 <div class="viewcode-block" id="Panorama.run_loop"><a class="viewcode-back" href="../pantiltzoomlib.html#pantiltzoomlib.Panorama.run_loop">[docs]</a>    <span class="k">def</span> <span class="nf">run_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        runs the panorama taker in a loop based on the interval in the config file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_to_capture</span><span class="p">():</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">summary</span><span class="p">)</span>

@@ -484,25 +484,56 @@ and the child ptz object.
 <dt id="pantiltzoomlib.Panorama.time2seconds">
 <em class="property">static </em><code class="descname">time2seconds</code><span class="sig-paren">(</span><em>t: datetime.datetime</em><span class="sig-paren">)</span> &rarr; int<a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.time2seconds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.time2seconds" title="Permalink to this definition">§</a></dt>
 <dd><p>converts a datetime to an integer of seconds since epoch</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">seconds since 1970-01-01 00:00</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)">int</a></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="pantiltzoomlib.Panorama.time_to_capture">
 <code class="descname">time_to_capture</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.time_to_capture"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.time_to_capture" title="Permalink to this definition">§</a></dt>
 <dd><p>filters out times for capture, returns True by default
-returns False if the conditions where the camera should NOT capture are met.
-:return:</p>
+returns False if the conditions where the camera should NOT capture are met.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">whether we should start capturing images now or not</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bool" title="(in Python v3.5)">bool</a></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pantiltzoomlib.Panorama.next_pano">
 <code class="descname">next_pano</code><a class="headerlink" href="#pantiltzoomlib.Panorama.next_pano" title="Permalink to this definition">§</a></dt>
-<dd></dd></dl>
+<dd><p>calculates the amount of time until the next panorama</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">time until the next panorama (in seconds)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)">int</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pantiltzoomlib.Panorama.run_loop">
 <code class="descname">run_loop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pantiltzoomlib.html#Panorama.run_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pantiltzoomlib.Panorama.run_loop" title="Permalink to this definition">§</a></dt>
-<dd></dd></dl>
+<dd><p>runs the panorama taker in a loop based on the interval in the config file.</p>
+</dd></dl>
 
 </dd></dl>
 

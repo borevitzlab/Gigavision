@@ -1008,6 +1008,9 @@ class Panorama(object):
     def time2seconds(t: datetime.datetime) -> int:
         """
         converts a datetime to an integer of seconds since epoch
+
+        :return: seconds since 1970-01-01 00:00
+        :rtype: int
         """
         try:
             return int(t.timestamp())
@@ -1020,7 +1023,9 @@ class Panorama(object):
         """
         filters out times for capture, returns True by default
         returns False if the conditions where the camera should NOT capture are met.
-        :return:
+
+        :return: whether we should start capturing images now or not
+        :rtype: bool
         """
         current_capture_time = datetime.datetime.now()
         current_naive_time = current_capture_time.time()
@@ -1042,6 +1047,12 @@ class Panorama(object):
 
     @property
     def next_pano(self):
+        """
+        calculates the amount of time until the next panorama
+
+        :return: time until the next panorama (in seconds)
+        :rtype: int
+        """
         nextin = self.time2seconds(datetime.datetime.now())
         nowstamp = self.time2seconds(datetime.datetime.now())
         while True:
@@ -1051,6 +1062,9 @@ class Panorama(object):
         return nextin - nowstamp
 
     def run_loop(self):
+        """
+        runs the panorama taker in a loop based on the interval in the config file.
+        """
         while True:
             if self.time_to_capture():
                 self.logger.info(self.summary)
