@@ -294,7 +294,7 @@ class Panorama(object):
                     raise ValueError("No 'camera' section found in config file.")
 
                 if camera_config == "DSLR":
-                    camera = GPCamera(queue=queue)
+                    camera = GPCamera(self.name, queue=queue)
                 elif type(camera_config) is dict:
                     camera = IPCamera(self.name, config=camera_config, queue=queue)
         except Exception as e:

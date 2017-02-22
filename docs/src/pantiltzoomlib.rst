@@ -10,3 +10,4 @@ It detects cameras, creates uploaders and an updater, starts threads etc.
     :members:
     :undoc-members:
     :show-inheritance:
+
