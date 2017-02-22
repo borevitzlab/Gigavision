@@ -111,6 +111,11 @@ class Uploader(Thread):
                 # dump ze files.
                 for f in file_names:
                     # use sftpuloadtracker to handle the progress
+                    if os.path.isdir(f):
+                        dirtarget = f.replace(self.upload_directory, os.path.join(self.target_directory, self.camera_name))
+                        dirtarget = dirtarget.replace("//", "/")
+                        self.mkdir_recursive(link, dirtarget)
+
                     try:
                         link.put(f, os.path.basename(f) + ".tmp")
                         if link.exists(os.path.basename(f)):
@@ -208,7 +213,7 @@ class Uploader(Thread):
         """
         while True and not self.stopper.is_set():
             try:
-                upload_list = glob(os.path.join(self.upload_directory, '*'))
+                upload_list = glob(os.path.join(self.upload_directory, '**'), recursive=True)
                 if len(upload_list) == 0:
                     self.logger.info("No files in upload directory")
                 if (len(upload_list) > 0) and self.upload_enabled:
