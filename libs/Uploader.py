@@ -96,12 +96,12 @@ class Uploader(Thread):
             with pysftp.Connection(**params) as link:
                 root = os.path.join(self.server_dir, self.camera_name)
                 # make the root dir in case it doesnt exist.
-                self.mkdir_recursive(link, os.path.join(self.server_dir, self.camera_name))
+                self.mkdir_recursive(link, root)
                 self.logger.debug("Uploading...")
 
                 # dump ze files.
                 for f in file_names:
-                    link.chdir(root)
+                    link.chdir("/")
                     if os.path.isdir(f):
                         dirtarget = f.replace(self.source_dir, "").replace("//", "/")
                         self.mkdir_recursive(link, dirtarget)
@@ -176,6 +176,7 @@ class Uploader(Thread):
                 chdir(basename)
         except Exception as e:
             self.logger.error("something went wrong making directories... {}".format(str(e)))
+
 
     def communicate_with_updater(self):
         """
