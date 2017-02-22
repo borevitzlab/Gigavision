@@ -115,6 +115,7 @@ class Uploader(Thread):
                         dirtarget = f.replace(self.upload_directory, os.path.join(self.target_directory, self.camera_name))
                         dirtarget = dirtarget.replace("//", "/")
                         self.mkdir_recursive(link, dirtarget)
+                        continue
 
                     try:
                         link.put(f, os.path.basename(f) + ".tmp")
