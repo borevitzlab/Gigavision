@@ -165,7 +165,7 @@ class Camera(object):
         self.logger = logging.getLogger(identifier)
         self.stopper = Event()
         self.identifier = identifier
-        self.orinal_config = None
+        self.camera_name = identifier
         self.failed = list()
         self._exif = dict()
         self.focus_position = None
