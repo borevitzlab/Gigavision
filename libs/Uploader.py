@@ -103,8 +103,7 @@ class Uploader(Thread):
                 for f in file_names:
                     link.chdir(root)
                     if os.path.isdir(f):
-                        dirtarget = f.replace(self.source_dir, root)
-                        dirtarget = dirtarget.replace("//", "/")
+                        dirtarget = f.replace(self.source_dir, "").replace("//", "/")
                         self.mkdir_recursive(link, dirtarget)
                         continue
 
