@@ -251,6 +251,7 @@ class Camera(object):
 
     def capture(self, filename: str = None) -> numpy.array:
         """
+        DONT OVERRIDE THIS!
         capture method, only extends functionality of :func:`Camera.capture` so that testing with  can happen
 
         Camera.capture = Camera.capture_monkey
@@ -260,6 +261,10 @@ class Camera(object):
         :return: :func:`numpy.array` if filename not specified, otherwise list of files.
         :rtype: numpy.array
         """
+
+        if filename:
+            dirname = os.path.dirname(filename)
+            os.makedirs(dirname, exist_ok=True)
         return self.capture_image(filename=filename)
 
     def capture_monkey(self, filename: str = None) -> numpy.array:
