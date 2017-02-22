@@ -241,7 +241,7 @@ class GenericUploader(Uploader):
     remove_source_files = False
 
     def fill_me(self, dict_of_values: dict):
-        for k,v in dict_of_values.items():
+        for k, v in dict_of_values.items():
             if hasattr(self, k):
                 setattr(self, k, v)
 

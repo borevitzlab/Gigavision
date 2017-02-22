@@ -10,7 +10,8 @@ starttime: 0520
 stoptime: 1900
 output_dir: /home/images/upload/Test
 
-camera:
+camera: DSLR
+camera_:
   ip: '192.168.1.78'
   username: root
   password: lab305
@@ -41,7 +42,7 @@ camera:
     get_autofocus_mode: "autofocus"
 
 ptz:
-  ip: '192.168.1.78'
+  ip: '192.168.1.8'
   username: root
   password: lab305
 
@@ -71,8 +72,8 @@ ptz:
     get_zoom: "zoom"
 
 upload:
-  enabled: False
+  enabled: True
   server: sftp.traitcapture.org
-  server_dir: /
+  server_dir: /gigavision
   username: picam
   password: from_key
