@@ -101,18 +101,18 @@ class Uploader(Thread):
 
                 # dump ze files.
                 for f in file_names:
-                    the_file = f.replace(self.source_dir, "").replace("//", "/")
+                    target_file = f.replace(self.source_dir, os.path.join(self.server_dir, self.camera_name)).replace("//", "/")
                     link.chdir("/")
                     if os.path.isdir(f):
-                        self.mkdir_recursive(link, the_file)
+                        self.mkdir_recursive(link, target_file)
                         continue
 
                     try:
-                        link.put(f, the_file + ".tmp")
-                        if link.exists(the_file):
-                            link.remove(the_file)
-                        link.rename(the_file + ".tmp", the_file)
-                        link.chmod(the_file, mode=755)
+                        link.put(f, target_file + ".tmp")
+                        if link.exists(target_file):
+                            link.remove(target_file)
+                        link.rename(target_file + ".tmp", target_file)
+                        link.chmod(target_file, mode=755)
                         self.total_data_uploaded_b += os.path.getsize(f)
                         if self.remove_source_files:
                             os.remove(f)
@@ -176,6 +176,7 @@ class Uploader(Thread):
                 chdir(basename)
         except Exception as e:
             self.logger.error("something went wrong making directories... {}".format(str(e)))
+        chdir("/")
 
 
     def communicate_with_updater(self):
