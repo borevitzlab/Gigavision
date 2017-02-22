@@ -9,6 +9,7 @@ from threading import Thread, Event
 import pysftp
 from .CryptUtil import SSHManager
 from .SysUtil import SysUtil
+
 try:
     logging.config.fileConfig("logging.ini")
     logging.getLogger("paramiko").setLevel(logging.WARNING)
@@ -24,7 +25,7 @@ class Uploader(Thread):
     upload_interval = 120
     remove_source_files = True
 
-    def __init__(self, identifier: str, queue: deque = None, config=None):
+    def __init__(self, identifier: str, queue: deque = None):
         # same thread name hackery that the Camera threads use
         Thread.__init__(self, name=identifier + "-Uploader")
         self.stopper = Event()
@@ -43,30 +44,18 @@ class Uploader(Thread):
         self.total_data_uploaded_tb = 0
         self.total_data_uploaded_b = 0
 
-        if config and type(config) is dict:
-            self.camera_name = config.get("name", self.identifier)
-            if type(config.get("upload")) is dict:
-                config = config.get("upload")
+        self.config_filename = SysUtil.identifier_to_ini(self.identifier)
+        self.config = \
+            self.hostname = \
+            self.username = \
+            self.password = \
+            self.camera_name = \
+            self.source_dir = \
+            self.server_dir = \
+            self.upload_enabled = None
 
-            self.hostname = config.get("server", "sftp.traitcapture.org")
-            self.username = config.get("username", "picam")
-            self.password = config.get("password", "Someone forgot to put in their password")
-            self.target_directory = config.get("server_dir", "/")
-            self.upload_directory = config.get("images_dir", os.path.join("/home/images/upload", self.camera_name))
-            self.upload_enabled = config.get("enabled", True)
-        else:
-            self.config_filename = SysUtil.identifier_to_ini(self.identifier)
-            self.config = \
-                self.hostname = \
-                self.username = \
-                self.password = \
-                self.target_directory = \
-                self.camera_name = \
-                self.upload_directory = \
-                self.upload_enabled = None
-
-            self.re_init()
-            SysUtil().add_watch(self.config_filename, self.re_init)
+        self.re_init()
+        SysUtil().add_watch(self.config_filename, self.re_init)
 
     def re_init(self):
         """
@@ -78,9 +67,9 @@ class Uploader(Thread):
         self.hostname = self.config["ftp"]["server"]
         self.username = self.config["ftp"]["username"]
         self.password = self.config["ftp"]["password"]
-        self.target_directory = self.config["ftp"]["directory"]
+        self.server_dir = self.config["ftp"]["directory"]
         self.camera_name = self.config["camera"]["name"]
-        self.upload_directory = self.config["localfiles"]["upload_dir"]
+        self.source_dir = self.config["localfiles"]["upload_dir"]
         self.upload_enabled = self.config.getboolean("ftp", "enabled")
         self.last_upload_list = []
 
@@ -105,13 +94,14 @@ class Uploader(Thread):
                 params['password'] = self.password
 
             with pysftp.Connection(**params) as link:
-                self.mkdir_recursive(link, os.path.join(self.target_directory, self.camera_name))
+                # make the root dir in case it doesnt exist.
+                self.mkdir_recursive(link, os.path.join(self.server_dir, self.camera_name))
                 self.logger.debug("Uploading...")
                 # dump ze files.
                 for f in file_names:
                     # use sftpuloadtracker to handle the progress
                     if os.path.isdir(f):
-                        dirtarget = f.replace(self.upload_directory, os.path.join(self.target_directory, self.camera_name))
+                        dirtarget = f.replace(self.source_dir, self.server_dir)
                         dirtarget = dirtarget.replace("//", "/")
                         self.mkdir_recursive(link, dirtarget)
                         continue
@@ -125,7 +115,8 @@ class Uploader(Thread):
                         self.total_data_uploaded_b += os.path.getsize(f)
                         if self.remove_source_files:
                             os.remove(f)
-                            self.logger.debug("Successfully uploaded {} through sftp and removed from local filesystem".format(f))
+                            self.logger.debug(
+                                "Successfully uploaded {} through sftp and removed from local filesystem".format(f))
                         else:
                             self.logger.debug("Successfully uploaded {} through sftp".format(f))
                         self.last_upload_time = datetime.datetime.now()
@@ -145,7 +136,7 @@ class Uploader(Thread):
                 # open link and create directory if for some reason it doesnt exist
                 ftp = ftplib.FTP(self.hostname)
                 ftp.login(self.username, self.password)
-                self.mkdir_recursive(ftp, os.path.join(self.target_directory, self.camera_name))
+                self.mkdir_recursive(ftp, os.path.join(self.server_dir, self.camera_name))
                 self.logger.info("Uploading")
                 # dump ze files.
                 for f in file_names:
@@ -213,18 +204,19 @@ class Uploader(Thread):
         """
         while True and not self.stopper.is_set():
             try:
-                upload_list = glob(os.path.join(self.upload_directory, '**'), recursive=True)
+                upload_list = glob(os.path.join(self.source_dir, '**'), recursive=True)
                 if len(upload_list) == 0:
                     self.logger.info("No files in upload directory")
                 if (len(upload_list) > 0) and self.upload_enabled:
                     start_upload_time = time.time()
                     self.logger.info("Preparing to upload %d files" % len(upload_list))
                     try:
-                        l_im = os.path.join(self.upload_directory, "last_image.jpg")
+                        l_im = os.path.join(self.source_dir, "last_image.jpg")
                         if l_im in upload_list:
                             upload_list.insert(0, upload_list.pop(upload_list.index(l_im)))
                     except Exception as e:
-                        self.logger.info("Something went wrong sorting the last image to the front of the list: {}".format(str(e)))
+                        self.logger.info(
+                            "Something went wrong sorting the last image to the front of the list: {}".format(str(e)))
                     self.upload(upload_list)
                     self.communicate_with_updater()
                     self.logger.info(
@@ -244,20 +236,31 @@ class Uploader(Thread):
 
 class GenericUploader(Uploader):
     """
-    generic uploader for uploading logs sensor data, etc.
+    Generic uploader for uploading logs sensor data, etc.
     """
     remove_source_files = False
 
-    def __init__(self, identifier: str, source_dir: str, hostname: str, queue: deque = None):
+    def fill_me(self, dict_of_values: dict):
+        for k,v in dict_of_values.items():
+            if hasattr(self, k):
+                setattr(self, k, v)
+
+    def __init__(self,
+                 identifier: str,
+                 source_dir: str = None,
+                 hostname: str = None,
+                 config: dict = None,
+                 queue: deque = None):
         # same thread name hackery that the Camera threads use
         Thread.__init__(self, name=identifier + "-Uploader")
         self.stopper = Event()
-        if queue is None:
-            queue = deque(tuple(), 256)
+
+        queue = queue if queue is not None else deque(tuple(), 256)
+
         self.communication_queue = queue
         self.identifier = identifier
         self.camera_name = identifier
-        self.upload_directory = source_dir
+        self.source_dir = source_dir
         self.logger = logging.getLogger(self.getName())
         self.startup_time = datetime.datetime.now()
         self.ssh_manager = SSHManager()
@@ -266,15 +269,23 @@ class GenericUploader(Uploader):
         self.last_upload_list = []
         self.total_data_uploaded_tb = 0
         self.total_data_uploaded_b = 0
-        self.hostname = hostname
+        self.hostname = hostname or "sftp.traitcapture.org"
         self.upload_enabled = True
         self.username = "picam"
         self.password = "INTENTIONALLY BLANK"
-        self.target_directory = "/"
+        self.server_dir = "/"
+
+        if config and type(config) is dict:
+            self.camera_name = config.get("name", self.camera_name)
+            self.source_dir = config.get("output_dir", self.source_dir)
+            if type(config.get("upload")) is dict:
+                config = config.get("upload")
+            self.fill_me(config)
+            self.upload_enabled = config.get("enabled", True)
 
     def re_init(self):
         """
-        there is no config to be reloaded here...
-        :return:
+        Your config is in another castle.
         """
         self.last_upload_list = []
+

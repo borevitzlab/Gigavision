@@ -103,7 +103,7 @@
 <span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">import</span> <span class="nn">yaml</span>
 <span class="kn">import</span> <span class="nn">tempfile</span>
-<span class="kn">from</span> <span class="nn">libs.Uploader</span> <span class="k">import</span> <span class="n">Uploader</span>
+<span class="kn">from</span> <span class="nn">libs.Uploader</span> <span class="k">import</span> <span class="n">GenericUploader</span>
 <span class="kn">from</span> <span class="nn">libs.Updater</span> <span class="k">import</span> <span class="n">Updater</span>
 <span class="kn">from</span> <span class="nn">libs.Camera</span> <span class="k">import</span> <span class="n">Camera</span><span class="p">,</span> <span class="n">GPCamera</span><span class="p">,</span> <span class="n">IPCamera</span>
 <span class="kn">from</span> <span class="nn">libs.PanTilt</span> <span class="k">import</span> <span class="n">PanTilt</span>
@@ -353,7 +353,11 @@
             <span class="n">config</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">config_filename</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
         <span class="n">config</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;DEFAULT_PANO_NAME&quot;</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;/home/images/upload&quot;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_spool_dir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_dir</span>
 
         <span class="n">start_time_string</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;starttime&#39;</span><span class="p">,</span> <span class="s2">&quot;0000&quot;</span><span class="p">))</span>
         <span class="n">start_time_string</span> <span class="o">=</span> <span class="n">start_time_string</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
@@ -378,7 +382,12 @@
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No &#39;camera&#39; section found in config file.&quot;</span><span class="p">)</span>
 
                 <span class="k">if</span> <span class="n">camera_config</span> <span class="o">==</span> <span class="s2">&quot;DSLR&quot;</span><span class="p">:</span>
-                    <span class="n">camera</span> <span class="o">=</span> <span class="n">GPCamera</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="n">queue</span><span class="p">)</span>
+                    <span class="kn">import</span> <span class="nn">gphoto2cffi</span> <span class="k">as</span> <span class="nn">gp</span>
+                    <span class="n">cameras</span> <span class="o">=</span> <span class="n">gp</span><span class="o">.</span><span class="n">list_cameras</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">cameras</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;No DSLR connected.&quot;</span><span class="p">)</span>
+
+                    <span class="n">camera</span> <span class="o">=</span> <span class="n">GPCamera</span><span class="p">(</span><span class="n">cameras</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">serialnumber</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="n">queue</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">camera_config</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span>
                     <span class="n">camera</span> <span class="o">=</span> <span class="n">IPCamera</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">camera_config</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="n">queue</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
@@ -407,9 +416,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_pantilt</span> <span class="o">=</span> <span class="n">ptz</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_output_dir</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output_dir&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;/home/images&quot;</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_spool_dir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_dir</span>
+
         <span class="c1"># this is vital to create the output folder</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_image_overlap</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;overlap&quot;</span><span class="p">,</span> <span class="mi">50</span><span class="p">))</span> <span class="o">/</span> <span class="mi">100</span>
@@ -1154,12 +1161,10 @@
 
     <span class="c1"># pano.test_calibration(1)</span>
 
-
-    <span class="n">uploader</span> <span class="o">=</span> <span class="n">Uploader</span><span class="p">(</span><span class="n">pano</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">identifier</span><span class="p">,</span>
-                        <span class="n">queue</span><span class="o">=</span><span class="n">updater</span><span class="o">.</span><span class="n">communication_queue</span><span class="p">,</span>
-                        <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
-    <span class="c1"># uploader.daemon = True</span>
-    <span class="c1"># uploader.start()</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;upload&quot;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">())</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;enabled&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="n">uploader</span> <span class="o">=</span> <span class="n">GenericUploader</span><span class="p">(</span><span class="n">pano</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+        <span class="n">uploader</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">uploader</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
     <span class="n">pano</span><span class="o">.</span><span class="n">take_panorama</span><span class="p">()</span>
     <span class="n">pano</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Next pano in </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sec2human</span><span class="p">(</span><span class="n">pano</span><span class="o">.</span><span class="n">next_pano</span><span class="p">)))</span>
     <span class="n">pano</span><span class="o">.</span><span class="n">run_loop</span><span class="p">()</span>

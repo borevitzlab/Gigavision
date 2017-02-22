@@ -11,6 +11,8 @@ interval: 300
 starttime: 0500
 stoptime: 1900
 
+output_dir: /home/images/upload/ARB-GV-ANU-FOREST-C01
+
 camera: DSLR
 
 ptz:
@@ -31,10 +33,6 @@ ptz:
 
 upload:
   enabled: True
-  spooling_dir: /home/images/spool/ARB-GV-ANU-FOREST
-  upload_dir: /home/images/upload/ARB-GV-ANU-FOREST
-  #spooling_dir: /data/ARB-GV-ANU-FOREST/spool
-  #upload_dir: /data/ARB-GV-ANU-FOREST/upload
   server: sftp.traitcapture.org
   server_dir: /
   username: picam

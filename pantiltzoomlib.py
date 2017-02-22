@@ -19,7 +19,7 @@ import time
 import csv
 import yaml
 import tempfile
-from libs.Uploader import Uploader
+from libs.Uploader import GenericUploader
 from libs.Updater import Updater
 from libs.Camera import Camera, GPCamera, IPCamera
 from libs.PanTilt import PanTilt
@@ -1078,9 +1078,7 @@ if __name__ == "__main__":
     # pano.test_calibration(1)
 
     if config.get("upload", dict()).get("enabled") != False:
-        uploader = Uploader(pano.name,
-                            queue=updater.communication_queue,
-                            config=config)
+        uploader = GenericUploader(pano.name, config=config)
         uploader.daemon = True
         uploader.start()
     pano.take_panorama()

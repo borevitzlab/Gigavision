@@ -140,7 +140,8 @@
 <dl class="method">
 <dt id="libs.Camera.Camera.capture">
 <code class="descname">capture</code><span class="sig-paren">(</span><em>filename: str = None</em><span class="sig-paren">)</span> &rarr; &lt;built-in function array&gt;<a class="reference internal" href="_modules/libs/Camera.html#Camera.capture"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.Camera.Camera.capture" title="Permalink to this definition">§</a></dt>
-<dd><p>capture method, only extends functionality of <a class="reference internal" href="#libs.Camera.Camera.capture" title="libs.Camera.Camera.capture"><code class="xref py py-func docutils literal"><span class="pre">Camera.capture()</span></code></a> so that testing with  can happen</p>
+<dd><p>DONT OVERRIDE THIS!
+capture method, only extends functionality of <a class="reference internal" href="#libs.Camera.Camera.capture" title="libs.Camera.Camera.capture"><code class="xref py py-func docutils literal"><span class="pre">Camera.capture()</span></code></a> so that testing with  can happen</p>
 <p>Camera.capture = Camera.capture_monkey
 For extending the Camera class override the Camera.capture_image method, not this one.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1376,7 +1377,7 @@ doesnt work...
 Helper class to cache various things like the hostname, machine-id, amount of space in the filesystem.</p>
 <dl class="attribute">
 <dt id="libs.SysUtil.SysUtil.a_statvfs">
-<code class="descname">a_statvfs</code><em class="property"> = os.statvfs_result(f_bsize=4096, f_frsize=4096, f_blocks=28682898, f_bfree=8406261, f_bavail=6943477, f_files=7299072, f_ffree=6482003, f_favail=6482003, f_flag=1024, f_namemax=255)</em><a class="headerlink" href="#libs.SysUtil.SysUtil.a_statvfs" title="Permalink to this definition">§</a></dt>
+<code class="descname">a_statvfs</code><em class="property"> = os.statvfs_result(f_bsize=4096, f_frsize=4096, f_blocks=28682898, f_bfree=8583324, f_bavail=7120540, f_files=7299072, f_ffree=6481981, f_favail=6481981, f_flag=1024, f_namemax=255)</em><a class="headerlink" href="#libs.SysUtil.SysUtil.a_statvfs" title="Permalink to this definition">§</a></dt>
 <dd></dd></dl>
 
 <dl class="classmethod">
@@ -2009,14 +2010,18 @@ eg sizeof_fmt(1234) returns &#8216;1.2KiB&#8217;</p>
 <span id="libs-uploader"></span><h2>libs.Uploader<a class="headerlink" href="#module-libs.Uploader" title="Permalink to this headline">§</a></h2>
 <dl class="class">
 <dt id="libs.Uploader.GenericUploader">
-<em class="property">class </em><code class="descclassname">libs.Uploader.</code><code class="descname">GenericUploader</code><span class="sig-paren">(</span><em>identifier: str</em>, <em>source_dir: str</em>, <em>hostname: str</em>, <em>queue: collections.deque = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/libs/Uploader.html#GenericUploader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.Uploader.GenericUploader" title="Permalink to this definition">§</a></dt>
+<em class="property">class </em><code class="descclassname">libs.Uploader.</code><code class="descname">GenericUploader</code><span class="sig-paren">(</span><em>identifier: str</em>, <em>source_dir: str = None</em>, <em>hostname: str = None</em>, <em>config: dict = None</em>, <em>queue: collections.deque = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/libs/Uploader.html#GenericUploader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.Uploader.GenericUploader" title="Permalink to this definition">§</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#libs.Uploader.Uploader" title="libs.Uploader.Uploader"><code class="xref py py-class docutils literal"><span class="pre">libs.Uploader.Uploader</span></code></a></p>
-<p>generic uploader for uploading logs sensor data, etc.</p>
+<p>Generic uploader for uploading logs sensor data, etc.</p>
+<dl class="method">
+<dt id="libs.Uploader.GenericUploader.fill_me">
+<code class="descname">fill_me</code><span class="sig-paren">(</span><em>dict_of_values: dict</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/libs/Uploader.html#GenericUploader.fill_me"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.Uploader.GenericUploader.fill_me" title="Permalink to this definition">§</a></dt>
+<dd></dd></dl>
+
 <dl class="method">
 <dt id="libs.Uploader.GenericUploader.re_init">
 <code class="descname">re_init</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/libs/Uploader.html#GenericUploader.re_init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.Uploader.GenericUploader.re_init" title="Permalink to this definition">§</a></dt>
-<dd><p>there is no config to be reloaded here...
-:return:</p>
+<dd><p>Your config is in another castle.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -2028,7 +2033,7 @@ eg sizeof_fmt(1234) returns &#8216;1.2KiB&#8217;</p>
 
 <dl class="class">
 <dt id="libs.Uploader.Uploader">
-<em class="property">class </em><code class="descclassname">libs.Uploader.</code><code class="descname">Uploader</code><span class="sig-paren">(</span><em>identifier: str</em>, <em>queue: collections.deque = None</em>, <em>config=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/libs/Uploader.html#Uploader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.Uploader.Uploader" title="Permalink to this definition">§</a></dt>
+<em class="property">class </em><code class="descclassname">libs.Uploader.</code><code class="descname">Uploader</code><span class="sig-paren">(</span><em>identifier: str</em>, <em>queue: collections.deque = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/libs/Uploader.html#Uploader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.Uploader.Uploader" title="Permalink to this definition">§</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.5/library/threading.html#threading.Thread" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></code></a></p>
 <p>Uploader class,
 used to upload,</p>
