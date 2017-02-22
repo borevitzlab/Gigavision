@@ -101,18 +101,18 @@ class Uploader(Thread):
 
                 # dump ze files.
                 for f in file_names:
+                    the_file = f.replace(self.source_dir, "").replace("//", "/")
                     link.chdir("/")
                     if os.path.isdir(f):
-                        dirtarget = f.replace(self.source_dir, "").replace("//", "/")
-                        self.mkdir_recursive(link, dirtarget)
+                        self.mkdir_recursive(link, the_file)
                         continue
 
                     try:
-                        link.put(f, os.path.basename(f) + ".tmp")
-                        if link.exists(os.path.basename(f)):
-                            link.remove(os.path.basename(f))
-                        link.rename(os.path.basename(f) + ".tmp", os.path.basename(f))
-                        link.chmod(os.path.basename(f), mode=755)
+                        link.put(f, the_file + ".tmp")
+                        if link.exists(the_file):
+                            link.remove(the_file)
+                        link.rename(the_file + ".tmp", the_file)
+                        link.chmod(the_file, mode=755)
                         self.total_data_uploaded_b += os.path.getsize(f)
                         if self.remove_source_files:
                             os.remove(f)
