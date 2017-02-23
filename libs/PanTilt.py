@@ -4,7 +4,7 @@ import logging.config
 from collections import deque
 from threading import Thread
 import requests
-from requests.auth import HTTPBasicAuth
+from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 from xml.etree import ElementTree
 
 try:
@@ -46,12 +46,15 @@ class PanTilt(object):
         self._notified = []
         self.return_parser = config.get("return_parser", "plaintext")
         format_str = config.get("format_url", "http://{HTTP_login}@{ip}{command}")
-
+        self.auth_type = config.get("auth_type", "basic")
         self.auth_object = None
         if format_str.startswith("http://{HTTP_login}@"):
             format_str = format_str.replace("{HTTP_login}@", "")
             self.auth_object = HTTPBasicAuth(user or config.get("username", "admin"),
                                              password or config.get("password", "admin"))
+            self.auth_object_digest = HTTPDigestAuth(config.get("username", "admin"),
+                                             config.get("password", "admin"))
+            self.auth_object = self.auth_object_digest if self.auth_type == "digest" else self.auth_object
 
         self._HTTP_login = config.get("HTTP_login", "{user}:{password}").format(
             user=user or config.get("username", "admin"),
@@ -115,7 +118,12 @@ class PanTilt(object):
             url = url.replace("&", "?", 1)
         response = None
         try:
+
             response = requests.get(url, auth=self.auth_object)
+            if response.status_code == 401 and self.auth_type != "digest":
+                self.logger.debug("Auth is not basic, trying digest")
+                response = requests.get(url, auth=self.auth_object_digest)
+                self.logger.debug(response.text)
         except Exception as e:
             self.logger.error("Some exception got raised {}".format(str(e)))
             return

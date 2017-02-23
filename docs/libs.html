@@ -108,7 +108,7 @@
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Variables:</th><td class="field-body"><ul class="first last simple">
-<li><a class="reference internal" href="#libs.Camera.Camera.accuracy" title="libs.Camera.Camera.accuracy"><strong>accuracy</strong></a> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a>) &#8211; 3: Number of seconds caputre should be accurate to.</li>
+<li><a class="reference internal" href="pantiltzoomlib.html#pantiltzoomlib.Panorama.accuracy" title="pantiltzoomlib.Panorama.accuracy"><strong>accuracy</strong></a> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a>) &#8211; 3: Number of seconds caputre should be accurate to.</li>
 <li><a class="reference internal" href="#libs.Camera.Camera.default_width" title="libs.Camera.Camera.default_width"><strong>default_width</strong></a> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a>) &#8211; 1080: Default width of resized images.</li>
 <li><a class="reference internal" href="#libs.Camera.Camera.default_height" title="libs.Camera.Camera.default_height"><strong>default_height</strong></a> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a>) &#8211; 720: Default height of resuzed images.</li>
 <li><a class="reference internal" href="#libs.Camera.Camera.file_types" title="libs.Camera.Camera.file_types"><strong>file_types</strong></a> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#list" title="(in Python v3.5)"><em>list</em></a>) &#8211; [&#8220;CR2&#8221;, &#8220;RAW&#8221;, &#8220;NEF&#8221;, &#8220;JPG&#8221;, &#8220;JPEG&#8221;, &#8220;PPM&#8221;, &#8220;TIF&#8221;, &#8220;TIFF&#8221;]: Supported output image types.</li>
@@ -1027,62 +1027,120 @@ works on dicts and lists
 <dt id="libs.CryptUtil.SSHManager">
 <em class="property">class </em><code class="descclassname">libs.CryptUtil.</code><code class="descname">SSHManager</code><span class="sig-paren">(</span><em>path='/home/.ssh'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/libs/CryptUtil.html#SSHManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.CryptUtil.SSHManager" title="Permalink to this definition">§</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#object" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>a manager of ssh keys, with the ability to sign messages using them.</p>
 <dl class="method">
 <dt id="libs.CryptUtil.SSHManager.get_new_key_from_server">
 <code class="descname">get_new_key_from_server</code><span class="sig-paren">(</span><em>token</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/libs/CryptUtil.html#SSHManager.get_new_key_from_server"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.CryptUtil.SSHManager.get_new_key_from_server" title="Permalink to this definition">§</a></dt>
-<dd><p>acquires an ssh key from the server with a token.
-:param token: a string token to send to the server.
-:return:</p>
+<dd><p>acquires an ssh key from the server with a token and writes the key to the current path.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>token</strong> &#8211; a string token to send to the server.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">boolean indicating whether the operation was successful.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bool" title="(in Python v3.5)">bool</a></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="libs.CryptUtil.SSHManager.paramiko_key">
 <code class="descname">paramiko_key</code><a class="headerlink" href="#libs.CryptUtil.SSHManager.paramiko_key" title="Permalink to this definition">§</a></dt>
-<dd></dd></dl>
+<dd><p>property for a key usable by paramiko</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">agentKey for use by paramiko/pysftp</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="http://docs.paramiko.org/en/latest/api/keys.html#paramiko.rsakey.RSAKey" title="(in Paramiko v)">paramiko.rsakey.RSAKey</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="attribute">
 <dt id="libs.CryptUtil.SSHManager.public_ssh_key_string">
 <code class="descname">public_ssh_key_string</code><a class="headerlink" href="#libs.CryptUtil.SSHManager.public_ssh_key_string" title="Permalink to this definition">§</a></dt>
-<dd><p>gets the public ssh key string.
-:return:</p>
+<dd><p>property for the public ssh key string.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">string of the ssh public key, encoded to be added to a authorized_keys file</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)">str</a></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="libs.CryptUtil.SSHManager.sign_message">
 <code class="descname">sign_message</code><span class="sig-paren">(</span><em>message</em><span class="sig-paren">)</span> &rarr; str<a class="reference internal" href="_modules/libs/CryptUtil.html#SSHManager.sign_message"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.CryptUtil.SSHManager.sign_message" title="Permalink to this definition">§</a></dt>
-<dd><p>signs a text message.
-:param message: utf-8 encoded string
-:return str: signature for message.</p>
+<dd><p>signs a text message using the internal key</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>message</strong> &#8211; utf-8 encoded string</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">signature for message.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)">str</a></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="libs.CryptUtil.SSHManager.ssh_key">
 <code class="descname">ssh_key</code><a class="headerlink" href="#libs.CryptUtil.SSHManager.ssh_key" title="Permalink to this definition">§</a></dt>
-<dd></dd></dl>
+<dd><p>ssh key property
+sets the internal rsa key and the agentKey for use by paramiko.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="libs.CryptUtil.SSHManager.write_key_to_path">
 <code class="descname">write_key_to_path</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/libs/CryptUtil.html#SSHManager.write_key_to_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.CryptUtil.SSHManager.write_key_to_path" title="Permalink to this definition">§</a></dt>
-<dd><p>writes public and private keys to their respective paths
-:return:</p>
+<dd><p>writes internally stored public and private keys to their respective paths</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="function">
 <dt id="libs.CryptUtil.serialize_signature">
-<code class="descclassname">libs.CryptUtil.</code><code class="descname">serialize_signature</code><span class="sig-paren">(</span><em>signature</em><span class="sig-paren">)</span> &rarr; str<a class="reference internal" href="_modules/libs/CryptUtil.html#serialize_signature"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.CryptUtil.serialize_signature" title="Permalink to this definition">§</a></dt>
-<dd><p>formats the signature for the server, with the correct boundaries
-:param signature: raw bytes signature.
-:return: str formatted signature for sending to the server.</p>
+<code class="descclassname">libs.CryptUtil.</code><code class="descname">serialize_signature</code><span class="sig-paren">(</span><em>signature: bytes</em><span class="sig-paren">)</span> &rarr; str<a class="reference internal" href="_modules/libs/CryptUtil.html#serialize_signature"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.CryptUtil.serialize_signature" title="Permalink to this definition">§</a></dt>
+<dd><p>formats the signature for the server, with the correct boundaries</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>signature</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><em>bytes</em></a>) &#8211; raw bytes signature.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">str formatted signature for sending to the server.</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="libs.CryptUtil.ssh_public_key">
 <code class="descclassname">libs.CryptUtil.</code><code class="descname">ssh_public_key</code><span class="sig-paren">(</span><em>keypair: cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKeyWithSerialization</em><span class="sig-paren">)</span> &rarr; str<a class="reference internal" href="_modules/libs/CryptUtil.html#ssh_public_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.CryptUtil.ssh_public_key" title="Permalink to this definition">§</a></dt>
-<dd><p>converts an rsa keypair to openssh format public key
-:param keypair:
-:return: string of public key</p>
+<dd><p>converts an rsa keypair to openssh format public key</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>keypair</strong> (<a class="reference external" href="https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/#cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKeyWithSerialization" title="(in Cryptography v1.8.dev1)"><em>cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKeyWithSerialization</em></a>) &#8211; keypair.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">string of public key</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </div>
@@ -1377,7 +1435,7 @@ doesnt work...
 Helper class to cache various things like the hostname, machine-id, amount of space in the filesystem.</p>
 <dl class="attribute">
 <dt id="libs.SysUtil.SysUtil.a_statvfs">
-<code class="descname">a_statvfs</code><em class="property"> = os.statvfs_result(f_bsize=4096, f_frsize=4096, f_blocks=28682898, f_bfree=8582921, f_bavail=7120137, f_files=7299072, f_ffree=6481981, f_favail=6481981, f_flag=1024, f_namemax=255)</em><a class="headerlink" href="#libs.SysUtil.SysUtil.a_statvfs" title="Permalink to this definition">§</a></dt>
+<code class="descname">a_statvfs</code><em class="property"> = os.statvfs_result(f_bsize=4096, f_frsize=4096, f_blocks=28682898, f_bfree=8457126, f_bavail=6994342, f_files=7299072, f_ffree=6481971, f_favail=6481971, f_flag=1024, f_namemax=255)</em><a class="headerlink" href="#libs.SysUtil.SysUtil.a_statvfs" title="Permalink to this definition">§</a></dt>
 <dd></dd></dl>
 
 <dl class="classmethod">
@@ -2010,7 +2068,7 @@ eg sizeof_fmt(1234) returns &#8216;1.2KiB&#8217;</p>
 <span id="libs-uploader"></span><h2>libs.Uploader<a class="headerlink" href="#module-libs.Uploader" title="Permalink to this headline">§</a></h2>
 <dl class="class">
 <dt id="libs.Uploader.GenericUploader">
-<em class="property">class </em><code class="descclassname">libs.Uploader.</code><code class="descname">GenericUploader</code><span class="sig-paren">(</span><em>identifier: str</em>, <em>source_dir: str = None</em>, <em>hostname: str = None</em>, <em>config: dict = None</em>, <em>queue: collections.deque = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/libs/Uploader.html#GenericUploader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.Uploader.GenericUploader" title="Permalink to this definition">§</a></dt>
+<em class="property">class </em><code class="descclassname">libs.Uploader.</code><code class="descname">GenericUploader</code><span class="sig-paren">(</span><em>identifier: str</em>, <em>source_dir: str = None</em>, <em>host: str = None</em>, <em>config: dict = None</em>, <em>queue: collections.deque = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/libs/Uploader.html#GenericUploader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libs.Uploader.GenericUploader" title="Permalink to this definition">§</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#libs.Uploader.Uploader" title="libs.Uploader.Uploader"><code class="xref py py-class docutils literal"><span class="pre">libs.Uploader.Uploader</span></code></a></p>
 <p>Generic uploader for uploading logs sensor data, etc.</p>
 <dl class="method">
@@ -2026,7 +2084,7 @@ eg sizeof_fmt(1234) returns &#8216;1.2KiB&#8217;</p>
 
 <dl class="attribute">
 <dt id="libs.Uploader.GenericUploader.remove_source_files">
-<code class="descname">remove_source_files</code><em class="property"> = False</em><a class="headerlink" href="#libs.Uploader.GenericUploader.remove_source_files" title="Permalink to this definition">§</a></dt>
+<code class="descname">remove_source_files</code><em class="property"> = True</em><a class="headerlink" href="#libs.Uploader.GenericUploader.remove_source_files" title="Permalink to this definition">§</a></dt>
 <dd></dd></dl>
 
 </dd></dl>

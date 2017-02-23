@@ -6,7 +6,7 @@ import time
 import tempfile
 import numpy
 import requests
-from requests.auth import HTTPBasicAuth
+from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 from xml.etree import ElementTree
 from collections import deque
 from io import BytesIO
@@ -633,11 +633,16 @@ class IPCamera(Camera):
         self._notified = []
 
         format_str = config.get("format_url", "http://{HTTP_login}@{ip}{command}")
+        self.auth_type = config.get("auth_type", "basic")
         self.auth_object = None
         if format_str.startswith("http://{HTTP_login}@"):
             format_str = format_str.replace("{HTTP_login}@", "")
             self.auth_object = HTTPBasicAuth(config.get("username", "admin"),
                                              config.get("password", "admin"))
+            self.auth_object_digest = HTTPDigestAuth(config.get("username", "admin"),
+                                                     config.get("password", "admin"))
+            self.auth_object = self.auth_object_digest if self.auth_type == "digest" else self.auth_object
+
 
 
         self._HTTP_login = config.get("HTTP_login", "{user}:{password}").format(
@@ -665,9 +670,7 @@ class IPCamera(Camera):
         self._hfov = self._vfov = None
         self._zoom_list = config.get("zoom_list", [50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000])
 
-
         self._focus_range = config.get("focus_range", [1, 99999])
-
 
         # set commands from the rest of the config.
         self.command_urls = config.get('urls', {})
@@ -694,11 +697,15 @@ class IPCamera(Camera):
         response = None
         try:
             response = requests.get(url, auth=self.auth_object)
+            if response.status_code == 401:
+                self.logger.debug("Auth is not basic, trying digest")
+                response = requests.get(url, auth=self.auth_object_digest)
         except Exception as e:
             self.logger.error("Some exception got raised {}".format(str(e)))
             return
         if response.status_code not in [200, 204]:
-            self.logger.error("[{}] - {}\n{}".format(str(response.status_code), str(response.reason), str(response.url)))
+            self.logger.error(
+                "[{}] - {}\n{}".format(str(response.status_code), str(response.reason), str(response.url)))
             return
         return response
 
@@ -904,8 +911,8 @@ class IPCamera(Camera):
         if cmd:
             stream = self._read_stream(cmd)
             output = self.get_value_from_stream(stream, keys)
-            width,height = self._image_size
-            for k,v in output.items():
+            width, height = self._image_size
+            for k, v in output.items():
                 if "width" in k:
                     width = v
                 if "height" in k:
@@ -1087,7 +1094,7 @@ class IPCamera(Camera):
 
         :return: response from the camera.
         """
-        cmd,keys = self._get_cmd("set_focus_mode")
+        cmd, keys = self._get_cmd("set_focus_mode")
         if not cmd:
             return None
         stream_output = self._read_stream(cmd.format(mode="REFOCUS"))
@@ -1274,7 +1281,8 @@ class GPCamera(Camera):
                             fn = (filename or os.path.splitext(image.filename)[0]) + os.path.splitext(image.filename)[
                                 -1]
                             if idx == 0:
-                                self._image = cv2.imdecode(numpy.fromstring(image.read(), numpy.uint8), cv2.IMREAD_COLOR)
+                                self._image = cv2.imdecode(numpy.fromstring(image.read(), numpy.uint8),
+                                                           cv2.IMREAD_COLOR)
                             image.save(fn)
                             successes.append(fn)
                             try:
@@ -1614,17 +1622,16 @@ class IVPortCamera(PiCamera):
 
     TRUTH_TABLE = [
         [False, False, True],
-        [True,  False, True],
-        [False, True,  False],
-        [True,  True,  False]
+        [True, False, True],
+        [False, True, False],
+        [True, True, False]
     ]
     gpio_groups = ("B",)
-
 
     def __init__(self,
                  identifier: str = None,
                  queue: deque = None,
-                 gpio_group: tuple=("B",),
+                 gpio_group: tuple = ("B",),
                  camera_number: int = None, **kwargs):
         """
         special __init__ for the IVport to set the gpio enumeration
@@ -1670,13 +1677,13 @@ class IVPortCamera(PiCamera):
         if idx is not None:
             cls.current_camera_index = idx
 
-        cls.current_camera_index %= (len(IVPortCamera.TRUTH_TABLE)*len(cls.gpio_groups))
+        cls.current_camera_index %= (len(IVPortCamera.TRUTH_TABLE) * len(cls.gpio_groups))
         # GPIO.setwarnings(False)
         # GPIO.setmode(GPIO.BOARD)
         # GPIO.setup(IVPortCamera.select, GPIO.OUT)
 
         # current groups determined by the camera index / number of cameras per board (truth table len)
-        current_group = cls.gpio_groups[int(cls.current_camera_index/len(IVPortCamera.TRUTH_TABLE))]
+        current_group = cls.gpio_groups[int(cls.current_camera_index / len(IVPortCamera.TRUTH_TABLE))]
         current_pins = cls.enable_pins[current_group]
         print("Switching to camera {}: {}".format(current_group, cls.current_camera_index))
 

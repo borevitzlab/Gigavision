@@ -33,7 +33,7 @@ ptz:
 
 upload:
   enabled: True
-  server: sftp.traitcapture.org
-  server_dir: /
+  host: sftp.traitcapture.org
+  server_dir: /phenocams/gigavision
   username: picam
   password: from_key

@@ -46,7 +46,7 @@ class Uploader(Thread):
 
         self.config_filename = SysUtil.identifier_to_ini(self.identifier)
         self.config = \
-            self.hostname = \
+            self.host = \
             self.username = \
             self.password = \
             self.camera_name = \
@@ -64,7 +64,7 @@ class Uploader(Thread):
         """
         self.machine_id = SysUtil.get_machineid()
         self.config = SysUtil.ensure_config(self.identifier)
-        self.hostname = self.config["ftp"]["server"]
+        self.host = self.config["ftp"]["server"]
         self.username = self.config["ftp"]["username"]
         self.password = self.config["ftp"]["password"]
         self.server_dir = self.config["ftp"]["directory"]
@@ -83,15 +83,17 @@ class Uploader(Thread):
         try:
             self.logger.debug("Connecting sftp and uploading buddy")
             # open link and create directory if for some reason it doesnt exist
-            params = dict(host=self.hostname, username=self.username)
-            params['cnopts'] = pysftp.CnOpts(knownhosts='/home/.ssh/known_hosts')
+            params = dict(host=self.host, username=self.username)
+            params['cnopts'] = pysftp.CnOpts(knownhosts=self.ssh_manager.known_hosts_path)
             params['cnopts'].hostkeys = None
+
+
+            if self.password is not None:
+                params['password'] = self.password
 
             if os.path.exists(self.ssh_manager.priv_path) and os.path.exists(self.ssh_manager.known_hosts_path):
                 params['private_key'] = self.ssh_manager.priv_path
                 params['cnopts'] = pysftp.CnOpts(knownhosts=self.ssh_manager.known_hosts_path)
-            else:
-                params['password'] = self.password
 
             with pysftp.Connection(**params) as link:
                 root = os.path.join(link.getcwd() or "", self.server_dir, self.camera_name)
@@ -105,13 +107,12 @@ class Uploader(Thread):
                 self.logger.info(root)
                 self.logger.debug("Uploading...")
                 # dump ze files.
-                for f in file_names:
+                for idx, f in enumerate(file_names):
                     try:
 
                         target_file = f.replace(self.source_dir, "")
                         target_file = target_file[1:] if target_file.startswith("/") else target_file
                         dirname = os.path.dirname(target_file)
-                        print("dirname:{}".format(dirname), "target:{}".format(target_file))
                         if os.path.isdir(f):
                             self.mkdir_recursive(link, target_file)
                             continue
@@ -129,9 +130,9 @@ class Uploader(Thread):
                         if self.remove_source_files:
                             os.remove(f)
                             self.logger.debug(
-                                "Successfully uploaded {} through sftp and removed from local filesystem".format(f))
+                                "Successfully uploaded image {}/{} through sftp and removed from local filesystem".format(idx, len(file_names)))
                         else:
-                            self.logger.debug("Successfully uploaded {} through sftp".format(f))
+                            self.logger.debug("Successfully uploaded {}/{} through sftp".format(idx, len(file_names)))
                         self.last_upload_time = datetime.datetime.now()
                     except Exception as e:
                         self.logger.error("sftp:{}".format(str(e)))
@@ -149,7 +150,7 @@ class Uploader(Thread):
             try:
                 self.logger.debug("Connecting ftp")
                 # open link and create directory if for some reason it doesnt exist
-                ftp = ftplib.FTP(self.hostname)
+                ftp = ftplib.FTP(self.host)
                 ftp.login(self.username, self.password)
                 self.mkdir_recursive(ftp, os.path.join(self.server_dir, self.camera_name))
                 self.logger.info("Uploading")
@@ -254,7 +255,7 @@ class GenericUploader(Uploader):
     """
     Generic uploader for uploading logs sensor data, etc.
     """
-    remove_source_files = False
+    remove_source_files = True
 
     def fill_me(self, dict_of_values: dict):
         for k, v in dict_of_values.items():
@@ -264,7 +265,7 @@ class GenericUploader(Uploader):
     def __init__(self,
                  identifier: str,
                  source_dir: str = None,
-                 hostname: str = None,
+                 host: str = None,
                  config: dict = None,
                  queue: deque = None):
         # same thread name hackery that the Camera threads use
@@ -285,10 +286,10 @@ class GenericUploader(Uploader):
         self.last_upload_list = []
         self.total_data_uploaded_tb = 0
         self.total_data_uploaded_b = 0
-        self.hostname = hostname or "sftp.traitcapture.org"
+        self.host = host or "sftp.traitcapture.org"
         self.upload_enabled = True
         self.username = "picam"
-        self.password = "INTENTIONALLY BLANK"
+        self.password = None
         self.server_dir = "/"
 
         if config and type(config) is dict:

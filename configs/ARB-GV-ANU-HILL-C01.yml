@@ -1,26 +1,31 @@
-name: AXIS-Test
+name: ARB-GV-ANU-HILL-C01
 
-first_corner: [11.5079, 16.2282]
-second_corner: [104.5051, -11.6703]
-camera_fov: [16.87, 9.50]
-overlap: 50
+first_corner: [-27.7532, 6.4121]
+second_corner: [134.5333, -23.1001]
 
-interval: 300
-starttime: 0520
+camera_fov: [5.6708, 3.1613]
+overlap: 40
+scan_order: cols,right
+
+interval: 3600
+starttime: 0700
 stoptime: 1900
-output_dir: /home/images/upload/Test
+
+output_dir: /home/images/upload/ARB-GV-ANU-HILL-C01
 
 camera:
-  ip: '192.168.1.99'
+  ip: '10.132.11.32:4442'
   username: root
-  password: lab305
+  password: "1Phen0cam"
   use_focus_at_center: True
 
   HTTP_login: "{user}:{password}"
   format_url: "http://{HTTP_login}@{ip}{command}"
   return_parser: plaintext
+  auth_type: "digest"
 
   image_size_list:
+#  - [1920, 1080]
   - [1280, 720]
   - [800, 450]
   - [480, 270]
@@ -41,38 +46,32 @@ camera:
     get_autofocus_mode: "autofocus"
 
 ptz:
-  ip: '192.168.1.99'
+  ip: '10.132.11.32:4442'
   username: root
-  password: lab305
+  password: "1Phen0cam"
 
   HTTP_login: "{user}:{password}"
   format_url: "http://{HTTP_login}@{ip}{command}"
   return_parser: plaintext
+  auth_type: "digest"
 
   use_focus_at_center: True
-  zoom: 1500
+  zoom: 3500
   scan_order: cols,right
   zoom_range: [1, 9999]
-  zoom_list: [50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1000]
+  zoom_list: [50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 9999]
 
   pan_range: [-180, 180]
   tilt_range: [-90, 19]
   scale: 1.0
 
   urls:
-    set_zoom: /axis-cgi/com/ptz.cgi?zoom={zoom}
-    set_pan: /axis-cgi/com/ptz.cgi?pan={pan}
-    set_tilt: /axis-cgi/com/ptz.cgi?tilt={tilt}
-    set_pan_tilt: /axis-cgi/com/ptz.cgi?pan={pan}&tilt={tilt}
-    get_pan_tilt: /axis-cgi/com/ptz.cgi?query=position
-    get_zoom: /axis-cgi/com/ptz.cgi?query=position
+    set_zoom: "/axis-cgi/com/ptz.cgi?zoom={zoom}"
+    set_pan: "/axis-cgi/com/ptz.cgi?pan={pan}"
+    set_tilt: "/axis-cgi/com/ptz.cgi?tilt={tilt}"
+    set_pan_tilt: "/axis-cgi/com/ptz.cgi?pan={pan}&tilt={tilt}"
+    get_pan_tilt: "/axis-cgi/com/ptz.cgi?query=position"
+    get_zoom: "/axis-cgi/com/ptz.cgi?query=position"
   keys:
     get_pan_tilt: ["pan","tilt"]
     get_zoom: "zoom"
-
-upload:
-  enabled: True
-  host: sftp.traitcapture.org
-  server_dir: /gigavision
-  username: picam
-  password: from_key
