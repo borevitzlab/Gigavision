@@ -171,7 +171,6 @@
             <span class="n">params</span><span class="p">[</span><span class="s1">&#39;cnopts&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pysftp</span><span class="o">.</span><span class="n">CnOpts</span><span class="p">(</span><span class="n">knownhosts</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_manager</span><span class="o">.</span><span class="n">known_hosts_path</span><span class="p">)</span>
             <span class="n">params</span><span class="p">[</span><span class="s1">&#39;cnopts&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">hostkeys</span> <span class="o">=</span> <span class="kc">None</span>
 
-
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">params</span><span class="p">[</span><span class="s1">&#39;password&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">password</span>
 
@@ -191,9 +190,11 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Uploading...&quot;</span><span class="p">)</span>
                 <span class="c1"># dump ze files.</span>
+                <span class="n">total_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+                <span class="n">total_size</span> <span class="o">=</span> <span class="mi">0</span>
                 <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">file_names</span><span class="p">):</span>
                     <span class="k">try</span><span class="p">:</span>
-
+                        <span class="n">onefile_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
                         <span class="n">target_file</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source_dir</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
                         <span class="n">target_file</span> <span class="o">=</span> <span class="n">target_file</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">if</span> <span class="n">target_file</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">target_file</span>
                         <span class="n">dirname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">target_file</span><span class="p">)</span>
@@ -212,9 +213,13 @@
                         <span class="n">link</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">target_file</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="mi">755</span><span class="p">)</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">total_data_uploaded_b</span> <span class="o">+=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
                         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_source_files</span><span class="p">:</span>
+                            <span class="n">size</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+                            <span class="n">total_size</span> <span class="o">+=</span> <span class="n">size</span>
+                            <span class="n">mbps</span> <span class="o">=</span> <span class="p">(</span><span class="n">size</span><span class="o">/</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">onefile_time</span><span class="p">))</span><span class="o">/</span><span class="mi">1024</span><span class="o">/</span><span class="mi">1024</span>
+
                             <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                                <span class="s2">&quot;Successfully uploaded image </span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2"> through sftp and removed from local filesystem&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">file_names</span><span class="p">)))</span>
+                                <span class="s2">&quot;Uploaded file </span><span class="si">{0}</span><span class="s2">/</span><span class="si">{1}</span><span class="s2"> through sftp and removed from local filesystem, </span><span class="si">{2:.2f}</span><span class="s2">Mb/s&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">file_names</span><span class="p">),</span> <span class="n">mbps</span><span class="p">))</span>
                         <span class="k">else</span><span class="p">:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Successfully uploaded </span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2"> through sftp&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">file_names</span><span class="p">)))</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">last_upload_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
@@ -222,7 +227,9 @@
                         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;sftp:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)))</span>
                     <span class="k">finally</span><span class="p">:</span>
                         <span class="n">link</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Disconnecting, eh&quot;</span><span class="p">)</span>
+
+                <span class="n">mbps</span> <span class="o">=</span> <span class="p">(</span><span class="n">total_size</span><span class="o">/</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">total_time</span><span class="p">))</span><span class="o">/</span><span class="mi">1024</span><span class="o">/</span><span class="mi">1024</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Finished uploading, </span><span class="si">{0:.2f}</span><span class="s2">Mb/s&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mbps</span><span class="p">))</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_data_uploaded_b</span> <span class="o">&gt;</span> <span class="mi">1000000000000</span><span class="p">:</span>
                 <span class="n">curr</span> <span class="o">=</span> <span class="p">(((</span><span class="bp">self</span><span class="o">.</span><span class="n">total_data_uploaded_b</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1024</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">total_data_uploaded_b</span> <span class="o">=</span> <span class="mi">0</span>
@@ -276,11 +283,9 @@
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;something went wrong making directories... </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)))</span></div>
 
-
 <div class="viewcode-block" id="Uploader.communicate_with_updater"><a class="viewcode-back" href="../../libs.html#libs.Uploader.Uploader.communicate_with_updater">[docs]</a>    <span class="k">def</span> <span class="nf">communicate_with_updater</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        communication member. This is meant to send some metadata to the updater thread.</span>
-<span class="sd">        :return:</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">communication_queue</span><span class="p">:</span>
             <span class="k">return</span>
@@ -301,7 +306,7 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        run method.</span>
 <span class="sd">        main loop for Uploaders.</span>
-<span class="sd">        :return:</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">while</span> <span class="kc">True</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopper</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
             <span class="k">try</span><span class="p">:</span>
@@ -330,7 +335,6 @@
 <div class="viewcode-block" id="Uploader.stop"><a class="viewcode-back" href="../../libs.html#libs.Uploader.Uploader.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        stopper method</span>
-<span class="sd">        :return:</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stopper</span><span class="o">.</span><span class="n">set</span><span class="p">()</span></div></div>
 
@@ -342,6 +346,12 @@
     <span class="n">remove_source_files</span> <span class="o">=</span> <span class="kc">True</span>
 
 <div class="viewcode-block" id="GenericUploader.fill_me"><a class="viewcode-back" href="../../libs.html#libs.Uploader.GenericUploader.fill_me">[docs]</a>    <span class="k">def</span> <span class="nf">fill_me</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dict_of_values</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        fills self with values from a dict.</span>
+
+<span class="sd">        :param dict_of_values: dictionary of key: values</span>
+<span class="sd">        :type dict_of_values: dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">dict_of_values</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">):</span>
                 <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span></div>

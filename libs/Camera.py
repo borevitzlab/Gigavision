@@ -200,7 +200,7 @@ class Camera(object):
 
         self.camera_name = self.config["camera"]["name"]
         self.interval = self.config.getint("timelapse", "interval")
-        self.spool_directory = tempfile.mkdtemp("SPC-EYEPI")
+        self.spool_directory = tempfile.mkdtemp(prefix="SPC-EYEPI")
         self.upload_directory = self.config["localfiles"]["upload_dir"]
         self.begin_capture = datetime.time(0, 0)
         self.end_capture = datetime.time(23, 59)
@@ -251,7 +251,6 @@ class Camera(object):
 
     def capture(self, filename: str = None) -> numpy.array:
         """
-        DONT OVERRIDE THIS!
         capture method, only extends functionality of :func:`Camera.capture` so that testing with  can happen
 
         Camera.capture = Camera.capture_monkey
@@ -456,8 +455,6 @@ class Camera(object):
     def stop(self):
         """
         Stops the capture thread, if self is an instance of :class:`threading.Thread`.
-
-        :return:
         """
         self.stopper.set()
 
@@ -684,9 +681,10 @@ class IPCamera(Camera):
 
     def _make_request(self, command_string, *args, **kwargs):
         """
-        makes a generic request formatting the command string and applying the authentication.
+        Makes a generic request formatting the command string and applying the authentication.
 
-        :param command_string:
+        :param command_string: command string like read stream raw
+        :type command_string: str
         :param args:
         :param kwargs:
         :return:
@@ -724,8 +722,9 @@ class IPCamera(Camera):
     def _read_stream_raw(self, command_string, *args, **kwargs):
         """
         opens a url with the current HTTP_login string
-        :type command_string: str
+
         :param command_string: url to go to with parameters
+        :type command_string: str
         :return: string of data returned from the camera
         """
         response = self._make_request(command_string, *args, **kwargs)
@@ -762,12 +761,12 @@ class IPCamera(Camera):
             return return_values
         # apparently, there is an issue parsing when the ptz returns INVALID XML (WTF?)
         # these seem to be the tags that get mutilated.
-        illegal = [b'\n', b'\t', b'\r',
-                   b"<CPStatusMsg>", b"</CPStatusMsg>", b"<Text>",
-                   b"</Text>", b"<Type>Info</Type>", b"<Type>Info",
-                   b"Info</Type>", b"</Type>", b"<Type>"]
+        illegal = ['\n', '\t', '\r',
+                   "<CPStatusMsg>", "</CPStatusMsg>", "<Text>",
+                   "</Text>", "<Type>Info</Type>", "<Type>Info",
+                   "Info</Type>", "</Type>", "<Type>"]
         for ill in illegal:
-            message_xml = message_xml.replace(ill, b"")
+            message_xml = message_xml.replace(ill, "")
 
         root_element = ElementTree.Element("invalidation_tag")
         try:
@@ -836,6 +835,17 @@ class IPCamera(Camera):
         return return_values
 
     def get_value_from_stream(self, stream, *keys):
+        """
+        Gets a value from some text data (xml or plaintext = separated values)
+        returns a dict of "key":value pairs.
+
+        :param stream: text data to search for values
+        :type stream: str
+        :param keys:
+        :type keys: list
+        :return: dict of values
+        :rtype: dict
+        """
         if self.return_parser == 'plaintext':
             return self.get_value_from_plaintext(stream, *keys)
         elif self.return_parser == 'xml':
@@ -845,7 +855,11 @@ class IPCamera(Camera):
 
     def capture_image(self, filename=None) -> numpy.array:
         """
-        Overridden method to get and image from the camera base on the cmd for "get_image".
+        Captures an image with the IP camera, uses requests.get to acqire the image.
+
+        :param filename: filename without extension to capture to.
+        :return: list of filenames (of captured images) if filename was specified, otherwise a numpy array of the image.
+        :rtype: numpy.array or list
         """
         st = time.time()
         cmd, keys = self._get_cmd("get_image")
@@ -899,7 +913,7 @@ class IPCamera(Camera):
             self._read_stream(cmd.format(value))
 
     @property
-    def image_size(self) -> tuple:
+    def image_size(self) -> list:
         """
         Image resolution in pixels, tuple of (width, height)
 
@@ -911,8 +925,8 @@ class IPCamera(Camera):
         if cmd:
             stream = self._read_stream(cmd)
             output = self.get_value_from_stream(stream, keys)
-            width, height = self._image_size
-            for k, v in output.items():
+            width,height = self._image_size
+            for k,v in output.items():
                 if "width" in k:
                     width = v
                 if "height" in k:
@@ -934,6 +948,8 @@ class IPCamera(Camera):
     @property
     def focus_mode(self) -> str:
         """
+        TODO: this is broken, returns the dict of key: value not value
+
         Focus Mode
 
         When setting, the mode provided must be in 'focus_modes'
@@ -984,6 +1000,9 @@ class IPCamera(Camera):
             self._read_stream(cmd.format(focus=absolute_position))
 
     def focus(self):
+        """
+        focuses the camera by cycling it through its autofocus modes.
+        """
         self.logger.debug("Focusing...")
         cmd, key = self._get_cmd("set_autofocus_mode")
         if not cmd or len(self._autofocus_modes) < 1:
@@ -1088,18 +1107,6 @@ class IPCamera(Camera):
         fmt_string = "".join(("\nfocus_pos:\t{}\nfocus_range:\t{}"))
         return fmt_string.format(self.focus_position, self.focus_range)
 
-    def focus(self):
-        """
-        forces a refocus of the the camera
-
-        :return: response from the camera.
-        """
-        cmd, keys = self._get_cmd("set_focus_mode")
-        if not cmd:
-            return None
-        stream_output = self._read_stream(cmd.format(mode="REFOCUS"))
-        return self.get_value_from_stream(stream_output, keys)
-
 
 class GPCamera(Camera):
     """
@@ -1109,11 +1116,6 @@ class GPCamera(Camera):
     """
 
     def __init__(self, identifier: str = None, lock=Lock(), **kwargs):
-        """
-        this needs to be fixed for multiple cameras.
-        :param identifier: serialnumber of camera or None for next camera.
-        :param kwargs:
-        """
         self.lock = lock
         self._serialnumber = None
         self.usb_address = [None, None]
@@ -1123,7 +1125,6 @@ class GPCamera(Camera):
     def re_init(self):
         """
         re initialises the camera.
-        :return:
         """
         super(GPCamera, self).re_init()
 
@@ -1158,7 +1159,9 @@ class GPCamera(Camera):
         """
         This is meant to get the exif fields for the image if we want to manually save them.
         This is incomplete.
-        :return:
+
+        :return: dictionary of exif fields.
+        :rtype: dict
         """
         exif = super(GPCamera, self).get_exif_fields()
         try:
@@ -1199,6 +1202,18 @@ class GPCamera(Camera):
                 raise FileNotFoundError("Camera cannot be found")
 
     def capture_image(self, filename=None):
+        """
+        Gapture method for DSLRs.
+        Some contention exists around this method, as its definitely not the easiest thing to have operate robustly.
+        :func:`GPCamera._cffi_capture` is how it _should_ be done, however that method is unreliable and causes many
+        crashes when in real world timelapse situations.
+        This method calls gphoto2 directly, which makes us dependent on gphoto2 (not just libgphoto2 and gphoto2-cffi),
+        and there is probably some issue with calling gphoto2 at the same time like 5 times, maybe dont push it.
+
+        :param filename: filename without extension to capture to.
+        :return: list of filenames (of captured images) if filename was specified, otherwise a numpy array of the image.
+        :rtype: numpy.array or list
+        """
         import subprocess
         import glob
 
@@ -1267,6 +1282,14 @@ class GPCamera(Camera):
         return None
 
     def _cffi_capture(self, filename=None):
+        """
+        old cffi capture. very unreliable.
+        Causes a memory leak somewhere that I cant find.
+
+        :param filename: filename without extension to capture to.
+        :return: list of filenames (of captured images) if filename was specified, otherwise a numpy array of the image.
+        :rtype: numpy.array or list
+        """
         st = time.time()
         camera = None
         for x in range(10):
@@ -1281,8 +1304,7 @@ class GPCamera(Camera):
                             fn = (filename or os.path.splitext(image.filename)[0]) + os.path.splitext(image.filename)[
                                 -1]
                             if idx == 0:
-                                self._image = cv2.imdecode(numpy.fromstring(image.read(), numpy.uint8),
-                                                           cv2.IMREAD_COLOR)
+                                self._image = cv2.imdecode(numpy.fromstring(image.read(), numpy.uint8), cv2.IMREAD_COLOR)
                             image.save(fn)
                             successes.append(fn)
                             try:
@@ -1319,15 +1341,12 @@ class GPCamera(Camera):
     def serial_number(self) -> str:
         """
         returns the current serialnumber for the camera.
-        :return:
         """
         return self._serialnumber
 
     def focus(self):
         """
         this is meant to trigger the autofocus. currently not in use because it causes some distortion in the images.
-
-        :return:
         """
         camera = self._get_camera()
         try:
@@ -1342,8 +1361,6 @@ class GPCamera(Camera):
     def eos_serial_number(self) -> str or None:
         """
         returns the eosserialnumber of supported cameras, otherwise the normal serialnumber
-
-        :return:
         """
         camera = self._get_camera()
         sn = vars(camera.status).get("eosserialnumber", self.serial_number)
@@ -1374,8 +1391,6 @@ class USBCamera(Camera):
         """
         usb camera stream thread.
         TODO: Needs to be aware of multiple cameras.
-
-        :return:
         """
         print("ThreadStartup ...")
         cam = cv2.VideoCapture()
@@ -1404,9 +1419,10 @@ class USBCamera(Camera):
 
     def __init__(self, identifier, sys_number, **kwargs):
         """
-        webcamera init. must have a sys_number (the 0 from /dev/video0) to capture from
-        :param identifier:
-        :param sys_number:
+        USB camera init. must have a sys_number (the 0 from /dev/video0) to capture from
+
+        :param identifier: identifier for the webcamera
+        :param sys_number: system device number of device to use
         :param kwargs:
         """
         # only webcams have a v4l sys_number.
@@ -1422,8 +1438,7 @@ class USBCamera(Camera):
     def re_init(self):
         """
         re-initialisation of webcamera
-        todo: fix release of camera otherwise it could be locked forever.
-        :return:
+        todo: fix release of camera otherwise it gets locked forever.
         """
         super(USBCamera, self).re_init()
         self._assert_capture_device()
@@ -1441,7 +1456,6 @@ class USBCamera(Camera):
     def stop(self):
         """
         releases the video device and stops the camera thread
-        :return:
         """
         try:
             self.video_capture.release()
@@ -1452,8 +1466,8 @@ class USBCamera(Camera):
     def _assert_capture_device(self):
         """
         ensures the capture device is open and valid.
+
         :param self:
-        :return:
         """
         try:
             if not self.video_capture:
@@ -1467,8 +1481,12 @@ class USBCamera(Camera):
 
     def capture_image(self, filename=None):
         """
-        :param filename: filename to output
-        :return:
+        captures an image from the usb webcam.
+        Writes some limited exif data to the image if it can.
+
+        :param filename: filename to output without excension
+        :return: list of image filenames if filename was specified, otherwise a numpy array.
+        :rtype: numpy.array or list
         """
 
         st = time.time()
@@ -1622,16 +1640,16 @@ class IVPortCamera(PiCamera):
 
     TRUTH_TABLE = [
         [False, False, True],
-        [True, False, True],
-        [False, True, False],
-        [True, True, False]
+        [True,  False, True],
+        [False, True,  False],
+        [True,  True,  False]
     ]
     gpio_groups = ("B",)
 
     def __init__(self,
                  identifier: str = None,
                  queue: deque = None,
-                 gpio_group: tuple = ("B",),
+                 gpio_group: tuple=("B",),
                  camera_number: int = None, **kwargs):
         """
         special __init__ for the IVport to set the gpio enumeration
@@ -1639,9 +1657,9 @@ class IVPortCamera(PiCamera):
         ivport. Multiple camera groups can be specified, and they will be enumerated in alphabetical order.
 
         :param identifier: string identifier for the camera
-        :type: str
+        :type identifier: str
         :param queue: communication queue for the camera to communicate with the updater
-        :type: deque
+        :type queue: deque
         :param kwargs:
         """
         self.__class__.gpio_groups = sorted(gpio_group)
@@ -1655,8 +1673,6 @@ class IVPortCamera(PiCamera):
     def setup(self):
         """
         sets up gpio for IVPort
-
-        :return:
         """
         super(IVPortCamera, self).setup()
         # switch to the current camera index.
@@ -1669,7 +1685,7 @@ class IVPortCamera(PiCamera):
         with no index, switches to the next camera, looping around from the beginning
 
         :param idx: index to switch the camera to (optional)
-        :return:
+        :type idx: int
         """
         time.sleep(1)
         # import RPi.GPIO as GPIO
@@ -1677,13 +1693,13 @@ class IVPortCamera(PiCamera):
         if idx is not None:
             cls.current_camera_index = idx
 
-        cls.current_camera_index %= (len(IVPortCamera.TRUTH_TABLE) * len(cls.gpio_groups))
+        cls.current_camera_index %= (len(IVPortCamera.TRUTH_TABLE)*len(cls.gpio_groups))
         # GPIO.setwarnings(False)
         # GPIO.setmode(GPIO.BOARD)
         # GPIO.setup(IVPortCamera.select, GPIO.OUT)
 
         # current groups determined by the camera index / number of cameras per board (truth table len)
-        current_group = cls.gpio_groups[int(cls.current_camera_index / len(IVPortCamera.TRUTH_TABLE))]
+        current_group = cls.gpio_groups[int(cls.current_camera_index/len(IVPortCamera.TRUTH_TABLE))]
         current_pins = cls.enable_pins[current_group]
         print("Switching to camera {}: {}".format(current_group, cls.current_camera_index))
 
@@ -1710,7 +1726,7 @@ class IVPortCamera(PiCamera):
         iterates over the number of vameras
 
         :return: :func:`numpy.array` if filename not specified, otherwise list of files.
-        :rtype: numpy.array
+        :rtype: numpy.array or list
         """
         filenames = []
         st = time.time()

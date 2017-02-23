@@ -87,7 +87,6 @@ class Uploader(Thread):
             params['cnopts'] = pysftp.CnOpts(knownhosts=self.ssh_manager.known_hosts_path)
             params['cnopts'].hostkeys = None
 
-
             if self.password is not None:
                 params['password'] = self.password
 
@@ -200,11 +199,9 @@ class Uploader(Thread):
         except Exception as e:
             self.logger.error("something went wrong making directories... {}".format(str(e)))
 
-
     def communicate_with_updater(self):
         """
         communication member. This is meant to send some metadata to the updater thread.
-        :return:
         """
         if not self.communication_queue:
             return
@@ -225,7 +222,7 @@ class Uploader(Thread):
         """
         run method.
         main loop for Uploaders.
-        :return:
+
         """
         while True and not self.stopper.is_set():
             try:
@@ -254,7 +251,6 @@ class Uploader(Thread):
     def stop(self):
         """
         stopper method
-        :return:
         """
         self.stopper.set()
 
@@ -266,6 +262,12 @@ class GenericUploader(Uploader):
     remove_source_files = True
 
     def fill_me(self, dict_of_values: dict):
+        """
+        fills self with values from a dict.
+
+        :param dict_of_values: dictionary of key: values
+        :type dict_of_values: dict
+        """
         for k, v in dict_of_values.items():
             if hasattr(self, k):
                 setattr(self, k, v)

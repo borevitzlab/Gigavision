@@ -194,6 +194,7 @@ intersphinx_mapping = {
     # '': ('', None),
     'python': ('https://docs.python.org/3.5', None),
     'numpy': ('http://numpy.readthedocs.io/en/latest/', None),
+    'requests': ('http://docs.python-requests.org/en/latest/', None),
     'cryptography': ('https://cryptography.io/en/latest/', None),
     'paramiko': ('http://docs.paramiko.org/en/latest/', None),
     'flask': ('http://flask.pocoo.org/docs/0.12/', None),
