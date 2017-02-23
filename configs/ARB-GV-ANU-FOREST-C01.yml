@@ -7,7 +7,7 @@ camera_fov: [15.02, 8.5]
 overlap: 50
 scan_order: cols,right
 
-interval: 300
+interval: 3600
 starttime: 0500
 stoptime: 1900
 
@@ -16,7 +16,7 @@ output_dir: /home/images/upload/ARB-GV-ANU-FOREST-C01
 camera: DSLR
 
 ptz:
-  ip: '192.168.1.101:81'
+  ip: '192.168.1.105:81'
   username: admin
   password: admin
   HTTP_login: "USER={user}&PWD={password}"
@@ -27,7 +27,7 @@ ptz:
   scale: 10.0
   urls:
     set_pan_tilt: "/Bump.xml?GoToP={pan}&GoToT={tilt}"
-    get_pan_tilt: "/CP_Update.xml!PanPos!TiltPos"
+    get_pan_tilt: "/CP_Update.xml"
   keys:
     get_pan_tilt: [PanPos, TiltPos]
 

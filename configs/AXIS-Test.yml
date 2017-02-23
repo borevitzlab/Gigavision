@@ -5,14 +5,13 @@ second_corner: [104.5051, -11.6703]
 camera_fov: [16.87, 9.50]
 overlap: 50
 
-interval: 3600
+interval: 300
 starttime: 0520
 stoptime: 1900
 output_dir: /home/images/upload/Test
 
-camera: DSLR
-camera_:
-  ip: '192.168.1.78'
+camera:
+  ip: '192.168.1.99'
   username: root
   password: lab305
   use_focus_at_center: True
@@ -42,7 +41,7 @@ camera_:
     get_autofocus_mode: "autofocus"
 
 ptz:
-  ip: '192.168.1.8'
+  ip: '192.168.1.99'
   username: root
   password: lab305
 

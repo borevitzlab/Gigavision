@@ -177,12 +177,12 @@ class PanTilt(object):
             return return_values
         # apparently, there is an issue parsing when the ptz returns INVALID XML (WTF?)
         # these seem to be the tags that get mutilated.
-        illegal = [b'\n', b'\t', b'\r',
-                   b"<CPStatusMsg>", b"</CPStatusMsg>", b"<Text>",
-                   b"</Text>", b"<Type>Info</Type>", b"<Type>Info",
-                   b"Info</Type>", b"</Type>", b"<Type>"]
+        illegal = ['\n', '\t', '\r',
+                   "<CPStatusMsg>", "</CPStatusMsg>", "<Text>",
+                   "</Text>", "<Type>Info</Type>", "<Type>Info",
+                   "Info</Type>", "</Type>", "<Type>"]
         for ill in illegal:
-            message_xml = message_xml.replace(ill, b"")
+            message_xml = message_xml.replace(ill, "")
 
         root_element = ElementTree.Element("invalidation_tag")
         try:
@@ -193,7 +193,7 @@ class PanTilt(object):
             print("Couldnt parse XML!!!")
             print(message_xml)
 
-        return_values = dict
+        return_values = dict()
         for key in args:
             target_ele = root_element.find(key)
             if target_ele is None:

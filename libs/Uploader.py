@@ -87,36 +87,44 @@ class Uploader(Thread):
             params['cnopts'] = pysftp.CnOpts(knownhosts='/home/.ssh/known_hosts')
             params['cnopts'].hostkeys = None
 
-            if os.path.exists("/home/.ssh/id_rsa") and os.path.exists('/home/.ssh/known_hosts'):
-                params['private_key'] = "/home/.ssh/id_rsa"
-                params['cnopts'] = pysftp.CnOpts(knownhosts='/home/.ssh/known_hosts')
+            if os.path.exists(self.ssh_manager.priv_path) and os.path.exists(self.ssh_manager.known_hosts_path):
+                params['private_key'] = self.ssh_manager.priv_path
+                params['cnopts'] = pysftp.CnOpts(knownhosts=self.ssh_manager.known_hosts_path)
             else:
                 params['password'] = self.password
 
             with pysftp.Connection(**params) as link:
-                root = os.path.join(self.server_dir, self.camera_name)
+                root = os.path.join(link.getcwd() or "", self.server_dir, self.camera_name)
+                root = root[1:] if root.startswith("/") else root
                 # make the root dir in case it doesnt exist.
-                self.mkdir_recursive(link, root)
+                if not link.isdir(root):
+                    self.logger.debug("Making root directory")
+                    self.mkdir_recursive(link, root)
+                link.chdir(root)
+                root = os.path.join(link.getcwd())
+                self.logger.info(root)
                 self.logger.debug("Uploading...")
-
                 # dump ze files.
                 for f in file_names:
-                    target_file = os.path.join(root, f.replace(self.source_dir, ""))
-                    if target_file.startswith("/"):
-                        target_file = target_file[1:]
-                    link.chdir("/")
-                    if os.path.isdir(f):
-                        self.mkdir_recursive(link, target_file)
-                        continue
-                    if not link.isdir(os.path.dirname(target_file)):
-                        self.mkdir_recursive(link, os.path.dirname(target_file))
                     try:
 
-                        link.put(f, target_file + ".tmp")
-                        if link.exists(target_file):
-                            link.remove(target_file)
-                        link.rename(target_file + ".tmp", target_file)
-                        link.chmod(target_file, mode=755)
+                        target_file = f.replace(self.source_dir, "")
+                        target_file = target_file[1:] if target_file.startswith("/") else target_file
+                        dirname = os.path.dirname(target_file)
+                        print("dirname:{}".format(dirname), "target:{}".format(target_file))
+                        if os.path.isdir(f):
+                            self.mkdir_recursive(link, target_file)
+                            continue
+
+                        if not link.isdir(dirname):
+                            self.mkdir_recursive(link, dirname)
+                        link.chdir(os.path.join(root, dirname))
+
+                        link.put(f, os.path.basename(target_file) + ".tmp")
+                        if link.exists(os.path.basename(target_file)):
+                            link.remove(os.path.basename(target_file))
+                        link.rename(os.path.basename(target_file) + ".tmp", os.path.basename(target_file))
+                        link.chmod(os.path.basename(target_file), mode=755)
                         self.total_data_uploaded_b += os.path.getsize(f)
                         if self.remove_source_files:
                             os.remove(f)
@@ -127,6 +135,8 @@ class Uploader(Thread):
                         self.last_upload_time = datetime.datetime.now()
                     except Exception as e:
                         self.logger.error("sftp:{}".format(str(e)))
+                    finally:
+                        link.chdir(root)
                 self.logger.debug("Disconnecting, eh")
             if self.total_data_uploaded_b > 1000000000000:
                 curr = (((self.total_data_uploaded_b / 1024) / 1024) / 1024) / 1024
@@ -180,7 +190,6 @@ class Uploader(Thread):
                 chdir(basename)
         except Exception as e:
             self.logger.error("something went wrong making directories... {}".format(str(e)))
-        chdir("/")
 
 
     def communicate_with_updater(self):

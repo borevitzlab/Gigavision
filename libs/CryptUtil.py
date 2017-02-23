@@ -54,10 +54,16 @@ class SSHManager(object):
     def __init__(self, path="/home/.ssh"):
         self._key = self.ssh_agentKey = None
         self.path = path
+        if not os.path.exists(path):
+            homepath = os.path.join(os.environ['HOME'], ".ssh")
+            if os.path.exists(homepath):
+                self.path = homepath
+                path = homepath
         self.logger = logging.getLogger("SFTP Key Manager")
         self.token_path = os.path.join(path, "key_token")
         self.priv_path = os.path.join(path, "id_rsa")
         self.pub_path = os.path.join(path, "id_rsa.pub")
+        self.known_hosts_path = os.path.join(path, "known_hosts")
         self.authorized_keys_path = os.path.join(path, "authorized_keys")
         if os.path.isfile(self.token_path):
             with open(self.token_path, 'r') as key_token_file:
