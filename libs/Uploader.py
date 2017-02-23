@@ -107,9 +107,11 @@ class Uploader(Thread):
                 self.logger.info(root)
                 self.logger.debug("Uploading...")
                 # dump ze files.
+                total_time = time.time()
+                total_size = 0
                 for idx, f in enumerate(file_names):
                     try:
-
+                        onefile_time = time.time()
                         target_file = f.replace(self.source_dir, "")
                         target_file = target_file[1:] if target_file.startswith("/") else target_file
                         dirname = os.path.dirname(target_file)
@@ -128,9 +130,13 @@ class Uploader(Thread):
                         link.chmod(os.path.basename(target_file), mode=755)
                         self.total_data_uploaded_b += os.path.getsize(f)
                         if self.remove_source_files:
+                            size = os.path.getsize(f)
+                            total_size += size
+                            mbps = (size/(time.time() - onefile_time))/1024/1024
+
                             os.remove(f)
                             self.logger.debug(
-                                "Successfully uploaded image {}/{} through sftp and removed from local filesystem".format(idx, len(file_names)))
+                                "Uploaded file {0}/{1} through sftp and removed from local filesystem, {2:.2f}Mb/s".format(idx, len(file_names), mbps))
                         else:
                             self.logger.debug("Successfully uploaded {}/{} through sftp".format(idx, len(file_names)))
                         self.last_upload_time = datetime.datetime.now()
@@ -138,7 +144,9 @@ class Uploader(Thread):
                         self.logger.error("sftp:{}".format(str(e)))
                     finally:
                         link.chdir(root)
-                self.logger.debug("Disconnecting, eh")
+
+                mbps = (total_size/(time.time() - total_time))/1024/1024
+                self.logger.debug("Finished uploading, {0:.2f}Mb/s".format(mbps))
             if self.total_data_uploaded_b > 1000000000000:
                 curr = (((self.total_data_uploaded_b / 1024) / 1024) / 1024) / 1024
                 self.total_data_uploaded_b = 0
