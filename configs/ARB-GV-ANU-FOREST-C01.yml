@@ -1,9 +1,10 @@
 name: ARB-GV-ANU-FOREST-C01
 
-first_corner: [200,-14]
-second_corner: [150,14]
+first_corner: [102, 8]
+second_corner: [300,-12]
 
-camera_fov: [15.02, 8.5]
+camera_fov: [12.0, 6.8]
+
 overlap: 50
 scan_order: cols,right
 
