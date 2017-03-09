@@ -64,7 +64,7 @@ class SSHManager(object):
     def __init__(self, path="/home/.ssh"):
         self._key = self.ssh_agentKey = None
         if not os.path.exists(path):
-            homepath = os.path.join(os.environ['HOME'], ".ssh")
+            homepath = os.path.join(os.environ.get('HOME', "/home"), ".ssh")
             if os.path.exists(homepath):
                 path = homepath
         self.path = path
