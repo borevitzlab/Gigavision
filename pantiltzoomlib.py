@@ -752,6 +752,7 @@ class Panorama(object):
             hfovt = reference_image.shape[1] * displacement[0] / dx
             vfovt = reference_image.shape[0] * displacement[1] / dy
             self.logger.debug("Guess: {0:.3f}|{1:.3f}".format(hfovt, vfovt))
+            print("Guess: {0:.3f}|{1:.3f}".format(hfovt, vfovt))
             return hfovt, vfovt
 
         hestimates = []
