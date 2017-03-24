@@ -268,8 +268,8 @@ class Panorama(object):
         if config_filename:
             config = yaml.load(open(config_filename).read())
         config = config.copy()
+        self.use_focus_at_center = config.get("use_focus_at_center", True)
         self.name = config.get("name", "DEFAULT_PANO_NAME")
-
         self.logger = logging.getLogger(self.name)
         self._output_dir = os.path.join(config.get("output_dir", "/home/images/upload"), self.name)
         self._spool_dir = tempfile.mkdtemp(prefix=self.name)
@@ -864,11 +864,15 @@ class Panorama(object):
         last_image_captured = 0
         now = datetime.datetime.now()
 
-        self.logger.debug("Moving to center to focus...")
-        self._pantilt.position = np.mean(self._pan_range), np.mean(self._tilt_range)
-        time.sleep(1)
-        self._camera.focus()
-        time.sleep(1)
+        if self.use_focus_at_center:
+            self.logger.debug("Moving to center to focus...")
+            self._pantilt.position = np.mean(self._pan_range), np.mean(self._tilt_range)
+            time.sleep(1)
+            self._camera.focus()
+            time.sleep(1)
+            self._camera.focus_mode = "off"
+            self._camera.focus_mode = "manual"
+
         last_started = self._recovery_file.get('started_time', None)
         if last_started:
             last_started = datetime.datetime.strptime(last_started, ts_fmt)
