@@ -967,7 +967,7 @@ class IPCamera(Camera):
     @focus_mode.setter
     def focus_mode(self, mode: str):
         assert (self._autofocus_modes is not None)
-        if mode.upper() not in self._autofocus_modes:
+        if mode.upper() not in [x.upper for x in self._autofocus_modes]:
             print("Focus mode not in list of supported focus modes. YMMV.")
         cmd, keys = self._get_cmd("set_focus_mode")
         if cmd:
@@ -1004,12 +1004,14 @@ class IPCamera(Camera):
         focuses the camera by cycling it through its autofocus modes.
         """
         self.logger.debug("Focusing...")
+        tempfocus = self.focus_mode
         cmd, key = self._get_cmd("set_autofocus_mode")
         if not cmd or len(self._autofocus_modes) < 1:
             return
         for mode in self._autofocus_modes:
             self.focus_mode = mode
             time.sleep(2)
+        self.focus_mode = tempfocus
         self._read_stream(cmd.format(mode=self._autofocus_modes[0]))
         time.sleep(2)
         self.logger.debug("Focus complete.")
