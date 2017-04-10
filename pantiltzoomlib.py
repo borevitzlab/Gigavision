@@ -338,7 +338,7 @@ class Panorama(object):
         self._image_overlap = float(config.get("overlap", 50)) / 100
         self._seconds_per_image = 5
         self._csv_log = None
-        self._recovery_filename = ".gv_recover.json"
+        self._recovery_filename = ".gv_recover_{}.json".format(self.name)
         self._recovery_file = dict(image_index=0)
         try:
             if os.path.exists(os.path.join(os.getcwd(), self._recovery_filename)):
