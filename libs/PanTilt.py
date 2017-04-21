@@ -119,17 +119,18 @@ class PanTilt(object):
         response = None
         try:
 
-            response = requests.get(url, auth=self.auth_object)
+            response = requests.get(url, auth=self.auth_object, timeout=60)
             if response.status_code == 401 and self.auth_type != "digest":
                 self.logger.debug("Auth is not basic, trying digest")
-                response = requests.get(url, auth=self.auth_object_digest)
+                response = requests.get(url, auth=self.auth_object_digest, timeout=60)
                 self.logger.debug(response.text)
+            if response.status_code not in [200, 204]:
+                self.logger.error("[{}] - {}\n{}".format(str(response.status_code), str(response.reason), str(response.url)))
+                return
         except Exception as e:
             self.logger.error("Some exception got raised {}".format(str(e)))
             return
-        if response.status_code not in [200, 204]:
-            self.logger.error("[{}] - {}\n{}".format(str(response.status_code), str(response.reason), str(response.url)))
-            return
+
         return response
 
     def _read_stream(self, command_string, *args, **kwargs):

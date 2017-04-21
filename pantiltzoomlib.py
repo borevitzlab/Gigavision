@@ -333,10 +333,9 @@ class Panorama(object):
         self._pantilt = ptz
 
 
-        # this is vital to create the output folder
-
         self._image_overlap = float(config.get("overlap", 50)) / 100
         self._seconds_per_image = 5
+        # this is vital to create the output folder
         self._csv_log = None
         self._recovery_filename = ".gv_recover_{}.json".format(self.name)
         self._recovery_file = dict(image_index=0)
@@ -360,8 +359,6 @@ class Panorama(object):
         self._tilt_range = sorted([first_corner[1], second_corner[1]])
         self._pan_step = self._tilt_step = None
         self._pan_pos_list = self._tilt_pos_list = list()
-
-        self._camera.focus_mode = "AUTO"
 
         scan_order_unparsed = config.get("scan_order", "0")
         self._scan_order_translation = {

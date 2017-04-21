@@ -694,18 +694,19 @@ class IPCamera(Camera):
             url = url.replace("&", "?", 1)
         response = None
         try:
-            response = requests.get(url, auth=self.auth_object)
+            response = requests.get(url, timeout=60, auth=self.auth_object)
             if response.status_code == 401:
                 self.logger.debug("Auth is not basic, trying digest")
-                response = requests.get(url, auth=self.auth_object_digest)
+                response = requests.get(url, timeout=60, auth=self.auth_object_digest)
+            if response.status_code not in [200, 204]:
+                self.logger.error(
+                    "[{}] - {}\n{}".format(str(response.status_code), str(response.reason), str(response.url)))
+                return
+            return response
         except Exception as e:
             self.logger.error("Some exception got raised {}".format(str(e)))
             return
-        if response.status_code not in [200, 204]:
-            self.logger.error(
-                "[{}] - {}\n{}".format(str(response.status_code), str(response.reason), str(response.url)))
-            return
-        return response
+
 
     def _read_stream(self, command_string, *args, **kwargs):
         """

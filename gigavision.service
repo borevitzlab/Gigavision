@@ -6,6 +6,7 @@ Type=simple
 WorkingDirectory=/home/Gigavision
 ExecStart=/usr/bin/python3 pantiltzoomlib.py configs/%H.yml
 Restart=always
+RestartSec=60
 
 [Install]
 WantedBy=multi-user.target
