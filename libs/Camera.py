@@ -968,7 +968,7 @@ class IPCamera(Camera):
     @focus_mode.setter
     def focus_mode(self, mode: str):
         assert (self._autofocus_modes is not None)
-        if mode.upper() not in [x.upper for x in self._autofocus_modes]:
+        if str(mode).upper() not in [x.upper() for x in self._autofocus_modes]:
             print("Focus mode not in list of supported focus modes. YMMV.")
         cmd, keys = self._get_cmd("set_focus_mode")
         if cmd:
