@@ -56,9 +56,9 @@
 
     - include: tasks/wireless.yml interface="wlan0"
       tags: network,wireless
-#
-#    - include: tasks/sftp_key.yml
-#      tags: network,sftp
+
+    - include: tasks/sftp_key.yml
+      tags: network,sftp
 
     - include: software_modules/butterfly.yml
       tags: network,shell
