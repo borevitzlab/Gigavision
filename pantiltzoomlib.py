@@ -79,7 +79,6 @@ def draw_matches_opencv(img1, kp1, img2, kp2, matches):
 
     out = np.zeros((max([rows1, rows2]), cols1 + cols2, 3), dtype='uint8')
 
-
     # Place the first image to the left
     out[:rows1, :cols1, :] = np.dstack([img1, img1, img1])
 
@@ -335,7 +334,6 @@ class Panorama(object):
                 ptz = None
 
         self._pantilt = ptz
-
 
         self._image_overlap = float(config.get("overlap", 50)) / 100
         self._seconds_per_image = 5
@@ -964,6 +962,8 @@ class Panorama(object):
                     self.logger.error("failed capturing!")
                     return lcap
 
+            rolling = []
+
             # reverse it because we should start from top and go down
             tilt_pos_list = list(reversed(self._tilt_pos_list))
             pan_pos_list = self._pan_pos_list
@@ -976,7 +976,6 @@ class Panorama(object):
                 tilt_pos_list = self._tilt_pos_list
                 pan_pos_list = list(reversed(self._pan_pos_list))
             recovery_index = self._recovery_file.get('image_index', 0)
-            rolling = []
 
             if self._scan_order >= 2:
                 for i, tilt_pos in enumerate(tilt_pos_list):
@@ -986,9 +985,9 @@ class Panorama(object):
                             continue
                         t = time.time()
                         last_image_captured = cap(pan_pos, tilt_pos, image_index, last_image_captured)
-                        rolling.append(time.time()-t)
+                        rolling.append(time.time() - t)
                     try:
-                        metric = {'timing_avg_s': sum(rolling)/len(rolling), 'total_images': len(rolling)}
+                        metric = {'timing_avg_s': sum(rolling) / len(rolling), 'rolling_index': len(rolling)}
                         telegraf_client.metric("gigavision", metric, tags={"name": self.name})
                     except:
                         pass
@@ -1002,10 +1001,18 @@ class Panorama(object):
                         last_image_captured = cap(pan_pos, tilt_pos, image_index, last_image_captured)
                         rolling.append(time.time() - t)
                     try:
-                        metric = {'timing_avg_s': sum(rolling) / len(rolling), 'total_images': len(rolling)}
+                        metric = {'timing_avg_s': sum(rolling) / len(rolling), 'rolling_index': len(rolling)}
                         telegraf_client.metric("gigavision", metric, tags={"name": self.name})
                     except:
                         pass
+            try:
+                metric = {'timing_avg_s': sum(rolling) / len(rolling),
+                          'total_images': len(rolling),
+                          'num_rows': len(self._tilt_pos_list),
+                          'num_cols': len(self._pan_pos_list)}
+                telegraf_client.metric("gigavision", metric, tags={"name": self.name})
+            except:
+                pass
 
         shutil.move(self._csv_log, os.path.join(self._output_dir, os.path.basename(self._csv_log)))
         os.remove(self._recovery_filename)
