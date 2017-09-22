@@ -309,7 +309,7 @@ class Panorama(object):
 
                     camera = GPCamera(cameras[0].status.serialnumber, queue=queue)
                 elif type(camera_config) is dict:
-                    camera = IPCamera(self.name, config=camera_config, queue=queue)
+                    camera = IPCamera(self.name, config=camera_config, queue=queue, noconf=True)
         except Exception as e:
             self.logger.error("Couldnt initialise Camera: " + str(e))
             time.sleep(30)
