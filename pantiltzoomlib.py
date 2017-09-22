@@ -31,6 +31,11 @@ try:
 except:
     pass
 
+try:
+    import telegraf
+except Exception as e:
+    print(str(e))
+
 logging.getLogger("paramiko").setLevel(logging.WARNING)
 
 
@@ -272,7 +277,6 @@ class Panorama(object):
         self.name = config.get("name", "DEFAULT_PANO_NAME")
         self.logger = logging.getLogger(self.name)
         self._output_dir = os.path.join(config.get("output_dir", "/home/images/upload"), self.name)
-        self._spool_dir = tempfile.mkdtemp(prefix=self.name)
         self.output_dir = self._output_dir
 
         start_time_string = str(config.get('starttime', "0000"))
@@ -383,6 +387,19 @@ class Panorama(object):
         }
         self._scan_order = self._scan_order_translation.get(str(scan_order_unparsed).lower().replace(" ", ""), 0)
         self.logger.info(self.summary)
+
+        try:
+            telegraf_client = telegraf.TelegrafClient(host="localhost", port=8092)
+            metric = {
+                "num_rows": len(self._tilt_pos_list),
+                "num_cols": len(self._pan_pos_list),
+                "recovery_index": int(self._recovery_file.get("image_index", 0)),
+                "hfov": self.camera.hfov,
+                "vfov": self.camera.vfov
+            }
+            telegraf_client.metric("gigavision", metric, tags={'name': self.name})
+        except:
+            pass
 
     def set_current_as_first_corner(self):
         """
@@ -893,89 +910,120 @@ class Panorama(object):
         #                      im1.shape[1]*len(self._pan_pos_list),
         #                      3), np.uint8)
         # cv2.imwrite("overview.jpg", overview)
+        try:
+            telegraf_client = telegraf.TelegrafClient(host="localhost", port=8092)
+        except:
+            pass
+        with tempfile.TemporaryDirectory(prefix=self.name) as spool:
+            def cap(_pan_pos: float, _tilt_pos: float, _image_index: int, lcap: int) -> int:
+                """
+                captures an image for the position _pan_pos,_tilt_pos with the image index _image_index
+    
+                :param _pan_pos: the pan position to take an image
+                :param _tilt_pos: the tilt position to take an image
+                :param _image_index: index of the current image. used to write the image filename.
+                :param lcap: used to calculate how long capture is taking.
+                :return:
+                """
+                self._pantilt.position = _pan_pos, _tilt_pos
+                time.sleep(0.1)
 
-        def cap(_pan_pos: float, _tilt_pos: float, _image_index: int, lcap: int) -> int:
-            """
-            captures an image for the position _pan_pos,_tilt_pos with the image index _image_index
+                self.write_csv_log(_image_index, _pan_pos, _tilt_pos)
+                self.write_to_recovery_file(_image_index, now.strftime(ts_fmt))
+                for _ in range(0, 15):
+                    filename = os.path.join(spool,
+                                            now.strftime("{name}_" + ts_fmt + "_{index:04}").format(name=self.name,
+                                                                                                    index=_image_index + 1))
+                    try:
+                        output_filenames = list(self._camera.capture(filename=filename))
+                        # output_filenames = self._camera.capture_monkey(filename=filename)
+                        self.camera.communicate_with_updater()
+                        if type(output_filenames) is list and len(output_filenames):
+                            # image = cv2.resize(self.camera.image.copy(),
+                            #                    None, fx=0.1, fy=0.1,
+                            #                    interpolation=cv2.INTER_NEAREST)
 
-            :param _pan_pos: the pan position to take an image
-            :param _tilt_pos: the tilt position to take an image
-            :param _image_index: index of the current image. used to write the image filename.
-            :param lcap: used to calculate how long capture is taking.
-            :return:
-            """
-            self._pantilt.position = _pan_pos, _tilt_pos
-            time.sleep(0.1)
+                            # yoff = _i * image.shape[0]
+                            # xoff = _j * image.shape[1]
+                            # overview[yoff:yoff+image.shape[0], xoff:xoff+image.shape[1]] = image
+                            # cv2.imwrite("overview.jpg", overview)
+                            for f in output_filenames:
+                                shutil.move(f, os.path.join(this_dir, os.path.basename(f)))
+                            self.logger.info("wrote image {}/{}".format(_image_index + 1,
+                                                                        (len(self._pan_pos_list) * len(
+                                                                            self._tilt_pos_list))))
+                            lcap += 1
+                            # update time per image
+                            current_time = time.time()
+                            self._seconds_per_image = (current_time - start_time) / lcap
+                            self.logger.info("Seconds per image {0:.2f}s".format(self._seconds_per_image))
+                            return lcap
+                    except Exception as e:
+                        self.logger.error("Bad things happened: {}".format(str(e)))
+                else:
+                    self.logger.error("failed capturing!")
+                    return lcap
 
-            self.write_csv_log(_image_index, _pan_pos, _tilt_pos)
-            self.write_to_recovery_file(_image_index, now.strftime(ts_fmt))
-            for _ in range(0, 15):
-                filename = os.path.join(self._spool_dir,
-                                        now.strftime("{name}_" + ts_fmt + "_{index:04}").format(name=self.name,
-                                                                                                index=_image_index + 1))
-                try:
-                    output_filenames = list(self._camera.capture(filename=filename))
-                    # output_filenames = self._camera.capture_monkey(filename=filename)
-                    self.camera.communicate_with_updater()
-                    if type(output_filenames) is list and len(output_filenames):
-                        # image = cv2.resize(self.camera.image.copy(),
-                        #                    None, fx=0.1, fy=0.1,
-                        #                    interpolation=cv2.INTER_NEAREST)
-
-                        # yoff = _i * image.shape[0]
-                        # xoff = _j * image.shape[1]
-                        # overview[yoff:yoff+image.shape[0], xoff:xoff+image.shape[1]] = image
-                        # cv2.imwrite("overview.jpg", overview)
-                        for f in output_filenames:
-                            shutil.move(f, os.path.join(this_dir, os.path.basename(f)))
-                        self.logger.info("wrote image {}/{}".format(_image_index + 1,
-                                                                    (len(self._pan_pos_list) * len(
-                                                                        self._tilt_pos_list))))
-                        lcap += 1
-                        # update time per image
-                        current_time = time.time()
-                        self._seconds_per_image = (current_time - start_time) / lcap
-                        self.logger.info("Seconds per image {0:.2f}s".format(self._seconds_per_image))
-                        return lcap
-                except Exception as e:
-                    self.logger.error("Bad things happened: {}".format(str(e)))
-            else:
-                self.logger.error("failed capturing!")
-                return lcap
-
-        # reverse it because we should start from top and go down
-        tilt_pos_list = list(reversed(self._tilt_pos_list))
-        pan_pos_list = self._pan_pos_list
-        if self.scan_order == 1:
-            # cols left
-            pan_pos_list = self._pan_pos_list
+            # reverse it because we should start from top and go down
             tilt_pos_list = list(reversed(self._tilt_pos_list))
-        elif self.scan_order == 3:
-            # rows up
-            tilt_pos_list = self._tilt_pos_list
-            pan_pos_list = list(reversed(self._pan_pos_list))
-        recovery_index = self._recovery_file.get('image_index', 0)
+            pan_pos_list = self._pan_pos_list
+            if self.scan_order == 1:
+                # cols left
+                pan_pos_list = self._pan_pos_list
+                tilt_pos_list = list(reversed(self._tilt_pos_list))
+            elif self.scan_order == 3:
+                # rows up
+                tilt_pos_list = self._tilt_pos_list
+                pan_pos_list = list(reversed(self._pan_pos_list))
+            recovery_index = self._recovery_file.get('image_index', 0)
+            rolling = []
 
-        if self._scan_order >= 2:
-            for i, tilt_pos in enumerate(tilt_pos_list):
-                for j, pan_pos in enumerate(pan_pos_list):
-                    image_index = i * len(pan_pos_list) + j
-                    if image_index < recovery_index:
-                        continue
-                    last_image_captured = cap(pan_pos, tilt_pos, image_index, last_image_captured)
-
-        else:
-            for j, pan_pos in enumerate(pan_pos_list):
+            if self._scan_order >= 2:
                 for i, tilt_pos in enumerate(tilt_pos_list):
-                    image_index = j * (len(tilt_pos_list)) + i
-                    if image_index < recovery_index:
-                        continue
-                    last_image_captured = cap(pan_pos, tilt_pos, image_index, last_image_captured)
+                    for j, pan_pos in enumerate(pan_pos_list):
+                        image_index = i * len(pan_pos_list) + j
+                        if image_index < recovery_index:
+                            continue
+                        t = time.time()
+                        last_image_captured = cap(pan_pos, tilt_pos, image_index, last_image_captured)
+                        rolling.append(time.time()-t)
+                    try:
+                        metric = {'timing_avg_s': sum(rolling)/len(rolling), 'rolling_index': len(rolling)}
+                        telegraf_client.metric("gigavision", metric, tags={"name": self.name})
+                    except:
+                        pass
+            else:
+                for j, pan_pos in enumerate(pan_pos_list):
+                    for i, tilt_pos in enumerate(tilt_pos_list):
+                        image_index = j * (len(tilt_pos_list)) + i
+                        if image_index < recovery_index:
+                            continue
+                        t = time.time()
+                        last_image_captured = cap(pan_pos, tilt_pos, image_index, last_image_captured)
+                        rolling.append(time.time() - t)
+                    try:
+                        metric = {'timing_avg_s': sum(rolling) / len(rolling), 'rolling_index': len(rolling)}
+                        telegraf_client.metric("gigavision", metric, tags={"name": self.name})
+                    except:
+                        pass
+            try:
+                metric = {'timing_avg_s': sum(rolling) / len(rolling),
+                            'total_images': len(rolling),
+                            "num_cols": len(self._pan_pos_list),
+                            "num_rows": len(self._tilt_pos_list)}
+                telegraf_client.metric("gigavision", metric, tags={"name": self.name})
+            except:
+                pass
 
         shutil.move(self._csv_log, os.path.join(self._output_dir, os.path.basename(self._csv_log)))
         os.remove(self._recovery_filename)
         self._recovery_file['image_index'] = 0
-        self.logger.info("Panorama complete in {}".format(sec2human(time.time() - start_time)))
+        t = time.time() - start_time
+        self.logger.info("Panorama complete in {}".format(sec2human(t)))
+        try:
+            telegraf_client.metric("gigavision", {'timing_total_s': t}, tags={"name": self.name})
+        except:
+            pass
 
     def calibrate_and_run(self):
         """

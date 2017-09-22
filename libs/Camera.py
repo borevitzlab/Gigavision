@@ -176,7 +176,6 @@ class Camera(object):
             self.config = \
                 self.camera_name = \
                 self.interval = \
-                self.spool_directory = \
                 self.upload_directory = \
                 self.begin_capture = \
                 self.end_capture = \
@@ -200,7 +199,7 @@ class Camera(object):
 
         self.camera_name = self.config["camera"]["name"]
         self.interval = self.config.getint("timelapse", "interval")
-        self.spool_directory = tempfile.mkdtemp(prefix="SPC-EYEPI")
+
         self.upload_directory = self.config["localfiles"]["upload_dir"]
         self.begin_capture = datetime.time(0, 0)
         self.end_capture = datetime.time(23, 59)
@@ -501,61 +500,62 @@ class Camera(object):
 
                     self.logger.info("Capturing for {}".format(self.identifier))
 
-                    files = self.capture(filename=os.path.join(self.spool_directory, raw_image))
-                    # capture. if capture didnt happen dont continue with the rest.
-                    if len(files) == 0:
-                        self.failed.append(self.current_capture_time)
-                        continue
+                    with tempfile.TemporaryDirectory(prefix=self.camera_name) as spool:
+                        files = self.capture(filename=os.path.join(spool, raw_image))
+                        # capture. if capture didnt happen dont continue with the rest.
+                        if len(files) == 0:
+                            self.failed.append(self.current_capture_time)
+                            continue
 
-                    if self.config.getboolean("ftp", "replace"):
-                        st = time.time()
-                        resize_t = 0.0
-                        if self.config.getboolean("ftp", "resize"):
-                            self._image = cv2.resize(self._image, (Camera.default_width, Camera.default_height),
-                                                     interpolation=cv2.INTER_NEAREST)
-                            resize_t = time.time() - st
+                        if self.config.getboolean("ftp", "replace"):
+                            st = time.time()
+                            resize_t = 0.0
+                            if self.config.getboolean("ftp", "resize"):
+                                self._image = cv2.resize(self._image, (Camera.default_width, Camera.default_height),
+                                                         interpolation=cv2.INTER_NEAREST)
+                                resize_t = time.time() - st
 
-                        cv2.putText(self._image,
-                                    self.timestamped_imagename,
-                                    org=(20, self._image.shape[0] - 20),
-                                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                    fontScale=1,
-                                    color=(0, 0, 255),
-                                    thickness=2,
-                                    lineType=cv2.LINE_AA)
+                            cv2.putText(self._image,
+                                        self.timestamped_imagename,
+                                        org=(20, self._image.shape[0] - 20),
+                                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                                        fontScale=1,
+                                        color=(0, 0, 255),
+                                        thickness=2,
+                                        lineType=cv2.LINE_AA)
 
-                        cv2.imwrite(os.path.join("/dev/shm", self.identifier + ".jpg"), self._image)
-                        shutil.copy(os.path.join("/dev/shm", self.identifier + ".jpg"),
-                                    os.path.join(self.upload_directory, "last_image.jpg"))
+                            cv2.imwrite(os.path.join("/dev/shm", self.identifier + ".jpg"), self._image)
+                            shutil.copy(os.path.join("/dev/shm", self.identifier + ".jpg"),
+                                        os.path.join(self.upload_directory, "last_image.jpg"))
 
-                        self.logger.info("Resize {0:.3f}s, total: {0:.3f}s".format(resize_t, time.time() - st))
+                            self.logger.info("Resize {0:.3f}s, total: {0:.3f}s".format(resize_t, time.time() - st))
 
-                    # copying/renaming for files
-                    oldfiles = files[:]
-                    files = []
+                        # copying/renaming for files
+                        oldfiles = files[:]
+                        files = []
 
-                    for fn in oldfiles:
-                        if type(fn) is list:
-                            files.extend(fn)
-                        else:
-                            files.append(fn)
+                        for fn in oldfiles:
+                            if type(fn) is list:
+                                files.extend(fn)
+                            else:
+                                files.append(fn)
 
-                    for fn in files:
-                        # move files to the upload directory
-                        try:
-                            if self.config.getboolean("ftp", "timestamped"):
-                                shutil.move(fn, self.upload_directory)
-                                self.logger.info("Captured & stored for upload - {}".format(os.path.basename(fn)))
-                        except Exception as e:
-                            self.logger.error("Couldn't move for timestamped: {}".format(str(e)))
+                        for fn in files:
+                            # move files to the upload directory
+                            try:
+                                if self.config.getboolean("ftp", "timestamped"):
+                                    shutil.move(fn, self.upload_directory)
+                                    self.logger.info("Captured & stored for upload - {}".format(os.path.basename(fn)))
+                            except Exception as e:
+                                self.logger.error("Couldn't move for timestamped: {}".format(str(e)))
 
-                        # remove the spooled files that remain
-                        try:
-                            if os.path.isfile(fn):
-                                self.logger.info("File remaining in spool directory, removing: {}".format(fn))
-                                os.remove(fn)
-                        except Exception as e:
-                            self.logger.error("Couldn't remove spooled when it still exists: {}".format(str(e)))
+                            # remove the spooled files that remain
+                            try:
+                                if os.path.isfile(fn):
+                                    self.logger.info("File remaining in spool directory, removing: {}".format(fn))
+                                    os.remove(fn)
+                            except Exception as e:
+                                self.logger.error("Couldn't remove spooled when it still exists: {}".format(str(e)))
                     # log total capture time
                     self.logger.info("Total capture time: {0:.2f}s".format(time.time() - start_capture_time))
                     # communicate our success with the updater
@@ -586,7 +586,6 @@ class IPCamera(Camera):
 
         self.camera_name = config.get("camera_name", identifier)
         self.interval = int(config.get("interval", 300))
-        self.spool_directory = tempfile.mkdtemp()
 
         self.upload_directory = config.get("upload_dir", os.path.join(os.getcwd(), identifier))
         self.begin_capture = datetime.time(0, 0)
@@ -612,7 +611,6 @@ class IPCamera(Camera):
 
         self.failed = list()
         self._image = numpy.empty((Camera.default_width, Camera.default_height, 3), numpy.uint8)
-        self.spool_directory = tempfile.mkdtemp(prefix='GIGAVISION')
 
         try:
             if not os.path.exists(self.upload_directory):
@@ -1225,9 +1223,6 @@ class GPCamera(Camera):
 
         # this one shouldnt really be used.
         fn = "{}-temp.%C".format(self.camera_name)
-        if filename:
-            # if target file path exists
-            fn = os.path.join(self.spool_directory, "{}.%C".format(filename))
 
         cmd = [
             "gphoto2",
