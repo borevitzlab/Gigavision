@@ -335,7 +335,7 @@ class Panorama(object):
                 ptz = None
 
         self._pantilt = ptz
-
+        self._zoom_position = config.get('ptz', {}).get('zoom', 800)
 
         self._image_overlap = float(config.get("overlap", 50)) / 100
         self._seconds_per_image = 5
@@ -881,6 +881,7 @@ class Panorama(object):
         if self.use_focus_at_center:
             self.logger.debug("Moving to center to focus...")
             self._pantilt.position = np.mean(self._pan_range), np.mean(self._tilt_range)
+            self._pantilt.zoom_position = self._zoom_position
             time.sleep(1)
             self._camera.focus()
             time.sleep(1)
