@@ -886,7 +886,6 @@ class Panorama(object):
             self._camera.focus()
             time.sleep(1)
             self._camera.focus_mode = "off"
-            self._camera.focus_mode = "manual"
 
         last_started = self._recovery_file.get('started_time', None)
         if last_started:
@@ -919,7 +918,7 @@ class Panorama(object):
             def cap(_pan_pos: float, _tilt_pos: float, _image_index: int, lcap: int) -> int:
                 """
                 captures an image for the position _pan_pos,_tilt_pos with the image index _image_index
-    
+
                 :param _pan_pos: the pan position to take an image
                 :param _tilt_pos: the tilt position to take an image
                 :param _image_index: index of the current image. used to write the image filename.
