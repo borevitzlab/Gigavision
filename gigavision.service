@@ -4,7 +4,7 @@ Description=GigaVision capture systemd service using %i
 [Service]
 Type=simple
 WorkingDirectory=/home/Gigavision
-ExecStart=/usr/bin/python3 pantiltzoomlib.py configs/%H.yml
+ExecStart=/usr/bin/python3 run.py configs/%H.yml
 Restart=always
 RestartSec=60
 

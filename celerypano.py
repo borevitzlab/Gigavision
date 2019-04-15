@@ -12,7 +12,7 @@ from ipcamcontrol_webinterface import app as application
 import numpy as np
 import scipy.misc as misc
 import yaml
-import pantiltzoomlib
+import run
 
 def create_celery_app(app):
     celery = Celery(__name__, broker=app.config['CELERY_BROKER_URL'])

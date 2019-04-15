@@ -1,12 +1,10 @@
-import numpy
 import time
 import logging.config
-from collections import deque
-from threading import Thread
 import requests
 from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 from xml.etree import ElementTree
-
+import os
+import re
 try:
     logging.config.fileConfig("logging.ini")
     logging.getLogger("paramiko").setLevel(logging.WARNING)
@@ -34,8 +32,7 @@ class PanTilt(object):
     - Close Calibration window
     """
 
-    def __init__(self, ip=None, user=None, password=None, config=None, queue=None):
-        self.communication_queue = deque(tuple(), 256) if queue is None else queue
+    def __init__(self, config=None):
         self.logger = logging.getLogger("PanTilt")
         if not config:
             config = dict()
@@ -45,64 +42,92 @@ class PanTilt(object):
         self.return_keys = config.get('keys', {})
         self._notified = []
         self.return_parser = config.get("return_parser", "plaintext")
+        e = os.environ.get("RETURN_PARSER", None)
+        e = os.environ.get("PTZ_RETURN_PARSER", e)
+        self.return_parser = e if e is not None else self.return_parser
+
         format_str = config.get("format_url", "http://{HTTP_login}@{ip}{command}")
+        e = os.environ.get("FORMAT_URL", None)
+        e = os.environ.get("PTZ_FORMAT_URL", e)
+        format_str = e if e is not None else format_str
+
         self.auth_type = config.get("auth_type", "basic")
+        e = os.environ.get("AUTH_TYPE", None)
+        e = os.environ.get("PTZ_AUTH_TYPE", e)
+        self.auth_type = e if e is not None else self.auth_type
         self.auth_object = None
+        username = config.get("username", "admin")
+        e = os.environ.get("AUTH_USERNAME", None)
+        e = os.environ.get("PTZ_AUTH_USERNAME", e)
+        username = e if e is not None else username
+        password = config.get("password", "admin")
+        e = os.environ.get("AUTH_PASSWORD", None)
+        e = os.environ.get("PTZ_AUTH_PASSWORD", e)
+        username = e if e is not None else username
+
         if format_str.startswith("http://{HTTP_login}@"):
             format_str = format_str.replace("{HTTP_login}@", "")
-            self.auth_object = HTTPBasicAuth(user or config.get("username", "admin"),
-                                             password or config.get("password", "admin"))
-            self.auth_object_digest = HTTPDigestAuth(config.get("username", "admin"),
-                                             config.get("password", "admin"))
+            self.auth_object = HTTPBasicAuth(username, password)
+            self.auth_object_digest = HTTPDigestAuth(username, password)
             self.auth_object = self.auth_object_digest if self.auth_type == "digest" else self.auth_object
 
-        self._HTTP_login = config.get("HTTP_login", "{user}:{password}").format(
-            user=user or config.get("username", "admin"),
-            password=password or config.get("password", "admin"))
+        self._HTTP_login = config.get("HTTP_login", "{user}:{password}").format(user=username, password=password)
 
+        ip = config.get("ip", "192.168.1.101:81")
+        e = os.environ.get("IP", None)
+        e = os.environ.get("PTZ_IP", e)
+        ip = ip if e is None else e
         self._url = format_str.format(
-            ip=ip or config.get("ip", "192.168.1.101:81"),
+            ip=ip or e,
             HTTP_login=self._HTTP_login,
             command="{command}")
 
         self._pan_tilt_scale = config.get("scale", 10.0)
+        e = os.environ.get("PTZ_SCALE", e)
+        self._pan_tilt_scale = self._pan_tilt_scale if e is None else float(e)
+
         self._pan_range = list(config.get("pan_range", [0, 360]))
+        e = os.environ.get("PTZ_PAN_RANGE", e)
+        if e is not None:
+            e = re.split("[\W+\|,|x|x|:]", e)
+            e = [float(x) for x in e]
+        self._pan_range = self._pan_range if e is None else e
+
         self._tilt_range = list(config.get("tilt_range", [-90, 30]))
+        e = os.environ.get("PTZ_TILT_RANGE", e)
+        if e is not None:
+            e = re.split("[\W+\|,|x|x|:]", e)
+            e = [float(x) for x in e]
+        self._tilt_range = self._tilt_range if e is None else e
+
         self._position = [0, 0]
         self._pan_range.sort()
         self._tilt_range.sort()
 
-
         self._zoom_position = config.get("zoom", 800)
+        e = os.environ.get("PTZ_ZOOM", e)
+
+        self._zoom_position = self._zoom_position if e is None else float(e)
         self._zoom_range = config.get("zoom_range", [30, 1000])
+        e = os.environ.get("PTZ_ZOOM_RANGE", e)
+        if e is not None:
+            e = re.split("[\W+\|,|x|x|:]", e)
+            e = [float(x) for x in e]
+        self._tilt_range = self._tilt_range if e is None else e
         self.zoom_position = self._zoom_position
         # set zoom position to fill hfov and vfov
         # need to set this on camera.
         #     self._hfov = numpy.interp(self._zoom_position, self.zoom_list, self.hfov_list)
         #     self._vfov = numpy.interp(self._zoom_position, self.zoom_list, self.vfov_list)
         self._accuracy = config.get("accuracy", 0.5)
+        e = os.environ.get("PTZ_ACCURACY", e)
+        self._accuracy = self._accuracy if e is None else float(e)
 
         self._rounding = len(str(float(self._accuracy)).split(".")[-1].replace("0", ""))
 
         time.sleep(0.2)
 
         self.logger.info("pantilt:".format(self.position))
-
-    def communicate_with_updater(self):
-        """
-        communication member. This is meant to send some metadata to the updater thread.
-        :return:
-        """
-        try:
-            data = dict(
-                name=self.camera_name,
-                identifier=self.identifier,
-                failed=self.failed,
-                last_capture=int(self.current_capture_time.strftime("%s")))
-            self.communication_queue.append(data)
-            self.failed = list()
-        except Exception as e:
-            self.logger.error("thread communication error: {}".format(str(e)))
 
     def _make_request(self, command_string, *args, **kwargs):
         """
@@ -647,26 +672,3 @@ class PanTilt(object):
     def dwell(self):
         output = self._read_stream("/CP_Update.xml")
         return self.get_value_from_stream(output, "Dwell")
-
-
-class ThreadedPTZ(Thread):
-    def __init__(self, *args, **kwargs):
-        if hasattr(self, "identifier"):
-            Thread.__init__(self, name=self.identifier)
-        else:
-            Thread.__init__(self)
-
-        print("Threaded startup")
-        super(ThreadedPTZ, self).__init__(*args, **kwargs)
-        self.daemon = True
-
-
-class ThreadedPanTilt(ThreadedPTZ, PanTilt):
-    def __init__(self, *args, **kwargs):
-        self.identifier = "J-Systems PanTilt"
-        PanTilt.__init__(self, *args, **kwargs)
-        super(ThreadedPanTilt, self).__init__(*args, **kwargs)
-
-    def run(self):
-
-        super(PanTilt, self).run()
