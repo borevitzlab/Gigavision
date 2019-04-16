@@ -323,7 +323,9 @@ class IPCamera(object):
             fn = "{}.{}".format(fnp, ext)
             s = False
             try:
-                if ext == "tiff":
+                if ext in ("tiff", "tif"):
+                    if fn.endswith(".tiff"):
+                        fn = fn[:-1]
                     img.save(fn, compression='tiff_deflate')
                 else:
                     img.save(fn)
