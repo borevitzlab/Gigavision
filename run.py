@@ -495,7 +495,7 @@ class Panorama(object):
         """
         takes a panorama using the current values stored in this :class:`Panorama` object.
         """
-        ts_fmt = "%Y_%m_%d_%H_%M_00_00"
+        ts_fmt = "%Y_%m_%d_%H_%M_00"
         tar_fmt = "%Y_%m_%d_%H"
         last_image_captured = 0
         now = datetime.datetime.now()
@@ -551,16 +551,17 @@ class Panorama(object):
         rolling = []
         preview_width = int(os.environ.get("PREVIEW_WIDTH", 320))
         preview_height = int(preview_width * self.camera._image_size[1] / self.camera._image_size[0])
-        overview_width = len(pan_pos_list)*preview_width
-        overview_height = len(tilt_pos_list)*preview_height
-        overview_fn = os.path.join(this_dir, "{}_overview_{}.jpg".format(self.name, now.strftime(ts_fmt)))
-        overview = None        
-        try:
-            overview = Image.open(overview_fn)
-            if not (overview.size[0] == overview_width and overview.size[1] == overview_height):
+        if os.environ.get("OVERVIEW", None) is not None:
+            overview_width = len(pan_pos_list)*preview_width
+            overview_height = len(tilt_pos_list)*preview_height
+            overview_fn = os.path.join(this_dir, "{}_overview_{}.jpg".format(self.name, now.strftime(ts_fmt)))
+            overview = None
+            try:
+                overview = Image.open(overview_fn)
+                if not (overview.size[0] == overview_width and overview.size[1] == overview_height):
+                    overview = Image.new('RGB', (overview_width, overview_height))
+            except:
                 overview = Image.new('RGB', (overview_width, overview_height))
-        except:
-            overview = Image.new('RGB', (overview_width, overview_height))
         with tempfile.TemporaryDirectory(prefix=self.name) as spool:
 
             def cap(_pan_pos: float, _tilt_pos: float, _image_index: int, lcap: int, _i: int, _j: int) -> int:
@@ -592,10 +593,11 @@ class Panorama(object):
                                 image = self.camera._image.resize((preview_width,preview_height), Image.NEAREST)
                                 yoff = _i * preview_height
                                 xoff = _j * preview_width
-                                overview.paste(image, (xoff, yoff))
-                                overview.save(overview_fn)
+                                if os.environ.get("OVERVIEW", None) is not None:
+                                    overview.paste(image, (xoff, yoff))
+                                    overview.save(overview_fn)
 
-                                metric['overview_resize_s'] = time.time()-t
+                                    metric['overview_resize_s'] = time.time()-t
                                 telegraf_client.metric("gigavision", metric, tags={"name": self.name})
                             except Exception as e:
                                 self.logger.error("couldnt write overview to {}".format(overview_fn))
