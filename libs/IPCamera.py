@@ -326,7 +326,7 @@ class IPCamera(object):
                 if ext in ("tiff", "tif"):
                     if fn.endswith(".tiff"):
                         fn = fn[:-1]
-                    img.save(fn, compression='tiff_deflate')
+                    img.save(fn, format="TIFF", compression='tiff_lzw')
                 else:
                     img.save(fn)
                 s = True

@@ -511,11 +511,15 @@ class Panorama(object):
 
         last_started = self._recovery_file.get('started_time', None)
         if last_started:
-            last_started = datetime.datetime.strptime(last_started, ts_fmt)
-            if int(now.timestamp()) - int(last_started.timestamp()) < self.interval.total_seconds():
-                now = last_started
-            else:
-                self.logger.warning("Recovery exists, but its now too late. Starting from beginning.")
+            try:
+                last_started = datetime.datetime.strptime(last_started, ts_fmt)
+                if int(now.timestamp()) - int(last_started.timestamp()) < self.interval.total_seconds():
+                    now = last_started
+                else:
+                    self.logger.warning("Recovery exists, but its now too late. Starting from beginning.")
+                    self.write_to_recovery_file(0, now.strftime(ts_fmt))
+            except Exception as e: 
+                self.logger.warning(str(e))
                 self.write_to_recovery_file(0, now.strftime(ts_fmt))
         this_dir = os.path.join(self._output_dir, now.strftime("%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H"))
         os.makedirs(this_dir, exist_ok=True)
@@ -658,12 +662,6 @@ class Panorama(object):
             except:
                 pass
 
-        try:
-            shutil.move(self._csv_log, os.path.join(this_dir, now.strftime("{name}-" + ts_fmt + ".csv").format(name=self.name)))
-        except Exception as e:
-            self.logger.error("Couldnt move csv log.")
-            # self.logger.error(e)
-        os.remove(self._recovery_filepath)
         self._recovery_file['image_index'] = 0
         t = time.time() - start_time
         self.logger.info("Panorama complete in {}".format(sec2human(t)))
@@ -671,6 +669,16 @@ class Panorama(object):
             telegraf_client.metric("gigavision", {'timing_total_s': t}, tags={"name": self.name})
         except:
             pass
+
+        try:
+            shutil.move(self._csv_log, os.path.join(this_dir, now.strftime("{name}-" + ts_fmt + ".csv").format(name=self.name)))
+        except Exception as e:
+            self.logger.error("Couldnt move csv log.")
+            # self.logger.error(e)
+        try:
+            os.remove(self._recovery_filepath)
+        except Exception as e:
+            self.logger.error("Couldnt remove recovery.")
 
     def calibrate_and_run(self):
         """
