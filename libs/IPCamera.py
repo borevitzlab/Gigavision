@@ -316,8 +316,7 @@ class IPCamera(object):
         output_types = ["jpg", "tiff"]
         e = os.environ.get("OUTPUT_TYPES", None)
         if e is not None:
-            output_types = re.split("[\W+|\||,|:]", output_types)
-            self._image_size = [ int(float(x)) for x in self._image_size ]
+            output_types = re.split("[\W+|\||,|:]", e)
 
         for ext in output_types:
             fn = "{}.{}".format(fnp, ext)
