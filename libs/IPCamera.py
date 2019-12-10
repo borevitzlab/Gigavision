@@ -78,7 +78,7 @@ class IPCamera(object):
 
         ip = config.get("ip", "192.168.1.101:81")
         ip = os.environ.get("IP", ip)
-        op = os.environ.get("CAMERA_IP", ip)
+        ip = os.environ.get("CAMERA_IP", ip)
         self._url = format_str.format(
             ip=ip,
             HTTP_login=self._HTTP_login,
