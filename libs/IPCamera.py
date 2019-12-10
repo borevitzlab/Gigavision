@@ -83,7 +83,7 @@ class IPCamera(object):
             ip=ip,
             HTTP_login=self._HTTP_login,
             command="{command}")
-
+        )
         self._image_size = config.get("image_size", [1920, 1080])
         self._image_size = os.environ.get("CAMERA_IMAGE_SIZE", self._image_size)
         if type(self._image_size) is str:
