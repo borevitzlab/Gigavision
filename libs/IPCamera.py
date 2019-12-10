@@ -77,31 +77,22 @@ class IPCamera(object):
             password=password)
 
         ip = config.get("ip", "192.168.1.101:81")
-        e = os.environ.get("IP", None)
-        e = os.environ.get("CAMERA_IP", e)
-        ip = ip if e is None else e
-        self._url = format_str.format(
-            ip=ip or e,
-            HTTP_login=self._HTTP_login,
-            command="{command}")
-
+        ip = os.environ.get("IP", ip)
+        op = os.environ.get("CAMERA_IP", ip)
         self._url = format_str.format(
             ip=ip,
             HTTP_login=self._HTTP_login,
             command="{command}")
 
         self._image_size = config.get("image_size", [1920, 1080])
-        e = os.environ.get("CAMERA_IMAGE_SIZE", None)
-        self._image_size = e if e is not None else self._image_size
+        self._image_size = os.environ.get("CAMERA_IMAGE_SIZE", self._image_size)
         if type(self._image_size) is str:
             self._image_size = re.split("[\W+|\||,|x|x|:]", self._image_size)
             self._image_size = [ int(float(x)) for x in self._image_size ]
 
-        image_quality = config.get("image_quality", 100)
-        e = os.environ.get("CAMERA_IMAGE_QUALITY", None)
-        self._image_size = e if e is not None else self._image_size
+        self.image_quality = config.get("image_quality", 100)
+        self.image_quality = os.environ.get("CAMERA_IMAGE_QUALITY", self.image_quality)
 
-        self._image_quality = image_quality
         # no autofocus modes by default.
         self._autofocus_modes = config.get("autofocus_modes", [])
 
@@ -120,8 +111,6 @@ class IPCamera(object):
         # set commands from the rest of the config.
         self.command_urls = config.get('urls', {})
         self.return_keys = config.get("keys", {})
-
-        self.image_quality = self.image_quality
         self.logger.info(self.status)
 
     def _make_request(self, command_string, *args, **kwargs):
@@ -327,6 +316,8 @@ class IPCamera(object):
                     if fn.endswith(".tiff"):
                         fn = fn[:-1]
                     img.save(fn, format="TIFF", compression='tiff_lzw')
+                if ext in ("jpeg", "jpg"):
+                    img.save(fn, format="JPEG", quality=95, optimize=True, progressive=True, subsampling="4:4:4")
                 else:
                     img.save(fn)
                 s = True
