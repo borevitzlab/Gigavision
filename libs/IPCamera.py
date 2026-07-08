@@ -9,7 +9,7 @@ from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 from xml.etree import ElementTree
 from PIL import Image
 from io import BytesIO
-
+import traceback
 
 try:
     logging.config.fileConfig("logging.ini")
@@ -25,7 +25,6 @@ except Exception as e:
 
 
 class IPCamera(object):
-
 
     def __init__(self, identifier=None, config=None, **kwargs):
         if not config:
@@ -83,15 +82,14 @@ class IPCamera(object):
             ip=ip,
             HTTP_login=self._HTTP_login,
             command="{command}")
-        )
         self._image_size = config.get("image_size", [1920, 1080])
         self._image_size = os.environ.get("CAMERA_IMAGE_SIZE", self._image_size)
         if type(self._image_size) is str:
             self._image_size = re.split("[\W+|\||,|x|x|:]", self._image_size)
-            self._image_size = [ int(float(x)) for x in self._image_size ]
+            self._image_size = [int(float(x)) for x in self._image_size]
 
-        self.image_quality = config.get("image_quality", 100)
-        self.image_quality = os.environ.get("CAMERA_IMAGE_QUALITY", self.image_quality)
+        self._image_quality = config.get("image_quality", 100)
+        self._image_quality = os.environ.get("CAMERA_IMAGE_QUALITY", self._image_quality)
 
         # no autofocus modes by default.
         self._autofocus_modes = config.get("autofocus_modes", [])
@@ -140,7 +138,6 @@ class IPCamera(object):
         except Exception as e:
             self.logger.error("Some exception got raised {}".format(str(e)))
             return
-
 
     def _read_stream(self, command_string, *args, **kwargs):
         """
@@ -316,13 +313,19 @@ class IPCamera(object):
                         fn = fn[:-1]
                     img.save(fn, format="TIFF", compression='tiff_lzw')
                 if ext in ("jpeg", "jpg"):
-                    img.save(fn, format="JPEG", quality=95, optimize=True, progressive=True, subsampling="4:4:4")
+                    img.save(fn,
+                             format="JPEG",
+                             quality=95,
+                             optimize=True,
+                             progressive=True,
+                             subsampling="4:4:4")
                 else:
                     img.save(fn)
                 s = True
             except Exception as e:
-                self.logger.error("Couldnt write image")
+                self.logger.error("Couldnt write {} image".format(str(ext)))
                 self.logger.error(e)
+                traceback.print_exc()
 
             # im = Image.fromarray(np.uint8(img))
             # s = cv2.imwrite(fn, img)
@@ -343,7 +346,6 @@ class IPCamera(object):
                 except Exception as e:
                     self.logger.debug("Couldnt write the appropriate metadata: {}".format(str(e)))
         return successes
-
 
     def capture_image(self, filename=None) -> numpy.array:
         """
@@ -417,8 +419,8 @@ class IPCamera(object):
         if cmd:
             stream = self._read_stream(cmd)
             output = self.get_value_from_stream(stream, keys)
-            width,height = self._image_size
-            for k,v in output.items():
+            width, height = self._image_size
+            for k, v in output.items():
                 if "width" in k:
                     width = v
                 if "height" in k:

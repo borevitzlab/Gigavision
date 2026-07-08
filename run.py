@@ -10,11 +10,13 @@ Created on Mon Nov 17 10:24:49 2014
 """
 
 import sys
-import os, json
+import os
+import json
 from datetime import datetime
 import shutil
 import tarfile
-import logging, logging.config
+import logging
+import logging.config
 import numpy as np
 import time
 import csv
@@ -35,7 +37,6 @@ try:
     import telegraf
 except Exception as e:
     print(str(e))
-
 
 
 logging.getLogger("paramiko").setLevel(logging.WARNING)
@@ -65,6 +66,7 @@ def sec2human(seconds) -> str:
             fmt_st = "{val} {name}" if period_value == 1 else "{val} {name}s"
             strings.append(fmt_st.format(val=period_value, name=period_name))
     return ", ".join(strings)
+
 
 regex = re.compile(r'((?P<hours>\d+?)hr)?((?P<minutes>\d+?)m)?((?P<seconds>\d+?)s)?')
 
@@ -112,7 +114,6 @@ class Panorama(object):
         e = os.environ.get("STOP_TIME", None)
         end_time_string = e if e is not None else end_time_string
 
-
         start_time_string = start_time_string.replace(":", "")
 
         end_time_string = end_time_string.replace(":", "")
@@ -140,6 +141,8 @@ class Panorama(object):
                     raise ValueError("No 'camera' section found in config file.")
                 camera = IPCamera(self.name, config=camera_config)
         except Exception as e:
+            import traceback
+            self.logger.error(traceback.format_exc())
             self.logger.error("Couldnt initialise Camera: " + str(e))
             time.sleep(30)
             camera = None
@@ -236,7 +239,6 @@ class Panorama(object):
         }
         self._scan_order = self._scan_order_translation.get(str(scan_order_unparsed).lower().replace(" ", ""), 0)
         self.logger.info(self.summary)
-
 
         try:
             telegraf_client = telegraf.TelegrafClient(host="telegraf", port=8092)
@@ -428,7 +430,6 @@ class Panorama(object):
         self._pan_range[1], self._tilt_range[0] = value
         self.enumerate_positions()
 
-
     def _init_csv_log(self, path: str):
         self._csv_log = path
         if not os.path.exists(self._csv_log):
@@ -518,7 +519,7 @@ class Panorama(object):
                 else:
                     self.logger.warning("Recovery exists, but its now too late. Starting from beginning.")
                     self.write_to_recovery_file(0, now.strftime(ts_fmt))
-            except Exception as e: 
+            except Exception as e:
                 self.logger.warning(str(e))
                 self.write_to_recovery_file(0, now.strftime(ts_fmt))
         this_dir = os.path.join(self._output_dir, now.strftime("%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H"))
@@ -556,8 +557,8 @@ class Panorama(object):
         preview_width = int(os.environ.get("PREVIEW_WIDTH", 320))
         preview_height = int(preview_width * self.camera._image_size[1] / self.camera._image_size[0])
         if os.environ.get("OVERVIEW", None) is not None:
-            overview_width = len(pan_pos_list)*preview_width
-            overview_height = len(tilt_pos_list)*preview_height
+            overview_width = len(pan_pos_list) * preview_width
+            overview_height = len(tilt_pos_list) * preview_height
             overview_fn = os.path.join(this_dir, "{}_overview_{}.jpg".format(self.name, now.strftime(ts_fmt)))
             overview = None
             try:
@@ -594,14 +595,14 @@ class Panorama(object):
                             metric = dict()
                             try:
                                 t = time.time()
-                                image = self.camera._image.resize((preview_width,preview_height), Image.NEAREST)
+                                image = self.camera._image.resize((preview_width, preview_height), Image.NEAREST)
                                 yoff = _i * preview_height
                                 xoff = _j * preview_width
                                 if os.environ.get("OVERVIEW", None) is not None:
                                     overview.paste(image, (xoff, yoff))
                                     overview.save(overview_fn)
 
-                                    metric['overview_resize_s'] = time.time()-t
+                                    metric['overview_resize_s'] = time.time() - t
                                 telegraf_client.metric("gigavision", metric, tags={"name": self.name})
                             except Exception as e:
                                 self.logger.error("couldnt write overview to {}".format(overview_fn))
@@ -616,7 +617,7 @@ class Panorama(object):
                             current_time = time.time()
                             self._seconds_per_image = (current_time - start_time) / lcap
                             self.logger.info("Seconds per image {0:.2f}s".format(self._seconds_per_image))
-                            metric['image_capture_s'] = time.time()-this_img_capture_s
+                            metric['image_capture_s'] = time.time() - this_img_capture_s
                             telegraf_client.metric("gigavision", metric, tags={"name": self.name})
                             return lcap
                     except Exception as e:
@@ -633,9 +634,9 @@ class Panorama(object):
                             continue
                         t = time.time()
                         last_image_captured = cap(pan_pos, tilt_pos, image_index, last_image_captured, i, j)
-                        rolling.append(time.time()-t)
+                        rolling.append(time.time() - t)
                     try:
-                        metric = {'timing_avg_s': sum(rolling)/len(rolling), 'rolling_index': len(rolling)}
+                        metric = {'timing_avg_s': sum(rolling) / len(rolling), 'rolling_index': len(rolling)}
                         telegraf_client.metric("gigavision", metric, tags={"name": self.name})
                     except:
                         pass
@@ -654,10 +655,10 @@ class Panorama(object):
                     except:
                         pass
             try:
-                metric = { 'timing_avg_s': sum(rolling) / len(rolling),
-                            'total_images': len(rolling),
-                            "num_cols": len(self._pan_pos_list),
-                            "num_rows": len(self._tilt_pos_list)}
+                metric = {'timing_avg_s': sum(rolling) / len(rolling),
+                          'total_images': len(rolling),
+                          "num_cols": len(self._pan_pos_list),
+                          "num_rows": len(self._tilt_pos_list)}
                 telegraf_client.metric("gigavision", metric, tags={"name": self.name})
             except:
                 pass
